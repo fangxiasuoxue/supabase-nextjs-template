@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
+import { useLanguage } from "@/lib/context/LanguageContext";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -22,6 +23,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
 
     const { user } = useGlobal();
+    const { language, setLanguage, t } = useLanguage();
 
     const handleLogout = async () => {
         try {
@@ -45,10 +47,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const productName = process.env.NEXT_PUBLIC_PRODUCTNAME;
 
     const navigation = [
-        { name: 'Homepage', href: '/app', icon: Home },
-        { name: 'Example Storage', href: '/app/storage', icon: Files },
-        { name: 'Example Table', href: '/app/table', icon: LucideListTodo },
-        { name: 'User Settings', href: '/app/user-settings', icon: User },
+        { name: t('nav.home'), href: '/app', icon: Home },
+        { name: t('nav.storage'), href: '/app/storage', icon: Files },
+        { name: t('nav.table'), href: '/app/table', icon: LucideListTodo },
+        { name: t('nav.ip'), href: '/app/ip', icon: Files },
+        { name: t('nav.userSettings'), href: '/app/user-settings', icon: User },
     ];
 
     const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
@@ -112,7 +115,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         <Menu className="h-6 w-6"/>
                     </button>
 
-                    <div className="relative ml-auto">
+                    <div className="relative ml-auto flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setLanguage('en')}
+                                className={`px-2 py-1 text-sm rounded ${language==='en' ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'}`}
+                            >
+                                {t('lang.en')}
+                            </button>
+                            <button
+                                onClick={() => setLanguage('zh')}
+                                className={`px-2 py-1 text-sm rounded ${language==='zh' ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'}`}
+                            >
+                                {t('lang.zh')}
+                            </button>
+                        </div>
                         <button
                             onClick={() => setUserDropdownOpen(!isUserDropdownOpen)}
                             className="flex items-center space-x-2 text-sm text-gray-700 hover:text-gray-900"
@@ -129,7 +146,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         {isUserDropdownOpen && (
                             <div className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg border">
                                 <div className="p-2 border-b border-gray-100">
-                                    <p className="text-xs text-gray-500">Signed in as</p>
+                                    <p className="text-xs text-gray-500">{t('nav.signedInAs')}</p>
                                     <p className="text-sm font-medium text-gray-900 truncate">
                                         {user?.email}
                                     </p>
@@ -143,7 +160,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                         className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                                     >
                                         <Key className="mr-3 h-4 w-4 text-gray-400"/>
-                                        Change Password
+                                        {t('nav.changePassword')}
                                     </button>
                                     <button
                                         onClick={() => {
@@ -153,7 +170,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                         className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                                     >
                                         <LogOut className="mr-3 h-4 w-4 text-red-400"/>
-                                        Sign Out
+                                        {t('nav.signOut')}
                                     </button>
                                 </div>
                             </div>

@@ -4,9 +4,11 @@ import { useGlobal } from '@/lib/context/GlobalContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { CalendarDays, Settings, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+import { useLanguage } from '@/lib/context/LanguageContext';
 
 export default function DashboardContent() {
     const { loading, user } = useGlobal();
+    const { t } = useLanguage();
 
     const getDaysSinceRegistration = () => {
         if (!user?.registered_at) return 0;
@@ -29,10 +31,10 @@ export default function DashboardContent() {
         <div className="space-y-6 p-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Welcome, {user?.email?.split('@')[0]}! 👋</CardTitle>
+                    <CardTitle>{t('dashboard.welcome', { name: user?.email?.split('@')[0] || '' })}</CardTitle>
                     <CardDescription className="flex items-center gap-2">
                         <CalendarDays className="h-4 w-4" />
-                        Member for {daysSinceRegistration} days
+                        {t('dashboard.memberDays', { days: daysSinceRegistration })}
                     </CardDescription>
                 </CardHeader>
             </Card>
@@ -40,8 +42,8 @@ export default function DashboardContent() {
             {/* Quick Actions */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Quick Actions</CardTitle>
-                    <CardDescription>Frequently used features</CardDescription>
+                    <CardTitle>{t('dashboard.quickActions.title')}</CardTitle>
+                    <CardDescription>{t('dashboard.quickActions.desc')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="grid gap-4 md:grid-cols-2">
@@ -53,8 +55,8 @@ export default function DashboardContent() {
                                 <Settings className="h-4 w-4 text-primary-600" />
                             </div>
                             <div>
-                                <h3 className="font-medium">User Settings</h3>
-                                <p className="text-sm text-gray-500">Manage your account preferences</p>
+                                <h3 className="font-medium">{t('dashboard.quickActions.userSettings.title')}</h3>
+                                <p className="text-sm text-gray-500">{t('dashboard.quickActions.userSettings.desc')}</p>
                             </div>
                         </Link>
 
@@ -66,8 +68,8 @@ export default function DashboardContent() {
                                 <ExternalLink className="h-4 w-4 text-primary-600" />
                             </div>
                             <div>
-                                <h3 className="font-medium">Example Page</h3>
-                                <p className="text-sm text-gray-500">Check out example features</p>
+                                <h3 className="font-medium">{t('dashboard.quickActions.examplePage.title')}</h3>
+                                <p className="text-sm text-gray-500">{t('dashboard.quickActions.examplePage.desc')}</p>
                             </div>
                         </Link>
                     </div>
