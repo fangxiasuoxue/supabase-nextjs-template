@@ -14,9 +14,11 @@ export async function POST(req: Request) {
   const uid = auth.user?.id
   if (!uid) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
   const { data: role } = await ssr.from('user_roles' as any).select('role').eq('user_id', uid).limit(1).maybeSingle()
-  const isAdmin = role?.role === 'admin'
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const isAdmin = (role as any)?.role === 'admin'
   const { data: perm } = await ssr.from('module_permissions' as any).select('can_write, can_manage').eq('user_id', uid).eq('module', 'ip').limit(1).maybeSingle()
-  const canWrite = isAdmin || !!perm?.can_write || !!perm?.can_manage
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const canWrite = isAdmin || !!(perm as any)?.can_write || !!(perm as any)?.can_manage
   if (!canWrite) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const rows = ids.map((assignee) => ({
     ip_id,
@@ -27,7 +29,8 @@ export async function POST(req: Request) {
     owner: uid,
     assignee_user_id: assignee,
   }))
-  const { error } = await ssr.from('ip_allocations' as any).insert(rows)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await ssr.from('ip_allocations' as any).insert(rows as any)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ count: rows.length })
 }

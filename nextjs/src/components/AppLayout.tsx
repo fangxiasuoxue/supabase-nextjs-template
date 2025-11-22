@@ -1,7 +1,7 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import {usePathname, useRouter} from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
     Home,
     User,
@@ -14,16 +14,44 @@ import {
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/lib/context/LanguageContext";
+import { checkIsAdmin, getUserPermissionsAction } from "@/app/actions/auth";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const [isSidebarOpen, setSidebarOpen] = useState(false);
     const [isUserDropdownOpen, setUserDropdownOpen] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
 
 
+    const [permissions, setPermissions] = useState<any[]>([]);
     const { user } = useGlobal();
     const { language, setLanguage, t } = useLanguage();
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    useEffect(() => {
+        async function checkPermissions() {
+            try {
+                const [adminResult, permsResult] = await Promise.all([
+                    checkIsAdmin(),
+                    getUserPermissionsAction()
+                ]);
+                setIsAdmin(adminResult);
+                setPermissions(permsResult);
+            } catch (error) {
+                console.error('Error checking permissions:', error);
+                setIsAdmin(false);
+                setPermissions([]);
+            }
+        }
+        if (user?.id && isMounted) {
+            checkPermissions();
+        }
+    }, [user?.id, isMounted]);
 
     const handleLogout = async () => {
         try {
@@ -46,13 +74,39 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     const productName = process.env.NEXT_PUBLIC_PRODUCTNAME;
 
-    const navigation = [
-        { name: t('nav.home'), href: '/app', icon: Home },
-        { name: t('nav.storage'), href: '/app/storage', icon: Files },
-        { name: t('nav.table'), href: '/app/table', icon: LucideListTodo },
-        { name: t('nav.ip'), href: '/app/ip', icon: Files },
-        { name: t('nav.userSettings'), href: '/app/user-settings', icon: User },
-    ];
+    const navigation = React.useMemo(() => {
+        // Don't build navigation until mounted to avoid hydration mismatch
+        if (!isMounted) return [];
+
+        const baseNav = [
+            { name: t('nav.home'), href: '/app', icon: Home },
+        ];
+
+        // Check permissions for modules
+        // For now, we map paths/names to module names
+        // 'ip' -> 'ip'
+
+        // Storage and Table are not yet in module enum, so we show them by default or hide them?
+        // Let's show them by default for now to avoid breaking things, or check if admin.
+        // But for IP, we strictly check permission.
+
+        const hasIpPermission = isAdmin || permissions.some(p => p.module === 'ip' && p.can_menu);
+
+        baseNav.push({ name: t('nav.storage'), href: '/app/storage', icon: Files });
+        baseNav.push({ name: t('nav.table'), href: '/app/table', icon: LucideListTodo });
+
+        if (hasIpPermission) {
+            baseNav.push({ name: t('nav.ip'), href: '/app/ip', icon: Files });
+        }
+
+        baseNav.push({ name: t('nav.userSettings'), href: '/app/user-settings', icon: User });
+
+        if (isAdmin) {
+            baseNav.push({ name: t('nav.admin'), href: '/app/admin/users', icon: Key });
+        }
+
+        return baseNav;
+    }, [isAdmin, permissions, isMounted, t]);
 
     const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
 
@@ -87,16 +141,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                             <Link
                                 key={item.name}
                                 href={item.href}
-                                className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
-                                    isActive
-                                        ? 'bg-primary-50 text-primary-600'
-                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                                }`}
+                                className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${isActive
+                                    ? 'bg-primary-50 text-primary-600'
+                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                    }`}
                             >
                                 <item.icon
-                                    className={`mr-3 h-5 w-5 ${
-                                        isActive ? 'text-primary-500' : 'text-gray-400 group-hover:text-gray-500'
-                                    }`}
+                                    className={`mr-3 h-5 w-5 ${isActive ? 'text-primary-500' : 'text-gray-400 group-hover:text-gray-500'
+                                        }`}
                                 />
                                 {item.name}
                             </Link>
@@ -112,20 +164,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         onClick={toggleSidebar}
                         className="lg:hidden text-gray-500 hover:text-gray-700"
                     >
-                        <Menu className="h-6 w-6"/>
+                        <Menu className="h-6 w-6" />
                     </button>
 
                     <div className="relative ml-auto flex items-center gap-3">
                         <div className="flex items-center gap-1">
                             <button
                                 onClick={() => setLanguage('en')}
-                                className={`px-2 py-1 text-sm rounded ${language==='en' ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'}`}
+                                className={`px-2 py-1 text-sm rounded ${language === 'en' ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'}`}
                             >
                                 {t('lang.en')}
                             </button>
                             <button
                                 onClick={() => setLanguage('zh')}
-                                className={`px-2 py-1 text-sm rounded ${language==='zh' ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'}`}
+                                className={`px-2 py-1 text-sm rounded ${language === 'zh' ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'}`}
                             >
                                 {t('lang.zh')}
                             </button>
@@ -140,7 +192,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                 </span>
                             </div>
                             <span>{user?.email || 'Loading...'}</span>
-                            <ChevronDown className="h-4 w-4"/>
+                            <ChevronDown className="h-4 w-4" />
                         </button>
 
                         {isUserDropdownOpen && (
@@ -159,7 +211,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                         }}
                                         className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                                     >
-                                        <Key className="mr-3 h-4 w-4 text-gray-400"/>
+                                        <Key className="mr-3 h-4 w-4 text-gray-400" />
                                         {t('nav.changePassword')}
                                     </button>
                                     <button
@@ -169,7 +221,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                         }}
                                         className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                                     >
-                                        <LogOut className="mr-3 h-4 w-4 text-red-400"/>
+                                        <LogOut className="mr-3 h-4 w-4 text-red-400" />
                                         {t('nav.signOut')}
                                     </button>
                                 </div>

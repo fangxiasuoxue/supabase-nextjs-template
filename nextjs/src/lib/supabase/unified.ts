@@ -1,5 +1,5 @@
-import {SupabaseClient} from "@supabase/supabase-js";
-import {Database} from "@/lib/types";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { Database } from "@/lib/types";
 
 export enum ClientType {
     SERVER = 'server',
@@ -47,7 +47,7 @@ export class SassClient {
             scope: 'local',
         });
         if (error) throw error;
-        if(this.clientType === ClientType.SPA) {
+        if (this.clientType === ClientType.SPA) {
             window.location.href = '/auth/login';
         }
     }
@@ -87,12 +87,12 @@ export class SassClient {
         return this.client.from('todo_list').insert(row)
     }
 
-    async removeTask (id: number) {
+    async removeTask(id: number) {
         return this.client.from('todo_list').delete().eq('id', id)
     }
 
-    async updateAsDone (id: number) {
-        return this.client.from('todo_list').update({done: true}).eq('id', id)
+    async updateAsDone(id: number) {
+        return this.client.from('todo_list').update({ done: true }).eq('id', id)
     }
 
     getSupabaseClient() {
@@ -105,44 +105,54 @@ export class SassClient {
         if (!uid) return { allowed: false }
 
         const { data: role } = await this.client
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             .from('user_roles' as any)
             .select('role')
             .eq('user_id', uid)
             .limit(1)
             .maybeSingle()
-        if (role?.role === 'admin') return { allowed: true }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((role as any)?.role === 'admin') return { allowed: true }
 
         const { data } = await this.client
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             .from('module_permissions' as any)
             .select('can_read, can_write, can_manage')
             .eq('user_id', uid)
             .eq('module', module)
             .limit(1)
             .maybeSingle()
-        const allowed = !!data && (
-            (perm === 'read' && !!data.can_read) ||
-            (perm === 'write' && !!data.can_write) ||
-            (perm === 'manage' && !!data.can_manage)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const allowed = !!(data as any) && (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (perm === 'read' && !!(data as any).can_read) ||
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (perm === 'write' && !!(data as any).can_write) ||
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (perm === 'manage' && !!(data as any).can_manage)
         )
         return { allowed }
     }
 
-    async listIpAssets(filters?: { provider?: string; country?: string; status?: string }) {
+    async listIpAssets(filters?: { provider?: string; remark?: string; status?: string }) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let q = this.client.from('ip_assets' as any).select('*').order('created_at', { ascending: false })
         if (filters?.provider) q = q.eq('provider', filters.provider)
-        if (filters?.country) q = q.eq('country', filters.country)
+        if (filters?.remark) q = q.ilike('remark', `%${filters.remark}%`)
         if (filters?.status) q = q.eq('status', filters.status)
         return q
     }
 
-    async createIpAsset(row: { provider: string; ip: string; country?: string | null; asn?: string | null; type?: 'residential' | 'datacenter' | null; status?: string | null; expires_at?: string | null; metadata?: any }) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async createIpAsset(row: { provider: string; ip: string; remark?: string | null; asn?: string | null; type?: 'residential' | 'datacenter' | null; status?: string | null; expires_at?: string | null; metadata?: any }) {
         const { data: userRes } = await this.client.auth.getUser()
         const uid = userRes.user?.id
         if (!uid) return { error: { message: 'Not logged in' } }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return this.client.from('ip_assets' as any).insert({
             provider: row.provider,
             ip: row.ip,
-            country: row.country ?? null,
+            remark: row.remark ?? null,
             asn: row.asn ?? null,
             type: row.type ?? null,
             status: row.status ?? null,
@@ -156,6 +166,7 @@ export class SassClient {
         const { data: userRes } = await this.client.auth.getUser()
         const uid = userRes.user?.id
         if (!uid) return { error: { message: 'Not logged in' } }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return this.client.from('ip_allocations' as any).insert({
             ip_id,
             assigned_to,
@@ -167,6 +178,7 @@ export class SassClient {
     }
 
     async releaseIp(allocation_id: number) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return this.client.from('ip_allocations' as any).update({
             state: 'released',
             released_at: new Date().toISOString(),

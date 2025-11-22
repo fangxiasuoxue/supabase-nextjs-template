@@ -43,7 +43,8 @@ export async function POST() {
         source_raw: p,
       }
     })
-    const { error } = await admin.from('ip_assets' as any).upsert(rows, { onConflict: 'provider,public_ip' })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await admin.from('ip_assets' as any).upsert(rows as any, { onConflict: 'provider,public_ip' })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ count: rows.length })
   }

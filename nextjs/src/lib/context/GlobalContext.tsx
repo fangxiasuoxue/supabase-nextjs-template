@@ -9,6 +9,7 @@ type User = {
     email: string;
     id: string;
     registered_at: Date;
+    role: 'admin' | 'operator' | 'user';
 };
 
 interface GlobalContextType {
@@ -34,7 +35,8 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
                     setUser({
                         email: user.email!,
                         id: user.id,
-                        registered_at: new Date(user.created_at)
+                        registered_at: new Date(user.created_at),
+                        role: 'user' // Default role, will be checked server-side
                     });
                 } else {
                     throw new Error('User not found');
