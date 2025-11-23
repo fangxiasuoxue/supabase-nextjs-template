@@ -35,8 +35,8 @@ export async function assignResourceAction(
 
         // Create assignment
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await adminClient
-            .from('resource_assignments' as any)
+        const { error } = await (adminClient as any)
+            .from('resource_assignments')
             .insert({
                 resource_type: resourceType,
                 resource_id: resourceId,
@@ -91,8 +91,8 @@ export async function revokeResourceAssignmentAction(assignmentId: string) {
 
         // Delete assignment
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await adminClient
-            .from('resource_assignments' as any)
+        const { error } = await (adminClient as any)
+            .from('resource_assignments')
             .delete()
             .eq('id', assignmentId)
 
@@ -111,9 +111,9 @@ export async function getUserResourceAssignmentsAction(userId: string, resourceT
     try {
         const adminClient = await createServerAdminClient()
 
-        let query = adminClient
+        let query = (adminClient as any)
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .from('resource_assignments' as any)
+            .from('resource_assignments')
             .select('*')
             .eq('user_id', userId)
 
@@ -139,8 +139,8 @@ export async function getResourceAssignmentsAction(resourceType: string, resourc
         const adminClient = await createServerAdminClient()
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data, error } = await adminClient
-            .from('resource_assignments' as any)
+        const { data, error } = await (adminClient as any)
+            .from('resource_assignments')
             .select('*')
             .eq('resource_type', resourceType)
             .eq('resource_id', resourceId)
