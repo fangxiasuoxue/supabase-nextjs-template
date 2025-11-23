@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -23,6 +23,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const [isMounted, setIsMounted] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
 
     const [permissions, setPermissions] = useState<any[]>([]);
@@ -31,6 +32,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         setIsMounted(true);
+    }, []);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setUserDropdownOpen(false);
+            }
+        }
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
     }, []);
 
     useEffect(() => {
@@ -167,7 +181,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         <Menu className="h-6 w-6" />
                     </button>
 
-                    <div className="relative ml-auto flex items-center gap-3">
+                    <div className="relative ml-auto flex items-center gap-3" ref={dropdownRef}>
                         <div className="flex items-center gap-1">
                             <button
                                 onClick={() => setLanguage('en')}

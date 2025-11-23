@@ -51,13 +51,19 @@ export async function POST() {
 
   if (key && secret) {
     const url = 'https://api.proxy-cheap.com/proxies'
-    const res = await fetch(url, { headers: { Accept: 'application/json', 'X-Api-Key': key, 'X-Api-Secret': secret } })
-    if (!res.ok) {
-      return NextResponse.json({ error: 'Upstream error', status: res.status }, { status: 502 })
+    try {
+      const res = await fetch(url, { headers: { Accept: 'application/json', 'X-Api-Key': key, 'X-Api-Secret': secret } })
+      if (!res.ok) {
+        console.error('ProxyCheap API error:', res.status, res.statusText)
+        return NextResponse.json({ error: `Upstream error: ${res.status} ${res.statusText}` }, { status: 502 })
+      }
+      const raw = await res.json()
+      const list = Array.isArray(raw) ? raw : (raw.proxies || raw.items || raw.data || raw.results || raw.list || [])
+      return upsertFromList(list, url, 'proxy-cheap')
+    } catch (error: any) {
+      console.error('Fetch failed:', error)
+      return NextResponse.json({ error: `Fetch failed: ${error.message}` }, { status: 500 })
     }
-    const raw = await res.json()
-    const list = Array.isArray(raw) ? raw : (raw.proxies || raw.items || raw.data || raw.results || raw.list || [])
-    return upsertFromList(list, url, 'proxy-cheap')
   }
 
   // Fallback: sync from local file node-scripts/proxy-list.json

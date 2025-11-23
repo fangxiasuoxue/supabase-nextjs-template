@@ -48,17 +48,18 @@ type FormData = {
   auth_username: string
   auth_password: string
   expires_at: string
+  provider: string
 }
 
 export default function IpManagementPage() {
   const { t } = useLanguage()
   const { user } = useGlobal()
-  
+
   // 查询条件
   const [searchRemark, setSearchRemark] = useState("")
   const [searchIp, setSearchIp] = useState("")
   const [searchProviderId, setSearchProviderId] = useState("")
-  
+
   // 表单状态
   const [formMode, setFormMode] = useState<"create" | "edit">("create")
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -74,8 +75,11 @@ export default function IpManagementPage() {
     auth_username: "",
     auth_password: "",
     expires_at: "",
+    provider: "Manual",
   })
-  
+
+  const [canManage, setCanManage] = useState(false)
+
   // 列表状态
   const [ipAssets, setIpAssets] = useState<IpAsset[]>([])
   const [loading, setLoading] = useState(false)
@@ -83,14 +87,14 @@ export default function IpManagementPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const pageSize = 20
-  
+
   // 分配对话框
   const [allocatingId, setAllocatingId] = useState<number | null>(null)
   const [showAllocate, setShowAllocate] = useState(false)
   const [users, setUsers] = useState<{ id: string, email: string | null }[]>([])
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
   const [allocateNotes, setAllocateNotes] = useState("")
-  
+
   // 删除确认对话框
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -102,16 +106,16 @@ export default function IpManagementPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, currentPage])
-  
+
   // 防抖查询 - 当查询条件变化时延迟查询
   useEffect(() => {
     if (!user?.id) return
-    
+
     const timeoutId = setTimeout(() => {
       setCurrentPage(1)
       fetchIpAssets()
     }, 300)
-    
+
     return () => clearTimeout(timeoutId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchRemark, searchIp, searchProviderId])
@@ -124,7 +128,7 @@ export default function IpManagementPage() {
     if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
   }
-  
+
   // 格式化日期时间
   const formatDateTime = (dateString: string | null) => {
     if (!dateString) return "-"
@@ -145,21 +149,21 @@ export default function IpManagementPage() {
       setError("")
       const supabase = await createSPASassClient()
       const perm = await supabase.hasModulePermission('ip', 'read')
-      if (!perm.allowed) {
-        setError("没有查看权限")
-        setIpAssets([])
-        setTotalCount(0)
-        return
-      }
-      
+      const managePerm = await supabase.hasModulePermission('ip', 'manage')
+      setCanManage(managePerm.allowed)
+
+      // Relaxed check: Allow fetch to proceed even if global read is not allowed,
+      // relying on RLS to filter assigned IPs for the user.
+      // if (!perm.allowed) { ... }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let query = (supabase.getSupabaseClient() as any)
         .from('ip_assets')
         .select('*', { count: 'exact' })
-      
+
       // 应用查询条件 - 只查询未删除的记录
       query = query.is('deleted_at', null)
-      
+
       if (searchRemark) {
         query = query.ilike('remark', `%${searchRemark}%`)
       }
@@ -169,15 +173,15 @@ export default function IpManagementPage() {
       if (searchProviderId) {
         query = query.eq('provider_id', searchProviderId)
       }
-      
+
       // 分页和排序
       query = query
         .order('created_at', { ascending: false })
         .range((currentPage - 1) * pageSize, currentPage * pageSize - 1)
-      
+
       const { data, error, count } = await query
       if (error) throw error
-      
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setIpAssets((data as any) || [])
       setTotalCount(count || 0)
@@ -213,16 +217,24 @@ export default function IpManagementPage() {
       auth_username: "",
       auth_password: "",
       expires_at: "",
+      provider: "Manual",
     })
   }
 
   const handleEdit = (asset: IpAsset) => {
     setFormMode("edit")
     setEditingId(asset.id)
-    
+
     // 如果有协议类型，直接使用；否则根据端口数据推断
-    let proxyType: "socks5" | "http" | "https" | "" = (asset.proxy_type as "socks5" | "http" | "https") || ""
-    
+    let proxyType: "socks5" | "http" | "https" | "" = ""
+
+    if (asset.proxy_type) {
+      const lowerType = asset.proxy_type.toLowerCase()
+      if (lowerType === "socks5" || lowerType === "http" || lowerType === "https") {
+        proxyType = lowerType as "socks5" | "http" | "https"
+      }
+    }
+
     // 如果协议类型为空，但存在端口数据，自动推断协议类型
     if (!proxyType) {
       if (asset.socks5_port) {
@@ -233,7 +245,7 @@ export default function IpManagementPage() {
         proxyType = "http"
       }
     }
-    
+
     setFormData({
       remark: asset.remark || "",
       country_code: asset.country_code || "",
@@ -246,6 +258,7 @@ export default function IpManagementPage() {
       auth_username: asset.auth_username || "",
       auth_password: asset.auth_password || "",
       expires_at: asset.expires_at ? new Date(asset.expires_at).toISOString().slice(0, 16) : "",
+      provider: asset.provider || "Manual",
     })
     // 滚动到表单区域
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -266,6 +279,7 @@ export default function IpManagementPage() {
       auth_username: "",
       auth_password: "",
       expires_at: "",
+      provider: "Manual",
     })
   }
 
@@ -274,7 +288,7 @@ export default function IpManagementPage() {
       setError("IP地址不能为空")
       return
     }
-    
+
     try {
       setLoading(true)
       setError("")
@@ -284,7 +298,7 @@ export default function IpManagementPage() {
         setError("没有写入权限")
         return
       }
-      
+
       // 构建payload
       const payload: any = {
         ip: formData.ip.trim(),
@@ -294,12 +308,13 @@ export default function IpManagementPage() {
         auth_username: formData.auth_username.trim() || null,
         auth_password: formData.auth_password.trim() || null,
         expires_at: formData.expires_at ? new Date(formData.expires_at).toISOString() : null,
+        provider: formData.provider.trim() || "Manual",
       }
-      
+
       // 处理协议和端口
       if (formData.proxy_type) {
         // 用户明确选择了协议类型，只保存对应的端口
-        payload.proxy_type = formData.proxy_type
+        payload.proxy_type = formData.proxy_type.toLowerCase()
         if (formData.proxy_type === "http") {
           payload.http_port = formData.http_port ? parseInt(formData.http_port) : null
           payload.https_port = null
@@ -343,10 +358,10 @@ export default function IpManagementPage() {
           payload.socks5_port = null
         }
       }
-      
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const client = supabase.getSupabaseClient() as any
-      
+
       if (formMode === "create") {
         const { data: userRes } = await client.auth.getUser()
         const uid = userRes.user?.id
@@ -362,7 +377,7 @@ export default function IpManagementPage() {
         const { error } = await client.from('ip_assets').update(payload).eq('id', editingId)
         if (error) throw error
       }
-      
+
       handleCancel()
       await fetchIpAssets()
     } catch (e: any) {
@@ -374,7 +389,7 @@ export default function IpManagementPage() {
 
   async function handleDelete() {
     if (!deletingId) return
-    
+
     try {
       setLoading(true)
       setError("")
@@ -384,7 +399,7 @@ export default function IpManagementPage() {
         setError("没有删除权限")
         return
       }
-      
+
       // 软删除：设置 deleted_at
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const client = supabase.getSupabaseClient() as any
@@ -392,9 +407,9 @@ export default function IpManagementPage() {
         .from('ip_assets')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', deletingId)
-      
+
       if (error) throw error
-      
+
       setShowDeleteDialog(false)
       setDeletingId(null)
       await fetchIpAssets()
@@ -423,7 +438,7 @@ export default function IpManagementPage() {
 
   async function confirmAllocate() {
     if (!allocatingId || selectedUserIds.length === 0) return
-    
+
     try {
       setLoading(true)
       const res = await fetch('/api/ip/allocate', {
@@ -437,7 +452,7 @@ export default function IpManagementPage() {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || '分配失败')
-      
+
       setShowAllocate(false)
       setAllocatingId(null)
       setSelectedUserIds([])
@@ -451,6 +466,20 @@ export default function IpManagementPage() {
   }
 
   const totalPages = Math.ceil(totalCount / pageSize)
+
+  async function handleSync() {
+    try {
+      setLoading(true)
+      const res = await fetch('/api/ip/sync-proxy-cheap', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || '同步失败')
+      await fetchIpAssets()
+    } catch (e: any) {
+      setError(e.message || '同步失败')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="space-y-6 p-6">
@@ -507,9 +536,16 @@ export default function IpManagementPage() {
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">{formMode === "create" ? "创建IP资产" : "编辑IP资产"}</h3>
               {formMode === "create" && (
-                <Button onClick={handleCreate} variant="outline">
-                  新建
-                </Button>
+                <div className="flex gap-2">
+                  {canManage && (
+                    <Button onClick={handleSync} variant="outline" disabled={loading}>
+                      同步
+                    </Button>
+                  )}
+                  <Button onClick={handleCreate} variant="outline">
+                    新建
+                  </Button>
+                </div>
               )}
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -532,9 +568,16 @@ export default function IpManagementPage() {
               <div className="space-y-2">
                 <Label>供应商</Label>
                 <Input
-                  placeholder="供应商名称"
                   value={formData.isp_name}
                   onChange={(e) => setFormData({ ...formData, isp_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>来源 (Provider)</Label>
+                <Input
+                  placeholder="来源/供应商标识"
+                  value={formData.provider}
+                  onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -650,7 +693,8 @@ export default function IpManagementPage() {
                       <TableRow>
                         <TableHead>备注</TableHead>
                         <TableHead>国家</TableHead>
-                        <TableHead>ISP</TableHead>
+                        <TableHead>供应商ISP</TableHead>
+                        <TableHead>订单号</TableHead>
                         <TableHead>IP地址</TableHead>
                         <TableHead>已用流量</TableHead>
                         <TableHead>到期时间</TableHead>
@@ -663,6 +707,7 @@ export default function IpManagementPage() {
                           <TableCell>{asset.remark || "-"}</TableCell>
                           <TableCell>{asset.country_code || "-"}</TableCell>
                           <TableCell>{asset.isp_name || "-"}</TableCell>
+                          <TableCell>{asset.provider_id || "-"}</TableCell>
                           <TableCell>{asset.ip}</TableCell>
                           <TableCell>
                             {formatBandwidth(asset.bandwidth_used)}
@@ -702,7 +747,7 @@ export default function IpManagementPage() {
                     </TableBody>
                   </Table>
                 </div>
-                
+
                 {/* 分页 */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between">
