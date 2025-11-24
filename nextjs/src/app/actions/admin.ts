@@ -211,3 +211,38 @@ export async function updateModulePermissionAction(userId: string, module: strin
   }
 }
 
+
+// 获取非管理员用户列表(用于授权对话框)
+export async function getNonAdminUsersAction() {
+  try {
+    await checkAdmin()
+    const adminClient = await createServerAdminClient()
+
+    // 获取所有用户
+    const { data: { users }, error: usersError } = await adminClient.auth.admin.listUsers()
+    if (usersError) throw usersError
+
+    // 获取所有管理员用户ID
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: adminRoles } = await adminClient
+      .from('user_roles' as any)
+      .select('user_id')
+      .eq('role', 'admin')
+
+    const adminUserIds = new Set((adminRoles || []).map((r: any) => r.user_id))
+
+    // 过滤掉管理员用户
+    const nonAdminUsers = users
+      .filter(u => !adminUserIds.has(u.id))
+      .map(u => ({
+        id: u.id,
+        email: u.email || '',
+        created_at: u.created_at
+      }))
+
+    return { users: nonAdminUsers, error: null }
+  } catch (error: any) {
+    console.error('getNonAdminUsersAction error:', error)
+    return { users: [], error: error.message }
+  }
+}

@@ -195,3 +195,75 @@ export async function syncAllVPSAction(): Promise<{ results: { account: string, 
         return { results: [] } // Should probably return global error
     }
 }
+
+// Allocate VPS instance to user
+export async function allocateVPSAction(vpsId: string, userId: string, notes?: string): Promise<{ success: boolean, error: string | null }> {
+    try {
+        await checkPermission('manage')
+        const adminClient = await createServerAdminClient()
+
+        const allocationData = {
+            vps_id: vpsId,
+            owner: userId,
+            assigned_to: userId,
+            state: 'allocated',
+            allocated_at: new Date().toISOString(),
+            notes: notes || ''
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await adminClient
+            .from('vps_allocations' as any)
+            .insert(allocationData as any)
+
+        if (error) throw error
+        return { success: true, error: null }
+    } catch (error: any) {
+        console.error('allocateVPSAction error:', error)
+        return { success: false, error: error.message }
+    }
+}
+
+// Release VPS allocation
+export async function releaseVPSAction(allocationId: string): Promise<{ success: boolean, error: string | null }> {
+    try {
+        await checkPermission('manage')
+        const adminClient = await createServerAdminClient()
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await adminClient
+            .from('vps_allocations' as any)
+            .update({
+                state: 'released',
+                released_at: new Date().toISOString()
+            } as any)
+            .eq('id', allocationId)
+
+        if (error) throw error
+        return { success: true, error: null }
+    } catch (error: any) {
+        console.error('releaseVPSAction error:', error)
+        return { success: false, error: error.message }
+    }
+}
+
+// Get VPS allocations for a specific VPS instance
+export async function getVPSAllocationsAction(vpsId: string) {
+    try {
+        const { createSSRClient } = await import('@/lib/supabase/server')
+        const supabase = await createSSRClient()
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await supabase
+            .from('vps_allocations' as any)
+            .select('*')
+            .eq('vps_id', vpsId)
+            .eq('state', 'allocated')
+
+        if (error) throw error
+        return { allocations: data || [], error: null }
+    } catch (error: any) {
+        console.error('getVPSAllocationsAction error:', error)
+        return { allocations: [], error: error.message }
+    }
+}

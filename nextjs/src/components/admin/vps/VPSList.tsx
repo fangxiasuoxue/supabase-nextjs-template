@@ -6,7 +6,7 @@ import { checkIsAdmin, getUserPermissionsAction } from '@/app/actions/auth'
 import { VPSData, VPSInstance } from '@/types/vps'
 import { useLanguage } from '@/lib/context/LanguageContext'
 import { toast } from 'sonner'
-import { Loader2, RefreshCw, Server, Activity, CreditCard, AlertCircle, Search } from 'lucide-react'
+import { Loader2, RefreshCw, Server, Activity, CreditCard, AlertCircle, Search, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { VPSAuthDialog } from './VPSAuthDialog'
 
 export function VPSList() {
     const [data, setData] = useState<VPSData | null>(null)
@@ -34,6 +35,9 @@ export function VPSList() {
     const [filterName, setFilterName] = useState('')
     const [filterStatus, setFilterStatus] = useState('')
     const [filterAccount, setFilterAccount] = useState('')
+    const [authDialogOpen, setAuthDialogOpen] = useState(false)
+    const [selectedVpsId, setSelectedVpsId] = useState('')
+    const [selectedVpsName, setSelectedVpsName] = useState('')
 
     const checkPermissions = useCallback(async () => {
         try {
@@ -53,7 +57,6 @@ export function VPSList() {
     }, [])
 
     const fetchData = useCallback(async () => {
-        setLoading(true)
         try {
             const { data: vpsData, error } = await getVPSInstancesAction()
             if (error) {
@@ -65,15 +68,21 @@ export function VPSList() {
         } catch (err) {
             toast.error(t('vps.error.fetch'))
             console.error(err)
-        } finally {
-            setLoading(false)
         }
     }, [t])
 
     useEffect(() => {
-        checkPermissions()
-        fetchData()
-    }, [fetchData, checkPermissions])
+        // 并行执行权限检查和数据获取以提高性能
+        const loadData = async () => {
+            setLoading(true)
+            try {
+                await Promise.all([checkPermissions(), fetchData()])
+            } finally {
+                setLoading(false)
+            }
+        }
+        loadData()
+    }, [checkPermissions, fetchData])
 
     const handleSyncAll = async () => {
         if (!canManage) return
@@ -286,7 +295,8 @@ export function VPSList() {
                             <TableHead>{t('vps.table.status')}</TableHead>
                             <TableHead className="text-right">{t('vps.table.traffic')}</TableHead>
                             <TableHead className="text-right">{t('vps.billing.title')}</TableHead>
-                            <TableHead className="text-right">Action</TableHead>
+                            <TableHead className="text-right">授权</TableHead>
+                            <TableHead className="text-right">同步</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -349,6 +359,22 @@ export function VPSList() {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
+                                                    onClick={() => {
+                                                        setSelectedVpsId(instance.id)
+                                                        setSelectedVpsName(instance.name)
+                                                        setAuthDialogOpen(true)
+                                                    }}
+                                                    title={`授权 ${instance.account}`}
+                                                >
+                                                    <UserPlus className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {canManage && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
                                                     onClick={() => handleSyncAccount(instance.account)}
                                                     disabled={syncingAccount === instance.account}
                                                     title={`Sync ${instance.account}`}
@@ -364,6 +390,13 @@ export function VPSList() {
                     </TableBody>
                 </Table>
             </div>
+
+            <VPSAuthDialog
+                open={authDialogOpen}
+                onOpenChange={setAuthDialogOpen}
+                vpsId={selectedVpsId}
+                vpsName={selectedVpsName}
+            />
         </div>
     )
 }
