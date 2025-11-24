@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "13.0.5"
   }
   graphql_public: {
     Tables: {
@@ -39,6 +39,269 @@ export type Database = {
   }
   public: {
     Tables: {
+      ip_allocations: {
+        Row: {
+          allocated_at: string | null
+          assigned_to: string | null
+          assignee_user_id: string | null
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          id: number
+          ip_id: number | null
+          notes: string | null
+          owner: string | null
+          owner_id: string | null
+          released_at: string | null
+          state: string | null
+        }
+        Insert: {
+          allocated_at?: string | null
+          assigned_to?: string | null
+          assignee_user_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: never
+          ip_id?: number | null
+          notes?: string | null
+          owner?: string | null
+          owner_id?: string | null
+          released_at?: string | null
+          state?: string | null
+        }
+        Update: {
+          allocated_at?: string | null
+          assigned_to?: string | null
+          assignee_user_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: never
+          ip_id?: number | null
+          notes?: string | null
+          owner?: string | null
+          owner_id?: string | null
+          released_at?: string | null
+          state?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ip_allocations_ip_id_fkey"
+            columns: ["ip_id"]
+            isOneToOne: false
+            referencedRelation: "ip_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ip_assets: {
+        Row: {
+          asn: string | null
+          auth_password: string | null
+          auth_username: string | null
+          bandwidth_total: number | null
+          bandwidth_used: number | null
+          connect_ip: string | null
+          country_code: string | null
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          expires_at: string | null
+          http_port: number | null
+          https_port: number | null
+          id: number
+          ip: string
+          ip_version: string | null
+          isp_name: string | null
+          last_sync_at: string | null
+          metadata: Json | null
+          network_type: string | null
+          order_id: string | null
+          owner: string | null
+          owner_id: string | null
+          provider: string
+          provider_id: string | null
+          proxy_type: string | null
+          public_ip: string | null
+          remark: string | null
+          routes: Json | null
+          socks5_port: number | null
+          source_raw: Json | null
+          source_url: string | null
+          status: string | null
+          type: string | null
+        }
+        Insert: {
+          asn?: string | null
+          auth_password?: string | null
+          auth_username?: string | null
+          bandwidth_total?: number | null
+          bandwidth_used?: number | null
+          connect_ip?: string | null
+          country_code?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          expires_at?: string | null
+          http_port?: number | null
+          https_port?: number | null
+          id?: never
+          ip: string
+          ip_version?: string | null
+          isp_name?: string | null
+          last_sync_at?: string | null
+          metadata?: Json | null
+          network_type?: string | null
+          order_id?: string | null
+          owner?: string | null
+          owner_id?: string | null
+          provider: string
+          provider_id?: string | null
+          proxy_type?: string | null
+          public_ip?: string | null
+          remark?: string | null
+          routes?: Json | null
+          socks5_port?: number | null
+          source_raw?: Json | null
+          source_url?: string | null
+          status?: string | null
+          type?: string | null
+        }
+        Update: {
+          asn?: string | null
+          auth_password?: string | null
+          auth_username?: string | null
+          bandwidth_total?: number | null
+          bandwidth_used?: number | null
+          connect_ip?: string | null
+          country_code?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          expires_at?: string | null
+          http_port?: number | null
+          https_port?: number | null
+          id?: never
+          ip?: string
+          ip_version?: string | null
+          isp_name?: string | null
+          last_sync_at?: string | null
+          metadata?: Json | null
+          network_type?: string | null
+          order_id?: string | null
+          owner?: string | null
+          owner_id?: string | null
+          provider?: string
+          provider_id?: string | null
+          proxy_type?: string | null
+          public_ip?: string | null
+          remark?: string | null
+          routes?: Json | null
+          socks5_port?: number | null
+          source_raw?: Json | null
+          source_url?: string | null
+          status?: string | null
+          type?: string | null
+        }
+        Relationships: []
+      }
+      module_permissions: {
+        Row: {
+          can_manage: boolean | null
+          can_menu: boolean | null
+          can_read: boolean | null
+          can_write: boolean | null
+          created_at: string | null
+          id: number
+          module: string
+          user_id: string | null
+        }
+        Insert: {
+          can_manage?: boolean | null
+          can_menu?: boolean | null
+          can_read?: boolean | null
+          can_write?: boolean | null
+          created_at?: string | null
+          id?: never
+          module: string
+          user_id?: string | null
+        }
+        Update: {
+          can_manage?: boolean | null
+          can_menu?: boolean | null
+          can_read?: boolean | null
+          can_write?: boolean | null
+          created_at?: string | null
+          id?: never
+          module?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      resource_assignments: {
+        Row: {
+          assigned_by: string | null
+          created_at: string | null
+          id: string
+          resource_id: number
+          resource_type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string | null
+          id?: string
+          resource_id: number
+          resource_type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string | null
+          id?: string
+          resource_id?: number
+          resource_type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      system_configs: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          group: string | null
+          id: string
+          is_secret: boolean | null
+          key: string
+          updated_at: string | null
+          value: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          group?: string | null
+          id?: string
+          is_secret?: boolean | null
+          key: string
+          updated_at?: string | null
+          value?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          group?: string | null
+          id?: string
+          is_secret?: boolean | null
+          key?: string
+          updated_at?: string | null
+          value?: string | null
+        }
+        Relationships: []
+      }
       todo_list: {
         Row: {
           created_at: string
@@ -72,12 +335,132 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vps_allocations: {
+        Row: {
+          allocated_at: string | null
+          assigned_to: string | null
+          created_at: string | null
+          id: number
+          notes: string | null
+          owner: string | null
+          released_at: string | null
+          state: string | null
+          vps_id: string | null
+        }
+        Insert: {
+          allocated_at?: string | null
+          assigned_to?: string | null
+          created_at?: string | null
+          id?: never
+          notes?: string | null
+          owner?: string | null
+          released_at?: string | null
+          state?: string | null
+          vps_id?: string | null
+        }
+        Update: {
+          allocated_at?: string | null
+          assigned_to?: string | null
+          created_at?: string | null
+          id?: never
+          notes?: string | null
+          owner?: string | null
+          released_at?: string | null
+          state?: string | null
+          vps_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vps_allocations_vps_id_fkey"
+            columns: ["vps_id"]
+            isOneToOne: false
+            referencedRelation: "vps_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vps_instances: {
+        Row: {
+          account: string
+          billing_remaining: number | null
+          billing_used: number | null
+          created_at: string | null
+          external_ip: string | null
+          id: string
+          instance_id: string
+          internal_ip: string | null
+          last_updated: string | null
+          machine_type: string | null
+          name: string
+          status: string
+          traffic_received: number | null
+          traffic_sent: number | null
+          zone: string
+        }
+        Insert: {
+          account: string
+          billing_remaining?: number | null
+          billing_used?: number | null
+          created_at?: string | null
+          external_ip?: string | null
+          id?: string
+          instance_id: string
+          internal_ip?: string | null
+          last_updated?: string | null
+          machine_type?: string | null
+          name: string
+          status: string
+          traffic_received?: number | null
+          traffic_sent?: number | null
+          zone: string
+        }
+        Update: {
+          account?: string
+          billing_remaining?: number | null
+          billing_used?: number | null
+          created_at?: string | null
+          external_ip?: string | null
+          id?: string
+          instance_id?: string
+          internal_ip?: string | null
+          last_updated?: string | null
+          machine_type?: string | null
+          name?: string
+          status?: string
+          traffic_received?: number | null
+          traffic_sent?: number | null
+          zone?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_module_permission: {
+        Args: { m: string; p: string }
+        Returns: boolean
+      }
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

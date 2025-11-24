@@ -46,7 +46,7 @@ export function VPSList() {
                 setCanManage(true)
                 return
             }
-            const permissions = await getUserPermissionsAction()
+            const permissions: any = await getUserPermissionsAction()
             const vpsPerm = permissions.find((p: any) => p.module === 'vps')
             if (vpsPerm?.can_manage) {
                 setCanManage(true)

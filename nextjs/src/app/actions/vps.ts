@@ -228,15 +228,14 @@ export async function allocateVPSAction(vpsId: string, userId: string, notes?: s
 export async function releaseVPSAction(allocationId: string): Promise<{ success: boolean, error: string | null }> {
     try {
         await checkPermission('manage')
-        const adminClient = await createServerAdminClient()
+        const adminClient: any = await createServerAdminClient()
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error } = await adminClient
-            .from('vps_allocations' as any)
+            .from('vps_allocations')
             .update({
                 state: 'released',
                 released_at: new Date().toISOString()
-            } as any)
+            })
             .eq('id', allocationId)
 
         if (error) throw error
