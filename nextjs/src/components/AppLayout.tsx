@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
@@ -9,7 +10,7 @@ import {
     X,
     ChevronDown,
     LogOut,
-    Key, Files, LucideListTodo,
+    Key, Files, LucideListTodo, Settings, Server,
 } from 'lucide-react';
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
@@ -117,6 +118,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         if (isAdmin) {
             baseNav.push({ name: t('nav.admin'), href: '/app/admin/users', icon: Key });
+            baseNav.push({ name: t('nav.vps'), href: '/app/admin/vps', icon: Server });
+            baseNav.push({ name: t('nav.config'), href: '/app/admin/config', icon: Settings });
         }
 
         return baseNav;
@@ -158,11 +161,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                 className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${isActive
                                     ? 'bg-primary-50 text-primary-600'
                                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                                    }`}
+                                    } `}
                             >
                                 <item.icon
                                     className={`mr-3 h-5 w-5 ${isActive ? 'text-primary-500' : 'text-gray-400 group-hover:text-gray-500'
-                                        }`}
+                                        } `}
                                 />
                                 {item.name}
                             </Link>
@@ -185,13 +188,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         <div className="flex items-center gap-1">
                             <button
                                 onClick={() => setLanguage('en')}
-                                className={`px-2 py-1 text-sm rounded ${language === 'en' ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'}`}
+                                className={`px-2 py-1 text-sm rounded ${language === 'en' ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'} `}
                             >
                                 {t('lang.en')}
                             </button>
                             <button
                                 onClick={() => setLanguage('zh')}
-                                className={`px-2 py-1 text-sm rounded ${language === 'zh' ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'}`}
+                                className={`px-2 py-1 text-sm rounded ${language === 'zh' ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'} `}
                             >
                                 {t('lang.zh')}
                             </button>
