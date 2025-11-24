@@ -41,7 +41,7 @@ export async function getUserPermissionsAction() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data } = await adminClient
             .from('module_permissions' as any)
-            .select('module, can_menu')
+            .select('module, can_menu, can_read, can_write, can_manage')
             .eq('user_id', user.id)
 
         return data || []

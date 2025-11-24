@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { getVPSInstancesAction, syncAllVPSAction, syncAccountVPSAction } from '@/app/actions/vps'
+import { checkIsAdmin, getUserPermissionsAction } from '@/app/actions/auth'
 import { VPSData, VPSInstance } from '@/types/vps'
 import { useLanguage } from '@/lib/context/LanguageContext'
 import { toast } from 'sonner'
-import { Loader2, RefreshCw, Server, Activity, CreditCard, AlertCircle, Play } from 'lucide-react'
+import { Loader2, RefreshCw, Server, Activity, CreditCard, AlertCircle, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
     Table,
@@ -24,7 +26,31 @@ export function VPSList() {
     const [loading, setLoading] = useState(true)
     const [syncing, setSyncing] = useState(false)
     const [syncingAccount, setSyncingAccount] = useState<string | null>(null)
+    const [canManage, setCanManage] = useState(false)
     const { t } = useLanguage()
+
+    // Filters
+    const [filterIp, setFilterIp] = useState('')
+    const [filterName, setFilterName] = useState('')
+    const [filterStatus, setFilterStatus] = useState('')
+    const [filterAccount, setFilterAccount] = useState('')
+
+    const checkPermissions = useCallback(async () => {
+        try {
+            const isAdmin = await checkIsAdmin()
+            if (isAdmin) {
+                setCanManage(true)
+                return
+            }
+            const permissions = await getUserPermissionsAction()
+            const vpsPerm = permissions.find((p: any) => p.module === 'vps')
+            if (vpsPerm?.can_manage) {
+                setCanManage(true)
+            }
+        } catch (error) {
+            console.error('Error checking permissions:', error)
+        }
+    }, [])
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -45,10 +71,12 @@ export function VPSList() {
     }, [t])
 
     useEffect(() => {
+        checkPermissions()
         fetchData()
-    }, [fetchData])
+    }, [fetchData, checkPermissions])
 
     const handleSyncAll = async () => {
+        if (!canManage) return
         setSyncing(true)
         try {
             toast.info('Starting global sync...')
@@ -70,6 +98,7 @@ export function VPSList() {
     }
 
     const handleSyncAccount = async (account: string) => {
+        if (!canManage) return
         setSyncingAccount(account)
         try {
             toast.info(`Syncing account ${account}...`)
@@ -106,13 +135,63 @@ export function VPSList() {
         return gb.toFixed(2) + ' GB'
     }
 
-    // Group instances by account to show unique accounts in summary or for sync buttons?
-    // Actually, user wants "sync traffic" button on the right of each row, 
-    // but "if one account has multiple vps, show same".
-    // So the button is per row, but triggers account sync.
+    const filteredInstances = useMemo(() => {
+        if (!data?.instances) return []
+        return data.instances.filter(inst => {
+            const matchIp = (inst.internalIp?.includes(filterIp) || inst.externalIp?.includes(filterIp)) || !filterIp
+            const matchName = inst.name.toLowerCase().includes(filterName.toLowerCase()) || !filterName
+            const matchStatus = inst.status.toLowerCase().includes(filterStatus.toLowerCase()) || !filterStatus
+            const matchAccount = inst.account.toLowerCase().includes(filterAccount.toLowerCase()) || !filterAccount
+            return matchIp && matchName && matchStatus && matchAccount
+        })
+    }, [data, filterIp, filterName, filterStatus, filterAccount])
 
     return (
         <div className="space-y-6">
+            {/* Filters */}
+            <Card>
+                <CardContent className="p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">IP Address</label>
+                            <div className="relative">
+                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search IP..."
+                                    value={filterIp}
+                                    onChange={(e) => setFilterIp(e.target.value)}
+                                    className="pl-8"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Name</label>
+                            <Input
+                                placeholder="Search Name..."
+                                value={filterName}
+                                onChange={(e) => setFilterName(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Status</label>
+                            <Input
+                                placeholder="Search Status..."
+                                value={filterStatus}
+                                onChange={(e) => setFilterStatus(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Account</label>
+                            <Input
+                                placeholder="Search Account..."
+                                value={filterAccount}
+                                onChange={(e) => setFilterAccount(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
             <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                     {data?.lastUpdated && (
@@ -121,10 +200,12 @@ export function VPSList() {
                         </span>
                     )}
                 </div>
-                <Button onClick={handleSyncAll} disabled={syncing} variant="default" size="sm">
-                    <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-                    {t('vps.sync')}
-                </Button>
+                {canManage && (
+                    <Button onClick={handleSyncAll} disabled={syncing} variant="default" size="sm">
+                        <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                        {t('vps.sync')}
+                    </Button>
+                )}
             </div>
 
             {data?.errors && data.errors.length > 0 && (
@@ -151,7 +232,7 @@ export function VPSList() {
                         <Server className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{data?.instances.length || 0}</div>
+                        <div className="text-2xl font-bold">{filteredInstances.length} / {data?.instances.length || 0}</div>
                     </CardContent>
                 </Card>
                 <Card>
@@ -163,7 +244,7 @@ export function VPSList() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
-                            {data ? formatTraffic(data.instances.reduce((acc, curr) => acc + (curr.trafficReceived + curr.trafficSent), 0)) : '0.00 GB'}
+                            {formatTraffic(filteredInstances.reduce((acc, curr) => acc + (curr.trafficReceived + curr.trafficSent), 0))}
                         </div>
                         <p className="text-xs text-muted-foreground">
                             {t('vps.traffic.total')}
@@ -178,13 +259,11 @@ export function VPSList() {
                         <CreditCard className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        {/* Calculate total remaining across unique accounts */}
+                        {/* Calculate total remaining across unique accounts in filtered list */}
                         <div className="text-2xl font-bold">
-                            {data ?
-                                '$' + Array.from(new Set(data.instances.map(i => i.account)))
-                                    .map(acc => data.instances.find(i => i.account === acc)?.billingRemaining || 0)
-                                    .reduce((a, b) => a + b, 0).toFixed(2)
-                                : '$0.00'
+                            {'$' + Array.from(new Set(filteredInstances.map(i => i.account)))
+                                .map(acc => filteredInstances.find(i => i.account === acc)?.billingRemaining || 0)
+                                .reduce((a, b) => a + b, 0).toFixed(2)
                             }
                         </div>
                         <p className="text-xs text-muted-foreground">
@@ -217,14 +296,14 @@ export function VPSList() {
                                     <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
                                 </TableCell>
                             </TableRow>
-                        ) : !data?.instances.length ? (
+                        ) : filteredInstances.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                                     {t('vps.empty')}
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            data.instances.map((instance) => {
+                            filteredInstances.map((instance) => {
                                 const totalTraffic = instance.trafficReceived + instance.trafficSent
                                 return (
                                     <TableRow key={instance.id}>
@@ -266,15 +345,17 @@ export function VPSList() {
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => handleSyncAccount(instance.account)}
-                                                disabled={syncingAccount === instance.account}
-                                                title={`Sync ${instance.account}`}
-                                            >
-                                                <RefreshCw className={`h-4 w-4 ${syncingAccount === instance.account ? 'animate-spin' : ''}`} />
-                                            </Button>
+                                            {canManage && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleSyncAccount(instance.account)}
+                                                    disabled={syncingAccount === instance.account}
+                                                    title={`Sync ${instance.account}`}
+                                                >
+                                                    <RefreshCw className={`h-4 w-4 ${syncingAccount === instance.account ? 'animate-spin' : ''}`} />
+                                                </Button>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 )

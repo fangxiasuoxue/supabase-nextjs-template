@@ -4,7 +4,7 @@ import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { GCPService } from '@/lib/gcp/service'
 import { VPSInstance, VPSData, GCPInstance } from '@/types/vps'
 
-async function checkAdmin() {
+async function checkPermission(permission: 'read' | 'manage') {
     const { createSSRClient } = await import('@/lib/supabase/server')
     const supabase = await createSSRClient()
 
@@ -12,6 +12,8 @@ async function checkAdmin() {
     if (!user) throw new Error('Not authenticated')
 
     const adminClient = await createServerAdminClient()
+
+    // Check if admin
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: roleData } = await adminClient
         .from('user_roles' as any)
@@ -20,8 +22,27 @@ async function checkAdmin() {
         .single()
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((roleData as any)?.role !== 'admin') {
-        throw new Error('Unauthorized: Admin access required')
+    if ((roleData as any)?.role === 'admin') return
+
+    // Check module permission
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: permData } = await adminClient
+        .from('module_permissions' as any)
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('module', 'vps')
+        .single()
+
+    if (!permData) throw new Error('Unauthorized: No VPS permissions')
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (permission === 'manage' && !(permData as any).can_manage) {
+        throw new Error('Unauthorized: Manage permission required')
+    }
+    // Read is implied if record exists (as per current logic, or check can_read)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (permission === 'read' && !(permData as any).can_read && !(permData as any).can_manage) {
+        throw new Error('Unauthorized: Read permission required')
     }
 }
 
@@ -87,7 +108,7 @@ export async function getVPSInstancesAction(): Promise<{ data: VPSData | null, e
 // Sync single account
 export async function syncAccountVPSAction(accountAlias: string): Promise<{ success: boolean, error: string | null }> {
     try {
-        await checkAdmin()
+        await checkPermission('manage')
         const configs = await getGCPConfigs()
         const config = configs.find((c: any) => c.key === `vps.gcp.key.${accountAlias}`)
 
@@ -153,7 +174,7 @@ export async function syncAccountVPSAction(accountAlias: string): Promise<{ succ
 // Sync all accounts
 export async function syncAllVPSAction(): Promise<{ results: { account: string, success: boolean, error?: string }[] }> {
     try {
-        await checkAdmin()
+        await checkPermission('manage')
         const configs = await getGCPConfigs()
         const results = []
 

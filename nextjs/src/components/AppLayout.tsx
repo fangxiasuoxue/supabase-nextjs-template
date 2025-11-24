@@ -106,6 +106,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         // But for IP, we strictly check permission.
 
         const hasIpPermission = isAdmin || permissions.some(p => p.module === 'ip' && p.can_menu);
+        const hasVpsPermission = isAdmin || permissions.some(p => p.module === 'vps' && p.can_menu);
 
         baseNav.push({ name: t('nav.storage'), href: '/app/storage', icon: Files });
         baseNav.push({ name: t('nav.table'), href: '/app/table', icon: LucideListTodo });
@@ -116,9 +117,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         baseNav.push({ name: t('nav.userSettings'), href: '/app/user-settings', icon: User });
 
+        if (hasVpsPermission) {
+            baseNav.push({ name: t('nav.vps'), href: '/app/admin/vps', icon: Server });
+        }
+
         if (isAdmin) {
             baseNav.push({ name: t('nav.admin'), href: '/app/admin/users', icon: Key });
-            baseNav.push({ name: t('nav.vps'), href: '/app/admin/vps', icon: Server });
             baseNav.push({ name: t('nav.config'), href: '/app/admin/config', icon: Settings });
         }
 
