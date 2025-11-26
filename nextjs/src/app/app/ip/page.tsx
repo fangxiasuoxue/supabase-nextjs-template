@@ -34,6 +34,11 @@ type IpAsset = {
   status: string | null
   created_at: string
   deleted_at: string | null
+  // New fields for testing
+  last_latency_ms: number | null
+  last_speed_kbps: number | null
+  last_tested_at: string | null
+  last_ip: string | null
 }
 
 type FormData = {
@@ -97,7 +102,12 @@ export default function IpManagementPage() {
 
   // 删除确认对话框
   const [deletingId, setDeletingId] = useState<number | null>(null)
+
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+
+  // 测试状态
+  const [testingIds, setTestingIds] = useState<Set<number>>(new Set())
+  const [isTestingAll, setIsTestingAll] = useState(false)
 
   // 查询依赖项变化时重新获取数据
   useEffect(() => {
@@ -481,6 +491,75 @@ export default function IpManagementPage() {
     }
   }
 
+  async function handleTest(id: number) {
+    try {
+      setTestingIds(prev => new Set(prev).add(id))
+      const res = await fetch('/api/test-proxies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proxy_ids: [id] })
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || '测试失败')
+
+      // Update local state with result
+      if (json.results && json.results.length > 0) {
+        const result = json.results[0]
+        setIpAssets(prev => prev.map(asset => {
+          if (asset.id === id) {
+            return {
+              ...asset,
+              status: result.is_reachable ? 'active' : 'unreachable',
+              last_latency_ms: result.latency_ms,
+              last_speed_kbps: result.download_speed_kbps,
+              last_tested_at: result.tested_at,
+              last_ip: result.ip_address
+            }
+          }
+          return asset
+        }))
+      }
+    } catch (e: any) {
+      setError(e.message || '测试失败')
+    } finally {
+      setTestingIds(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }
+  }
+
+  async function handleTestAll() {
+    try {
+      setIsTestingAll(true)
+      // Get all current page IDs or maybe fetch all active IDs?
+      // For now, let's just trigger the batch test API which handles finding active proxies
+      // But wait, the API requires IDs or we can use GET to test all.
+      // Let's use GET /api/test-proxies which tests all active ones (limit 50 by default)
+      // Or we can pass all IDs from current view?
+      // Requirement says "Test All", usually implies all in DB or all visible.
+      // Let's use the GET endpoint we created which defaults to testing active ones.
+
+      const res = await fetch('/api/test-proxies?limit=100', { method: 'GET' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || '批量测试失败')
+
+      await fetchIpAssets()
+    } catch (e: any) {
+      setError(e.message || '批量测试失败')
+    } finally {
+      setIsTestingAll(false)
+    }
+  }
+
+  const getStatusColor = (status: string | null) => {
+    if (!status) return "text-gray-500"
+    if (status === 'active') return "text-green-600"
+    if (status === 'unreachable') return "text-red-600"
+    return "text-yellow-600"
+  }
+
   return (
     <div className="space-y-6 p-6">
       <Card>
@@ -538,9 +617,14 @@ export default function IpManagementPage() {
               {formMode === "create" && (
                 <div className="flex gap-2">
                   {canManage && (
-                    <Button onClick={handleSync} variant="outline" disabled={loading}>
-                      同步
-                    </Button>
+                    <>
+                      <Button onClick={handleTestAll} variant="outline" disabled={loading || isTestingAll}>
+                        {isTestingAll ? '测试中...' : '测试全部'}
+                      </Button>
+                      <Button onClick={handleSync} variant="outline" disabled={loading}>
+                        同步
+                      </Button>
+                    </>
                   )}
                   <Button onClick={handleCreate} variant="outline">
                     新建
@@ -692,6 +776,8 @@ export default function IpManagementPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>备注</TableHead>
+                        <TableHead>状态</TableHead>
+                        <TableHead>延迟/速度</TableHead>
                         <TableHead>国家</TableHead>
                         <TableHead>供应商ISP</TableHead>
                         <TableHead>订单号</TableHead>
@@ -705,10 +791,31 @@ export default function IpManagementPage() {
                       {ipAssets.map((asset) => (
                         <TableRow key={asset.id}>
                           <TableCell>{asset.remark || "-"}</TableCell>
+                          <TableCell>
+                            <span className={getStatusColor(asset.status)}>
+                              {asset.status || '未知'}
+                            </span>
+                            {asset.last_tested_at && (
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(asset.last_tested_at).toLocaleString()}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              <div>{asset.last_latency_ms ? `${asset.last_latency_ms}ms` : '-'}</div>
+                              <div>{asset.last_speed_kbps ? `${(asset.last_speed_kbps / 1024).toFixed(2)} MB/s` : '-'}</div>
+                            </div>
+                          </TableCell>
                           <TableCell>{asset.country_code || "-"}</TableCell>
                           <TableCell>{asset.isp_name || "-"}</TableCell>
                           <TableCell>{asset.provider_id || "-"}</TableCell>
-                          <TableCell>{asset.ip}</TableCell>
+                          <TableCell>
+                            <div>{asset.ip}</div>
+                            {asset.last_ip && asset.last_ip !== asset.ip && (
+                              <div className="text-xs text-muted-foreground">出口: {asset.last_ip}</div>
+                            )}
+                          </TableCell>
                           <TableCell>
                             {formatBandwidth(asset.bandwidth_used)}
                             {asset.bandwidth_total && ` / ${formatBandwidth(asset.bandwidth_total)}`}
@@ -716,6 +823,14 @@ export default function IpManagementPage() {
                           <TableCell>{formatDateTime(asset.expires_at)}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex gap-2 justify-end">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleTest(asset.id)}
+                                disabled={testingIds.has(asset.id)}
+                              >
+                                {testingIds.has(asset.id) ? '...' : '测试'}
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
