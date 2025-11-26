@@ -114,7 +114,11 @@ export type Database = {
           ip: string
           ip_version: string | null
           isp_name: string | null
+          last_ip: string | null
+          last_latency_ms: number | null
+          last_speed_kbps: number | null
           last_sync_at: string | null
+          last_tested_at: string | null
           metadata: Json | null
           network_type: string | null
           order_id: string | null
@@ -150,7 +154,11 @@ export type Database = {
           ip: string
           ip_version?: string | null
           isp_name?: string | null
+          last_ip?: string | null
+          last_latency_ms?: number | null
+          last_speed_kbps?: number | null
           last_sync_at?: string | null
+          last_tested_at?: string | null
           metadata?: Json | null
           network_type?: string | null
           order_id?: string | null
@@ -186,7 +194,11 @@ export type Database = {
           ip?: string
           ip_version?: string | null
           isp_name?: string | null
+          last_ip?: string | null
+          last_latency_ms?: number | null
+          last_speed_kbps?: number | null
           last_sync_at?: string | null
+          last_tested_at?: string | null
           metadata?: Json | null
           network_type?: string | null
           order_id?: string | null

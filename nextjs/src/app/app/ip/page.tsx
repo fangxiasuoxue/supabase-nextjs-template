@@ -34,11 +34,9 @@ type IpAsset = {
   status: string | null
   created_at: string
   deleted_at: string | null
-  // New fields for testing
   last_latency_ms: number | null
   last_speed_kbps: number | null
   last_tested_at: string | null
-  last_ip: string | null
 }
 
 type FormData = {
@@ -502,22 +500,10 @@ export default function IpManagementPage() {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || '测试失败')
 
-      // Update local state with result
+      // Update local state and refresh from database
       if (json.results && json.results.length > 0) {
-        const result = json.results[0]
-        setIpAssets(prev => prev.map(asset => {
-          if (asset.id === id) {
-            return {
-              ...asset,
-              status: result.is_reachable ? 'active' : 'unreachable',
-              last_latency_ms: result.latency_ms,
-              last_speed_kbps: result.download_speed_kbps,
-              last_tested_at: result.tested_at,
-              last_ip: result.ip_address
-            }
-          }
-          return asset
-        }))
+        // Refresh from database to get updated status, latency, and speed
+        await fetchIpAssets()
       }
     } catch (e: any) {
       setError(e.message || '测试失败')
@@ -795,11 +781,6 @@ export default function IpManagementPage() {
                             <span className={getStatusColor(asset.status)}>
                               {asset.status || '未知'}
                             </span>
-                            {asset.last_tested_at && (
-                              <div className="text-xs text-muted-foreground">
-                                {new Date(asset.last_tested_at).toLocaleString()}
-                              </div>
-                            )}
                           </TableCell>
                           <TableCell>
                             <div className="text-sm">
@@ -810,12 +791,7 @@ export default function IpManagementPage() {
                           <TableCell>{asset.country_code || "-"}</TableCell>
                           <TableCell>{asset.isp_name || "-"}</TableCell>
                           <TableCell>{asset.provider_id || "-"}</TableCell>
-                          <TableCell>
-                            <div>{asset.ip}</div>
-                            {asset.last_ip && asset.last_ip !== asset.ip && (
-                              <div className="text-xs text-muted-foreground">出口: {asset.last_ip}</div>
-                            )}
-                          </TableCell>
+                          <TableCell>{asset.ip}</TableCell>
                           <TableCell>
                             {formatBandwidth(asset.bandwidth_used)}
                             {asset.bandwidth_total && ` / ${formatBandwidth(asset.bandwidth_total)}`}
