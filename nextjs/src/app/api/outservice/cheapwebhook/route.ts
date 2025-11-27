@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
             .eq('key', 'message.cheap.webhook.secret')
             .single();
 
-        if (configError || !configData?.value) {
+        if (configError || !(configData as any)?.value) {
             console.error('Failed to get webhook secret:', configError);
             return NextResponse.json(
                 { error: 'Webhook secret not configured' },
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const secret = configData.value;
+        const secret = (configData as any).value;
 
         // 验证签名
         const isValid = verifyWebhookSignature(
@@ -138,8 +138,8 @@ export async function POST(request: NextRequest) {
         }
 
         // 保存消息到数据库
-        const { error: insertError } = await adminClient
-            .from('external_messages' as any)
+        const { error: insertError } = await (adminClient
+            .from('external_messages' as any) as any)
             .insert({
                 source: 'proxy-cheap',
                 event_type: eventName,

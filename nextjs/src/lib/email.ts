@@ -3,7 +3,8 @@ import { Resend } from 'resend';
 // Initialize Resend with API key from environment variable or system config
 // Note: In a real app, we might want to fetch this from system_configs if it's dynamic
 // But for now, let's assume it's an env var or we'll fetch it in the action
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resendApiKey = process.env.RESEND_API_KEY;
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 export async function sendEmail({
     to,
@@ -15,7 +16,7 @@ export async function sendEmail({
     html: string;
 }) {
     try {
-        if (!process.env.RESEND_API_KEY) {
+        if (!resend) {
             console.warn('RESEND_API_KEY is not set');
             // For development/testing without key, we might want to just log it
             if (process.env.NODE_ENV === 'development') {
