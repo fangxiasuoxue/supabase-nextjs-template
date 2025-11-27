@@ -10,7 +10,7 @@ import {
     X,
     ChevronDown,
     LogOut,
-    Key, Files, LucideListTodo, Settings, Server,
+    Key, Files, LucideListTodo, Settings, Server, MessageSquare,
 } from 'lucide-react';
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
@@ -107,6 +107,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         const hasIpPermission = isAdmin || permissions.some(p => p.module === 'ip' && p.can_menu);
         const hasVpsPermission = isAdmin || permissions.some(p => p.module === 'vps' && p.can_menu);
+        const hasMessagesPermission = isAdmin || permissions.some(p => p.module === 'messages' && p.can_menu);
 
         baseNav.push({ name: t('nav.storage'), href: '/app/storage', icon: Files });
         baseNav.push({ name: t('nav.table'), href: '/app/table', icon: LucideListTodo });
@@ -119,6 +120,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         if (hasVpsPermission) {
             baseNav.push({ name: t('nav.vps'), href: '/app/admin/vps', icon: Server });
+        }
+
+        if (hasMessagesPermission) {
+            baseNav.push({ name: t('nav.messages'), href: '/app/admin/messages', icon: MessageSquare });
         }
 
         if (isAdmin) {

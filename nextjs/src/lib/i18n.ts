@@ -79,6 +79,7 @@ const en: Dict = {
   'config.error.generic': 'Something went wrong',
   'config.empty': 'No configurations found',
   'nav.config': 'Configuration',
+  'nav.messages': 'Messages',
   'nav.vps': 'VPS Management',
 
   'vps.title': 'VPS Management',
@@ -183,6 +184,7 @@ const zh: Dict = {
   'config.error.generic': '发生错误',
   'config.empty': '未找到配置',
   'nav.config': '配置管理',
+  'nav.messages': '消息管理',
   'nav.vps': 'VPS 管理',
 
   'vps.title': 'VPS 管理',
