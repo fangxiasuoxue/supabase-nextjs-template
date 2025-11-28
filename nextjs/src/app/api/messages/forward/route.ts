@@ -67,14 +67,18 @@ export async function POST(request: NextRequest) {
 
         // 4. Get target users emails
         const { data: users, error: usersError } = await adminClient
-            .from('auth_users_view' as any) // Assuming we have a view or we can query auth.users via admin API if enabled
-            // Actually, we can't query auth.users directly easily unless we have a view or use listUsers
-            // Let's try to query the public.users table if it exists, or use the admin client to list users
-            // But listUsers is not available in Supabase client directly for bulk fetch by ID easily without loop
-            // Let's assume we can query a view or table. 
-            // Wait, in `api/users/list/route.ts` it uses `adminClient.auth.admin.listUsers()`.
-            // Let's use that.
-            .select('id, email') // This won't work on auth.users directly via postgrest
+            .from('auth_users_view' as any)
+            .select('id, email')
+
+        // Get Resend configuration
+        const { data: resendConfigData } = await adminClient
+            .from('system_configs' as any)
+            .select('key, value')
+            .in('key', ['sys.resend.apikey', 'sys.resend.frommail'])
+
+        const resendConfig = resendConfigData as any[]
+        const resendApiKey = resendConfig?.find((c: any) => c.key === 'sys.resend.apikey')?.value
+        const resendFromEmail = resendConfig?.find((c: any) => c.key === 'sys.resend.frommail')?.value
 
         // Alternative: Fetch all users and filter (not efficient but works for small scale)
         // Or better: use `adminClient.auth.admin.getUserById(id)` in a loop
@@ -92,27 +96,147 @@ export async function POST(request: NextRequest) {
         }
 
         // 5. Send emails
-        const subject = `[Forward] ${message.source} - ${message.event_type}`
-        const html = `
-      <h2>Forwarded Message</h2>
-      <p><strong>Source:</strong> ${message.source}</p>
-      <p><strong>Event Type:</strong> ${message.event_type}</p>
-      <p><strong>Event ID:</strong> ${message.event_id}</p>
-      <p><strong>Received At:</strong> ${new Date(message.received_at).toLocaleString()}</p>
-      <hr />
-      <h3>Payload:</h3>
-      <pre style="background-color: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto;">
-${JSON.stringify(message.payload, null, 2)}
-      </pre>
-      ${message.notes ? `<hr /><h3>Notes:</h3><p>${message.notes}</p>` : ''}
-    `
+        const generateEmailContent = (message: any) => {
+            const baseStyles = `
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                background-color: #ffffff;
+            `;
+
+            const ulStyles = `
+                list-style-type: none;
+                padding: 0;
+                margin: 20px 0;
+            `;
+
+            const liStyles = `
+                margin-bottom: 10px;
+                padding-left: 0;
+            `;
+
+            const footerStyles = `
+                margin-top: 30px;
+                padding-top: 20px;
+                border-top: 1px solid #e5e7eb;
+                font-size: 12px;
+                color: #6b7280;
+            `;
+
+            let subject = '';
+            let bodyContent = '';
+
+            // Helper to format date
+            const formatDate = (dateStr: string) => {
+                try {
+                    return new Date(dateStr).toLocaleString();
+                } catch (e) {
+                    return dateStr;
+                }
+            };
+
+            switch (message.event_type) {
+                case 'proxy.maintenance_window.created':
+                    subject = 'Proxy Maintenance Window Created';
+                    bodyContent = `
+                        <p>Dear User,</p>
+                        <p>A new maintenance window has been scheduled for one of your proxies.</p>
+                        <ul style="${ulStyles}">
+                            <li style="${liStyles}"><strong>Proxy ID:</strong> ${message.payload.proxyId}</li>
+                            <li style="${liStyles}"><strong>Window ID:</strong> ${message.payload.maintenanceWindowId}</li>
+                            <li style="${liStyles}"><strong>Start Time:</strong> ${formatDate(message.payload.startsAt)}</li>
+                            <li style="${liStyles}"><strong>End Time:</strong> ${formatDate(message.payload.endsAt)}</li>
+                        </ul>
+                        <p>This notification was generated because your account is subscribed to maintenance-related webhook events.</p>
+                    `;
+                    break;
+
+                case 'proxy.maintenance_window.cancelled':
+                case 'proxy.maintenance_window.deleted':
+                    subject = 'Proxy Maintenance Window Cancelled';
+                    bodyContent = `
+                        <p>Dear User,</p>
+                        <p>The scheduled maintenance window has been cancelled.</p>
+                        <ul style="${ulStyles}">
+                            <li style="${liStyles}"><strong>Proxy ID:</strong> ${message.payload.proxyId}</li>
+                            <li style="${liStyles}"><strong>Window ID:</strong> ${message.payload.maintenanceWindowId}</li>
+                            ${message.payload.startsAt ? `<li style="${liStyles}"><strong>Original Start:</strong> ${formatDate(message.payload.startsAt)}</li>` : ''}
+                            ${message.payload.endsAt ? `<li style="${liStyles}"><strong>Original End:</strong> ${formatDate(message.payload.endsAt)}</li>` : ''}
+                        </ul>
+                        <p>This notification was automatically generated.</p>
+                    `;
+                    break;
+
+                case 'proxy.status.changed':
+                    subject = 'Proxy Status Update';
+                    bodyContent = `
+                        <p>Dear User,</p>
+                        <p>The status of one of your proxies has changed.</p>
+                        <ul style="${ulStyles}">
+                            <li style="${liStyles}"><strong>Proxy ID:</strong> ${message.payload.proxyId}</li>
+                            <li style="${liStyles}"><strong>Old Status:</strong> ${message.payload.oldStatus}</li>
+                            <li style="${liStyles}"><strong>New Status:</strong> <strong>${message.payload.status}</strong></li>
+                        </ul>
+                        <p>This message was sent because you have monitoring enabled.</p>
+                    `;
+                    break;
+
+                case 'proxy.bandwidth.added':
+                    subject = 'Proxy Bandwidth Added';
+                    bodyContent = `
+                        <p>Dear User,</p>
+                        <p>Additional bandwidth has been successfully added to your proxy.</p>
+                        <ul style="${ulStyles}">
+                            <li style="${liStyles}"><strong>Proxy ID:</strong> ${message.payload.proxyId}</li>
+                            <li style="${liStyles}"><strong>Added Traffic:</strong> <strong>${message.payload.trafficInGb} GB</strong></li>
+                        </ul>
+                        <p>This notification confirms the resource allocation.</p>
+                    `;
+                    break;
+
+                default:
+                    subject = `System Notification: ${message.event_type}`;
+                    bodyContent = `
+                        <p>Dear User,</p>
+                        <p>A new event has been received from ${message.source}:</p>
+                        <pre style="background-color: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto;">${JSON.stringify(message.payload, null, 2)}</pre>
+                        <p>This is an automated system notification.</p>
+                    `;
+            }
+
+            const html = `
+                <div style="${baseStyles}">
+                    ${bodyContent}
+                    ${message.notes ? `
+                        <div style="margin-top: 20px; padding: 10px; background-color: #fffbeb; border-radius: 4px;">
+                            <strong>Note:</strong> ${message.notes}
+                        </div>
+                    ` : ''}
+                    <div style="${footerStyles}">
+                        <p>Kind regards,<br />System Notification Service</p>
+                        <p style="margin-top: 10px; font-size: 10px; color: #9ca3af;">Event ID: ${message.event_id}</p>
+                    </div>
+                </div>
+            `;
+
+            return { subject, html };
+        };
+
+        const { subject, html } = generateEmailContent(message);
 
         const results = []
         for (const email of targetEmails) {
             const result = await sendEmail({
                 to: email,
                 subject,
-                html
+                html,
+                apiKey: resendApiKey,
+                fromEmail: resendFromEmail
             })
             results.push({ email, ...result })
         }
