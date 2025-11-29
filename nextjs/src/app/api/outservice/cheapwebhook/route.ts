@@ -168,11 +168,13 @@ export async function POST(request: NextRequest) {
             source: 'proxy-cheap'
         });
 
-        // Trigger auto-push (non-blocking)
+        // Trigger auto-push (blocking to ensure execution in serverless)
         if (insertedData) {
-            autoPushMessage((insertedData as any).id, insertedData as any).catch(err => {
+            try {
+                await autoPushMessage((insertedData as any).id, insertedData as any);
+            } catch (err) {
                 console.error('Auto-push failed:', err);
-            });
+            }
         }
 
         return NextResponse.json({

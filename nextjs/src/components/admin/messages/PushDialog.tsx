@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Send, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -19,7 +19,7 @@ export function PushDialog({ messageId, trigger, onSuccess }: PushDialogProps) {
     const [open, setOpen] = useState(false)
     const [sending, setSending] = useState(false)
     const [botConfigs, setBotConfigs] = useState<Array<{ userId: string, botUrl: string }>>([])
-    const [selectedBot, setSelectedBot] = useState<string>('')
+    const [selectedBots, setSelectedBots] = useState<string[]>([])
     const [loading, setLoading] = useState(false)
 
     useEffect(() => {
@@ -35,48 +35,74 @@ export function PushDialog({ messageId, trigger, onSuccess }: PushDialogProps) {
             if (result.data) {
                 const configs = result.data.filter(c => c.botUrl)
                 setBotConfigs(configs)
-                // Default to first config or 'default'
-                if (configs.length > 0) {
-                    setSelectedBot(configs[0].userId)
-                } else {
-                    setSelectedBot('default')
-                }
+                // Default to 'default' if no configs, otherwise select all by default or none
+                setSelectedBots(['default'])
             }
         } catch (e) {
             console.error('Failed to load bot configs:', e)
-            setSelectedBot('default')
+            setSelectedBots(['default'])
         } finally {
             setLoading(false)
         }
     }
 
+    const toggleBot = (botId: string) => {
+        setSelectedBots(prev => {
+            if (prev.includes(botId)) {
+                return prev.filter(id => id !== botId)
+            } else {
+                return [...prev, botId]
+            }
+        })
+    }
+
     const handlePush = async () => {
+        if (selectedBots.length === 0) {
+            toast.error('请至少选择一个推送目标')
+            return
+        }
+
         setSending(true)
+        let successCount = 0
+        let failCount = 0
+
         try {
-            const botKey = selectedBot === 'default'
-                ? 'message.cheap.push.qywxboturl'
-                : `message.cheap.push.qywxboturl.${selectedBot}`
+            for (const botId of selectedBots) {
+                const botKey = botId === 'default'
+                    ? 'message.cheap.push.qywxboturl'
+                    : `message.cheap.push.qywxboturl.${botId}`
 
-            const response = await fetch('/api/messages/push', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message_id: messageId,
-                    bot_key: botKey
-                })
-            })
+                try {
+                    const response = await fetch('/api/messages/push', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message_id: messageId,
+                            bot_key: botKey
+                        })
+                    })
 
-            const data = await response.json()
+                    const data = await response.json()
 
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to push message')
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Failed')
+                    }
+                    successCount++
+                } catch (e) {
+                    console.error(`Failed to push to ${botId}:`, e)
+                    failCount++
+                }
             }
 
-            toast.success('Message pushed to WeChat Work')
-            setOpen(false)
-            if (onSuccess) onSuccess()
+            if (successCount > 0) {
+                toast.success(`成功推送到 ${successCount} 个目标${failCount > 0 ? `，${failCount} 个失败` : ''}`)
+                setOpen(false)
+                if (onSuccess) onSuccess()
+            } else {
+                toast.error('推送失败')
+            }
         } catch (e: any) {
             toast.error(e.message)
         } finally {
@@ -108,20 +134,29 @@ export function PushDialog({ messageId, trigger, onSuccess }: PushDialogProps) {
                 ) : (
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <Label htmlFor="bot-select">推送目标</Label>
-                            <Select value={selectedBot} onValueChange={setSelectedBot}>
-                                <SelectTrigger id="bot-select">
-                                    <SelectValue placeholder="选择机器人" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="default">默认机器人</SelectItem>
-                                    {botConfigs.map(config => (
-                                        <SelectItem key={config.userId} value={config.userId}>
+                            <Label>推送目标 (可多选)</Label>
+                            <div className="border rounded-md p-4 space-y-3 max-h-[200px] overflow-y-auto">
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="bot-default"
+                                        checked={selectedBots.includes('default')}
+                                        onCheckedChange={() => toggleBot('default')}
+                                    />
+                                    <Label htmlFor="bot-default" className="cursor-pointer">默认机器人</Label>
+                                </div>
+                                {botConfigs.map(config => (
+                                    <div key={config.userId} className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id={`bot-${config.userId}`}
+                                            checked={selectedBots.includes(config.userId)}
+                                            onCheckedChange={() => toggleBot(config.userId)}
+                                        />
+                                        <Label htmlFor={`bot-${config.userId}`} className="cursor-pointer">
                                             {config.userId}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                                        </Label>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                         <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
                             消息将被格式化为 Markdown 并发送到选定的企业微信机器人
