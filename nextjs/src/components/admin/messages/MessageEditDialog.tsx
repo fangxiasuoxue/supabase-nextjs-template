@@ -28,7 +28,7 @@ export function MessageEditDialog({ messageId, currentNotes, currentIsRead, trig
         try {
             setLoading(true)
             const result = await updateMessageAction(messageId, {
-                notes: notes.trim() || null,
+                notes: notes.trim() || undefined,
                 is_read: isRead
             })
 
