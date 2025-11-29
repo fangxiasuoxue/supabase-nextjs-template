@@ -90,8 +90,8 @@ export async function updateTemplateAction(key: string, content: string): Promis
 
         if (existing) {
             // Update existing
-            const { error } = await adminClient
-                .from('system_configs' as any)
+            const { error } = await (adminClient
+                .from('system_configs' as any) as any)
                 .update({ value: content, updated_at: new Date().toISOString() })
                 .eq('key', key)
 
@@ -100,8 +100,8 @@ export async function updateTemplateAction(key: string, content: string): Promis
             }
         } else {
             // Insert new
-            const { error } = await adminClient
-                .from('system_configs' as any)
+            const { error } = await (adminClient
+                .from('system_configs' as any) as any)
                 .insert({
                     key,
                     value: content,
