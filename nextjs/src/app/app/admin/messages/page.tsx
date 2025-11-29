@@ -19,6 +19,8 @@ import { toast } from "sonner"
 import { ForwardDialog } from "@/components/admin/messages/ForwardDialog"
 import { PushDialog } from "@/components/admin/messages/PushDialog"
 import { MessageEditDialog } from "@/components/admin/messages/MessageEditDialog"
+import { TemplateManagementDialog } from "@/components/admin/messages/TemplateManagementDialog"
+import { PushConfigManagementDialog } from "@/components/admin/messages/PushConfigManagementDialog"
 import { EditMessageDialog } from "@/components/admin/messages/EditMessageDialog"
 
 export default function MessagesPage() {
@@ -277,8 +279,16 @@ export default function MessagesPage() {
         <div className="space-y-6 p-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>消息管理</CardTitle>
-                    <CardDescription>管理来自 Proxy-Cheap 的 Webhook 通知消息</CardDescription>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle>消息管理</CardTitle>
+                            <CardDescription>管理来自 Proxy-Cheap 的 Webhook 通知消息</CardDescription>
+                        </div>
+                        <div className="flex gap-2">
+                            <TemplateManagementDialog />
+                            <PushConfigManagementDialog />
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     {error && (
