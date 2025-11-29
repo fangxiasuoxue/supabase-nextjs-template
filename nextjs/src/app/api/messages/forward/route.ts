@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { createSSRClient } from '@/lib/supabase/server'
 import { sendEmail } from '@/lib/email'
+import { getTemplate, renderTemplate, formatDate, DEFAULT_EMAIL_TEMPLATES, TemplateVariables } from '@/lib/messageTemplate'
 
 export async function POST(request: NextRequest) {
     try {
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 5. Send emails
-        const generateEmailContent = (message: any) => {
+        const generateEmailContent = async (message: any) => {
             const baseStyles = `
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                 line-height: 1.6;
@@ -109,17 +110,6 @@ export async function POST(request: NextRequest) {
                 background-color: #ffffff;
             `;
 
-            const ulStyles = `
-                list-style-type: none;
-                padding: 0;
-                margin: 20px 0;
-            `;
-
-            const liStyles = `
-                margin-bottom: 10px;
-                padding-left: 0;
-            `;
-
             const footerStyles = `
                 margin-top: 30px;
                 padding-top: 20px;
@@ -128,97 +118,49 @@ export async function POST(request: NextRequest) {
                 color: #6b7280;
             `;
 
-            let subject = '';
-            let bodyContent = '';
-
-            // Helper to format date
-            const formatDate = (dateStr: string) => {
-                try {
-                    return new Date(dateStr).toLocaleString();
-                } catch (e) {
-                    return dateStr;
-                }
-            };
-
-            switch (message.event_type) {
-                case 'proxy.maintenance_window.created':
-                    subject = 'Proxy Maintenance Window Created';
-                    bodyContent = `
-                        <p>Dear User,</p>
-                        <p>A new maintenance window has been scheduled for one of your proxies.</p>
-                        <ul style="${ulStyles}">
-                            <li style="${liStyles}"><strong>Proxy ID:</strong> ${message.payload.proxyId}</li>
-                            <li style="${liStyles}"><strong>Window ID:</strong> ${message.payload.maintenanceWindowId}</li>
-                            <li style="${liStyles}"><strong>Start Time:</strong> ${formatDate(message.payload.startsAt)}</li>
-                            <li style="${liStyles}"><strong>End Time:</strong> ${formatDate(message.payload.endsAt)}</li>
-                        </ul>
-                        <p>This notification was generated because your account is subscribed to maintenance-related webhook events.</p>
-                    `;
-                    break;
-
-                case 'proxy.maintenance_window.cancelled':
-                case 'proxy.maintenance_window.deleted':
-                    subject = 'Proxy Maintenance Window Cancelled';
-                    bodyContent = `
-                        <p>Dear User,</p>
-                        <p>The scheduled maintenance window has been cancelled.</p>
-                        <ul style="${ulStyles}">
-                            <li style="${liStyles}"><strong>Proxy ID:</strong> ${message.payload.proxyId}</li>
-                            <li style="${liStyles}"><strong>Window ID:</strong> ${message.payload.maintenanceWindowId}</li>
-                            ${message.payload.startsAt ? `<li style="${liStyles}"><strong>Original Start:</strong> ${formatDate(message.payload.startsAt)}</li>` : ''}
-                            ${message.payload.endsAt ? `<li style="${liStyles}"><strong>Original End:</strong> ${formatDate(message.payload.endsAt)}</li>` : ''}
-                        </ul>
-                        <p>This notification was automatically generated.</p>
-                    `;
-                    break;
-
-                case 'proxy.status.changed':
-                    subject = 'Proxy Status Update';
-                    bodyContent = `
-                        <p>Dear User,</p>
-                        <p>The status of one of your proxies has changed.</p>
-                        <ul style="${ulStyles}">
-                            <li style="${liStyles}"><strong>Proxy ID:</strong> ${message.payload.proxyId}</li>
-                            <li style="${liStyles}"><strong>Old Status:</strong> ${message.payload.oldStatus}</li>
-                            <li style="${liStyles}"><strong>New Status:</strong> <strong>${message.payload.status}</strong></li>
-                        </ul>
-                        <p>This message was sent because you have monitoring enabled.</p>
-                    `;
-                    break;
-
-                case 'proxy.bandwidth.added':
-                    subject = 'Proxy Bandwidth Added';
-                    bodyContent = `
-                        <p>Dear User,</p>
-                        <p>Additional bandwidth has been successfully added to your proxy.</p>
-                        <ul style="${ulStyles}">
-                            <li style="${liStyles}"><strong>Proxy ID:</strong> ${message.payload.proxyId}</li>
-                            <li style="${liStyles}"><strong>Added Traffic:</strong> <strong>${message.payload.trafficInGb} GB</strong></li>
-                        </ul>
-                        <p>This notification confirms the resource allocation.</p>
-                    `;
-                    break;
-
-                default:
-                    subject = `System Notification: ${message.event_type}`;
-                    bodyContent = `
-                        <p>Dear User,</p>
-                        <p>A new event has been received from ${message.source}:</p>
-                        <pre style="background-color: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto;">${JSON.stringify(message.payload, null, 2)}</pre>
-                        <p>This is an automated system notification.</p>
-                    `;
+            // Get subject based on event type
+            const subjectMap: Record<string, string> = {
+                'proxy.maintenance_window.created': '🛠️ 维护通知: IP 网络地址业务调整',
+                'proxy.maintenance_window.cancelled': '✅ 维护取消: IP 网络地址业务',
+                'proxy.maintenance_window.deleted': '✅ 维护取消: IP 网络地址业务',
+                'proxy.status.changed': '🔄 状态变更: IP 网络地址业务',
+                'proxy.bandwidth.added': '📶 流量增加: IP 网络地址业务'
             }
+
+            const subject = subjectMap[message.event_type] || `系统通知: ${message.event_type}`
+
+            // Get template
+            const defaultTemplate = DEFAULT_EMAIL_TEMPLATES[message.event_type as keyof typeof DEFAULT_EMAIL_TEMPLATES] || `<p>尊贵的会员,您好:</p>
+<p>收到来自 {{source}} 的新通知:</p>
+<pre style="background-color: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto;">${JSON.stringify(message.payload, null, 2)}</pre>
+<p>这是一条自动发送的系统通知。</p>
+{{customContent}}`
+
+            const template = await getTemplate('email', message.event_type, defaultTemplate)
+
+            // Prepare template variables
+            const variables: TemplateVariables = {
+                proxyId: message.payload.proxyId,
+                startsAt: message.payload.startsAt ? formatDate(message.payload.startsAt) : '',
+                endsAt: message.payload.endsAt ? formatDate(message.payload.endsAt) : '',
+                maintenanceWindowId: message.payload.maintenanceWindowId,
+                oldStatus: message.payload.oldStatus,
+                status: message.payload.status,
+                trafficInGb: message.payload.trafficInGb,
+                eventType: message.event_type,
+                source: message.source,
+                receivedAt: formatDate(message.received_at),
+                notes: message.notes || '',
+                customContent: message.notes ? `<div style="margin-top: 20px; padding: 10px; background-color: #fffbeb; border-radius: 4px;"><strong>备注:</strong> ${message.notes}</div>` : ''
+            }
+
+            const bodyContent = renderTemplate(template, variables)
 
             const html = `
                 <div style="${baseStyles}">
                     ${bodyContent}
-                    ${message.notes ? `
-                        <div style="margin-top: 20px; padding: 10px; background-color: #fffbeb; border-radius: 4px;">
-                            <strong>Note:</strong> ${message.notes}
-                        </div>
-                    ` : ''}
                     <div style="${footerStyles}">
-                        <p>Kind regards,<br />System Notification Service</p>
+                        <p>此致,<br />IBF 平台服务团队</p>
                         <p style="margin-top: 10px; font-size: 10px; color: #9ca3af;">Event ID: ${message.event_id}</p>
                     </div>
                 </div>
@@ -227,7 +169,7 @@ export async function POST(request: NextRequest) {
             return { subject, html };
         };
 
-        const { subject, html } = generateEmailContent(message);
+        const { subject, html } = await generateEmailContent(message);
 
         const results = []
         for (const email of targetEmails) {

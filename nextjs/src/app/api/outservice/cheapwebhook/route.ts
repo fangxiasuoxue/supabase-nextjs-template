@@ -1,6 +1,7 @@
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { autoPushMessage } from '@/lib/autoPush';
 
 /**
  * 验证 Proxy-Cheap webhook 签名
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 保存消息到数据库
-        const { error: insertError } = await (adminClient
+        const { data: insertedData, error: insertError } = await (adminClient
             .from('external_messages' as any) as any)
             .insert({
                 source: 'proxy-cheap',
@@ -149,7 +150,9 @@ export async function POST(request: NextRequest) {
                 received_at: new Date().toISOString(),
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
-            });
+            })
+            .select()
+            .single();
 
         if (insertError) {
             console.error('Failed to save message:', insertError);
@@ -164,6 +167,13 @@ export async function POST(request: NextRequest) {
             eventId,
             source: 'proxy-cheap'
         });
+
+        // Trigger auto-push (non-blocking)
+        if (insertedData) {
+            autoPushMessage((insertedData as any).id, insertedData as any).catch(err => {
+                console.error('Auto-push failed:', err);
+            });
+        }
 
         return NextResponse.json({
             success: true,

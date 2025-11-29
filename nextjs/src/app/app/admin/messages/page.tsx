@@ -18,6 +18,8 @@ import { Loader2, RefreshCw, Eye, Edit, Trash2, Mail, Send, CheckCircle, Circle 
 import { toast } from "sonner"
 import { ForwardDialog } from "@/components/admin/messages/ForwardDialog"
 import { PushDialog } from "@/components/admin/messages/PushDialog"
+import { MessageEditDialog } from "@/components/admin/messages/MessageEditDialog"
+import { EditMessageDialog } from "@/components/admin/messages/EditMessageDialog"
 
 export default function MessagesPage() {
     const { t } = useLanguage()
@@ -39,6 +41,10 @@ export default function MessagesPage() {
 
     // 选中的消息
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+
+    // 编辑对话框状态
+    const [editingMessage, setEditingMessage] = useState<ExternalMessage | null>(null)
+    const [showEditDialog, setShowEditDialog] = useState(false)
 
     // 权限状态
     const [isAdmin, setIsAdmin] = useState(false)
@@ -116,7 +122,7 @@ export default function MessagesPage() {
         if (user?.id && permissionLoaded) {
             fetchMessages()
         }
-    }, [user?.id, fetchMessages, permissionLoaded])
+    }, [filterSource, filterEventType, filterIsRead, filterSearch, permissionLoaded]) // 依赖筛选条件
 
     // 清空筛选条件
     const handleClearFilters = () => {
@@ -143,6 +149,19 @@ export default function MessagesPage() {
             }
         } catch (e: any) {
             toast.error('更新失败')
+        }
+    }
+
+    // 编辑消息
+    const handleEditMessage = (id: number) => {
+        if (!canWrite) {
+            toast.error('无权执行此操作')
+            return
+        }
+        const message = messages.find(m => m.id === id)
+        if (message) {
+            setEditingMessage(message)
+            setShowEditDialog(true)
         }
     }
 
@@ -392,6 +411,17 @@ export default function MessagesPage() {
                                                         <div className="flex items-center justify-end gap-2">
                                                             {canWrite && (
                                                                 <>
+                                                                    <MessageEditDialog
+                                                                        messageId={message.id}
+                                                                        currentNotes={message.notes}
+                                                                        currentIsRead={message.is_read}
+                                                                        trigger={
+                                                                            <Button variant="ghost" size="icon" title="编辑">
+                                                                                <Edit className="h-4 w-4" />
+                                                                            </Button>
+                                                                        }
+                                                                        onSuccess={fetchMessages}
+                                                                    />
                                                                     <ForwardDialog
                                                                         messageId={message.id}
                                                                         trigger={
@@ -466,6 +496,36 @@ export default function MessagesPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* 编辑消息对话框 */}
+            {editingMessage && (
+                <EditMessageDialog
+                    message={editingMessage}
+                    open={showEditDialog}
+                    onClose={() => {
+                        setShowEditDialog(false)
+                        setEditingMessage(null)
+                    }}
+                    onSave={async (data) => {
+                        try {
+                            const result = await updateMessageAction(editingMessage.id, data)
+                            if (result.error) {
+                                toast.error('更新失败: ' + result.error)
+                                return false
+                            } else {
+                                toast.success('更新成功')
+                                setShowEditDialog(false)
+                                setEditingMessage(null)
+                                fetchMessages()
+                                return true
+                            }
+                        } catch (e: any) {
+                            toast.error('更新失败')
+                            return false
+                        }
+                    }}
+                />
+            )}
         </div>
     )
 }
