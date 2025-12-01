@@ -164,6 +164,31 @@ export async function syncAccountVPSAction(accountAlias: string): Promise<{ succ
             if (error) throw error
         }
 
+        // 5. Cleanup stale instances
+        if (instanceIds.length > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { error: deleteError } = await adminClient
+                .from('vps_instances' as any)
+                .delete()
+                .eq('account', accountAlias)
+                .not('instance_id', 'in', `(${instanceIds.map(id => `"${id}"`).join(',')})`)
+
+            if (deleteError) {
+                console.error(`Error cleaning up stale instances for ${accountAlias}:`, deleteError)
+            }
+        } else {
+            // If no instances found in GCP, delete all for this account
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { error: deleteError } = await adminClient
+                .from('vps_instances' as any)
+                .delete()
+                .eq('account', accountAlias)
+
+            if (deleteError) {
+                console.error(`Error cleaning up all instances for ${accountAlias}:`, deleteError)
+            }
+        }
+
         return { success: true, error: null }
     } catch (error: any) {
         console.error(`syncAccountVPSAction error for ${accountAlias}:`, error)
