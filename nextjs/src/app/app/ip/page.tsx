@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Activity, Edit, Clock, UserPlus, Trash2 } from "lucide-react";
 
 type IpAsset = {
   id: number
@@ -82,6 +84,7 @@ export default function IpManagementPage() {
   })
 
   const [canManage, setCanManage] = useState(false)
+  const [balance, setBalance] = useState<number | null>(null)
 
   // 列表状态
   const [ipAssets, setIpAssets] = useState<IpAsset[]>([])
@@ -102,6 +105,12 @@ export default function IpManagementPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+
+  // 续期对话框
+  const [renewingId, setRenewingId] = useState<number | null>(null)
+  const [showRenewDialog, setShowRenewDialog] = useState(false)
+  const [renewPeriod, setRenewPeriod] = useState(1)
+  const [renewLoading, setRenewLoading] = useState(false)
 
   // 测试状态
   const [testingIds, setTestingIds] = useState<Set<number>>(new Set())
@@ -160,6 +169,10 @@ export default function IpManagementPage() {
       const managePerm = await supabase.hasModulePermission('ip', 'manage')
       setCanManage(managePerm.allowed)
 
+      if (managePerm.allowed) {
+        fetchBalance()
+      }
+
       // Relaxed check: Allow fetch to proceed even if global read is not allowed,
       // relying on RLS to filter assigned IPs for the user.
       // if (!perm.allowed) { ... }
@@ -202,6 +215,20 @@ export default function IpManagementPage() {
     }
   }
 
+
+  const fetchBalance = async () => {
+    try {
+      const res = await fetch('/api/proxy-cheap/balance')
+      if (res.ok) {
+        const data = await res.json()
+        if (typeof data.balance === 'number') {
+          setBalance(data.balance)
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch balance', e)
+    }
+  }
 
   const handleClearSearch = () => {
     setSearchRemark("")
@@ -473,6 +500,43 @@ export default function IpManagementPage() {
     }
   }
 
+  async function handleRenew() {
+    if (!renewingId) return
+
+    try {
+      setRenewLoading(true)
+      setError("")
+
+      const res = await fetch('/api/proxy-cheap/renew', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: renewingId,
+          period: renewPeriod
+        })
+      })
+
+      const json = await res.json()
+
+      if (!res.ok) {
+        throw new Error(json.error || '续期失败')
+      }
+
+      setShowRenewDialog(false)
+      setRenewingId(null)
+      setRenewPeriod(1)
+
+      // 刷新列表和余额
+      await fetchIpAssets()
+      await fetchBalance()
+
+    } catch (e: any) {
+      setError(e?.message || '续期失败')
+    } finally {
+      setRenewLoading(false)
+    }
+  }
+
   const totalPages = Math.ceil(totalCount / pageSize)
 
   async function handleSync() {
@@ -548,328 +612,395 @@ export default function IpManagementPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>IP管理</CardTitle>
-          <CardDescription>管理IP资产，支持查询、创建、编辑和分配</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* 第一部分：查询区域 */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">查询条件</h3>
-            <div className="grid gap-4 md:grid-cols-4">
-              <div className="space-y-2">
-                <Label>备注</Label>
-                <Input
-                  placeholder="输入备注进行模糊查询"
-                  value={searchRemark}
-                  onChange={(e) => setSearchRemark(e.target.value)}
-                />
+      <TooltipProvider>
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>IP管理</CardTitle>
+                <CardDescription>管理IP资产，支持查询、创建、编辑和分配</CardDescription>
               </div>
-              <div className="space-y-2">
-                <Label>IP地址</Label>
-                <Input
-                  placeholder="输入IP地址进行查询"
-                  value={searchIp}
-                  onChange={(e) => setSearchIp(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>订单号</Label>
-                <Input
-                  placeholder="输入订单号"
-                  value={searchProviderId}
-                  onChange={(e) => setSearchProviderId(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2 flex items-end">
-                <Button onClick={handleClearSearch} variant="outline" className="w-full">
-                  清空条件
-                </Button>
-              </div>
+              {canManage && balance !== null && (
+                <div className="text-sm font-medium bg-secondary px-4 py-2 rounded-md">
+                  当前余额: ${balance.toFixed(2)}
+                </div>
+              )}
             </div>
-          </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-          {/* 第二部分：表单区域 */}
-          <div className="space-y-4 border-t pt-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">{formMode === "create" ? "创建IP资产" : "编辑IP资产"}</h3>
-              {formMode === "create" && (
-                <div className="flex gap-2">
-                  {canManage && (
-                    <>
-                      <Button onClick={handleTestAll} variant="outline" disabled={loading || isTestingAll}>
-                        {isTestingAll ? '测试中...' : '测试全部'}
-                      </Button>
-                      <Button onClick={handleSync} variant="outline" disabled={loading}>
-                        同步
-                      </Button>
-                    </>
-                  )}
-                  <Button onClick={handleCreate} variant="outline">
-                    新建
+            {/* 第一部分：查询区域 */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">查询条件</h3>
+              <div className="grid gap-4 md:grid-cols-4">
+                <div className="space-y-2">
+                  <Label>备注</Label>
+                  <Input
+                    placeholder="输入备注进行模糊查询"
+                    value={searchRemark}
+                    onChange={(e) => setSearchRemark(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>IP地址</Label>
+                  <Input
+                    placeholder="输入IP地址进行查询"
+                    value={searchIp}
+                    onChange={(e) => setSearchIp(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>订单号</Label>
+                  <Input
+                    placeholder="输入订单号"
+                    value={searchProviderId}
+                    onChange={(e) => setSearchProviderId(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2 flex items-end">
+                  <Button onClick={handleClearSearch} variant="outline" className="w-full">
+                    清空条件
                   </Button>
                 </div>
-              )}
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <div className="space-y-2">
-                <Label>备注 *</Label>
-                <Input
-                  placeholder="给IP取一个独立的名字便于记录"
-                  value={formData.remark}
-                  onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>国家</Label>
-                <Input
-                  placeholder="国家代码，如 CN, US"
-                  value={formData.country_code}
-                  onChange={(e) => setFormData({ ...formData, country_code: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>供应商</Label>
-                <Input
-                  value={formData.isp_name}
-                  onChange={(e) => setFormData({ ...formData, isp_name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>来源 (Provider)</Label>
-                <Input
-                  placeholder="来源/供应商标识"
-                  value={formData.provider}
-                  onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>IP地址 *</Label>
-                <Input
-                  placeholder="IP地址，必填"
-                  value={formData.ip}
-                  onChange={(e) => setFormData({ ...formData, ip: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>协议</Label>
-                <Select
-                  value={formData.proxy_type}
-                  onValueChange={(value: "socks5" | "http" | "https") => setFormData({ ...formData, proxy_type: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="选择协议类型" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="socks5">SOCKS5</SelectItem>
-                    <SelectItem value="http">HTTP</SelectItem>
-                    <SelectItem value="https">HTTPS</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {formData.proxy_type === "socks5" && (
-                <div className="space-y-2">
-                  <Label>SOCKS5端口</Label>
-                  <Input
-                    type="number"
-                    placeholder="端口号"
-                    value={formData.socks5_port}
-                    onChange={(e) => setFormData({ ...formData, socks5_port: e.target.value })}
-                  />
-                </div>
-              )}
-              {formData.proxy_type === "http" && (
-                <div className="space-y-2">
-                  <Label>HTTP端口</Label>
-                  <Input
-                    type="number"
-                    placeholder="端口号"
-                    value={formData.http_port}
-                    onChange={(e) => setFormData({ ...formData, http_port: e.target.value })}
-                  />
-                </div>
-              )}
-              {formData.proxy_type === "https" && (
-                <div className="space-y-2">
-                  <Label>HTTPS端口</Label>
-                  <Input
-                    type="number"
-                    placeholder="端口号"
-                    value={formData.https_port}
-                    onChange={(e) => setFormData({ ...formData, https_port: e.target.value })}
-                  />
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label>用户名</Label>
-                <Input
-                  placeholder="认证用户名"
-                  value={formData.auth_username}
-                  onChange={(e) => setFormData({ ...formData, auth_username: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>密码</Label>
-                <Input
-                  type="password"
-                  placeholder="认证密码"
-                  value={formData.auth_password}
-                  onChange={(e) => setFormData({ ...formData, auth_password: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>到期时间</Label>
-                <Input
-                  type="datetime-local"
-                  value={formData.expires_at}
-                  onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
-                />
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={handleSave} disabled={loading} className="bg-primary-600 text-white hover:bg-primary-700">
-                保存
-              </Button>
-              {formMode === "edit" && (
-                <Button onClick={handleCancel} variant="outline" disabled={loading}>
-                  取消
-                </Button>
-              )}
-            </div>
-          </div>
 
-          {/* 第三部分：列表区域 */}
-          <div className="space-y-4 border-t pt-6">
-            <h3 className="text-lg font-semibold">IP列表</h3>
-            {loading && ipAssets.length === 0 ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-              </div>
-            ) : ipAssets.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">暂无IP资产</p>
-            ) : (
-              <>
-                <div className="border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>备注</TableHead>
-                        <TableHead>状态</TableHead>
-                        <TableHead>延迟/速度</TableHead>
-                        <TableHead>国家</TableHead>
-                        <TableHead>供应商ISP</TableHead>
-                        <TableHead>订单号</TableHead>
-                        <TableHead>IP地址</TableHead>
-                        <TableHead>已用流量</TableHead>
-                        <TableHead>到期时间</TableHead>
-                        <TableHead className="text-right">操作</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {ipAssets.map((asset) => (
-                        <TableRow key={asset.id}>
-                          <TableCell>{asset.remark || "-"}</TableCell>
-                          <TableCell>
-                            <span className={getStatusColor(asset.status)}>
-                              {asset.status || '未知'}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              <div>{asset.last_latency_ms ? `${asset.last_latency_ms}ms` : '-'}</div>
-                              <div>{asset.last_speed_kbps ? `${(asset.last_speed_kbps / 1024).toFixed(2)} MB/s` : '-'}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>{asset.country_code || "-"}</TableCell>
-                          <TableCell>{asset.isp_name || "-"}</TableCell>
-                          <TableCell>{asset.provider_id || "-"}</TableCell>
-                          <TableCell>{asset.ip}</TableCell>
-                          <TableCell>
-                            {formatBandwidth(asset.bandwidth_used)}
-                            {asset.bandwidth_total && ` / ${formatBandwidth(asset.bandwidth_total)}`}
-                          </TableCell>
-                          <TableCell>{formatDateTime(asset.expires_at)}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex gap-2 justify-end">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleTest(asset.id)}
-                                disabled={testingIds.has(asset.id)}
-                              >
-                                {testingIds.has(asset.id) ? '...' : '测试'}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleEdit(asset)}
-                              >
-                                编辑
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleAllocate(asset.id)}
-                              >
-                                分配
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => {
-                                  setDeletingId(asset.id)
-                                  setShowDeleteDialog(true)
-                                }}
-                              >
-                                删除
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* 分页 */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
-                      共 {totalCount} 条记录，第 {currentPage} / {totalPages} 页
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                        disabled={currentPage === 1 || loading}
-                      >
-                        上一页
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                        disabled={currentPage === totalPages || loading}
-                      >
-                        下一页
-                      </Button>
-                    </div>
+            {/* 第二部分：表单区域 */}
+            <div className="space-y-4 border-t pt-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">{formMode === "create" ? "创建IP资产" : "编辑IP资产"}</h3>
+                {formMode === "create" && (
+                  <div className="flex gap-2">
+                    {canManage && (
+                      <>
+                        <Button onClick={handleTestAll} variant="outline" disabled={loading || isTestingAll}>
+                          {isTestingAll ? '测试中...' : '测试全部'}
+                        </Button>
+                        <Button onClick={handleSync} variant="outline" disabled={loading}>
+                          同步
+                        </Button>
+                      </>
+                    )}
+                    <Button onClick={handleCreate} variant="outline">
+                      新建
+                    </Button>
                   </div>
                 )}
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>备注 *</Label>
+                  <Input
+                    placeholder="给IP取一个独立的名字便于记录"
+                    value={formData.remark}
+                    onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>国家</Label>
+                  <Input
+                    placeholder="国家代码，如 CN, US"
+                    value={formData.country_code}
+                    onChange={(e) => setFormData({ ...formData, country_code: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>供应商</Label>
+                  <Input
+                    value={formData.isp_name}
+                    onChange={(e) => setFormData({ ...formData, isp_name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>来源 (Provider)</Label>
+                  <Input
+                    placeholder="来源/供应商标识"
+                    value={formData.provider}
+                    onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>IP地址 *</Label>
+                  <Input
+                    placeholder="IP地址，必填"
+                    value={formData.ip}
+                    onChange={(e) => setFormData({ ...formData, ip: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>协议</Label>
+                  <Select
+                    value={formData.proxy_type}
+                    onValueChange={(value: "socks5" | "http" | "https") => setFormData({ ...formData, proxy_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择协议类型" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="socks5">SOCKS5</SelectItem>
+                      <SelectItem value="http">HTTP</SelectItem>
+                      <SelectItem value="https">HTTPS</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {formData.proxy_type === "socks5" && (
+                  <div className="space-y-2">
+                    <Label>SOCKS5端口</Label>
+                    <Input
+                      type="number"
+                      placeholder="端口号"
+                      value={formData.socks5_port}
+                      onChange={(e) => setFormData({ ...formData, socks5_port: e.target.value })}
+                    />
+                  </div>
+                )}
+                {formData.proxy_type === "http" && (
+                  <div className="space-y-2">
+                    <Label>HTTP端口</Label>
+                    <Input
+                      type="number"
+                      placeholder="端口号"
+                      value={formData.http_port}
+                      onChange={(e) => setFormData({ ...formData, http_port: e.target.value })}
+                    />
+                  </div>
+                )}
+                {formData.proxy_type === "https" && (
+                  <div className="space-y-2">
+                    <Label>HTTPS端口</Label>
+                    <Input
+                      type="number"
+                      placeholder="端口号"
+                      value={formData.https_port}
+                      onChange={(e) => setFormData({ ...formData, https_port: e.target.value })}
+                    />
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label>用户名</Label>
+                  <Input
+                    placeholder="认证用户名"
+                    value={formData.auth_username}
+                    onChange={(e) => setFormData({ ...formData, auth_username: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>密码</Label>
+                  <Input
+                    type="password"
+                    placeholder="认证密码"
+                    value={formData.auth_password}
+                    onChange={(e) => setFormData({ ...formData, auth_password: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>到期时间</Label>
+                  <Input
+                    type="datetime-local"
+                    value={formData.expires_at}
+                    onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleSave} disabled={loading} className="bg-primary-600 text-white hover:bg-primary-700">
+                  保存
+                </Button>
+                {formMode === "edit" && (
+                  <Button onClick={handleCancel} variant="outline" disabled={loading}>
+                    取消
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* 第三部分：列表区域 */}
+            <div className="space-y-4 border-t pt-6">
+              <h3 className="text-lg font-semibold">IP列表</h3>
+              {loading && ipAssets.length === 0 ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                </div>
+              ) : ipAssets.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">暂无IP资产</p>
+              ) : (
+                <>
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>备注</TableHead>
+                          <TableHead>状态</TableHead>
+                          <TableHead>延迟/速度</TableHead>
+                          <TableHead>国家</TableHead>
+                          <TableHead>供应商ISP</TableHead>
+                          <TableHead>订单号</TableHead>
+                          <TableHead>IP地址</TableHead>
+                          <TableHead>已用流量</TableHead>
+                          <TableHead>到期时间</TableHead>
+                          <TableHead className="text-right">操作</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {ipAssets.map((asset) => (
+                          <TableRow key={asset.id}>
+                            <TableCell>{asset.remark || "-"}</TableCell>
+                            <TableCell>
+                              <span className={getStatusColor(asset.status)}>
+                                {asset.status || '未知'}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <div>{asset.last_latency_ms ? `${asset.last_latency_ms}ms` : '-'}</div>
+                                <div>{asset.last_speed_kbps ? `${(asset.last_speed_kbps / 1024).toFixed(2)} MB/s` : '-'}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>{asset.country_code || "-"}</TableCell>
+                            <TableCell>{asset.isp_name || "-"}</TableCell>
+                            <TableCell>{asset.provider_id || "-"}</TableCell>
+                            <TableCell>{asset.ip}</TableCell>
+                            <TableCell>
+                              {formatBandwidth(asset.bandwidth_used)}
+                              {asset.bandwidth_total && ` / ${formatBandwidth(asset.bandwidth_total)}`}
+                            </TableCell>
+                            <TableCell>{formatDateTime(asset.expires_at)}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex gap-1 justify-end">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      onClick={() => handleTest(asset.id)}
+                                      disabled={testingIds.has(asset.id)}
+                                      className="h-8 w-8"
+                                    >
+                                      <Activity className={`h-4 w-4 ${testingIds.has(asset.id) ? 'animate-spin' : ''}`} />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>测试连接</p>
+                                  </TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      onClick={() => handleEdit(asset)}
+                                      className="h-8 w-8"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>编辑</p>
+                                  </TooltipContent>
+                                </Tooltip>
+
+                                {canManage && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          setRenewingId(asset.id)
+                                          setShowRenewDialog(true)
+                                        }}
+                                        className="h-8 w-8"
+                                      >
+                                        <Clock className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>续期</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      onClick={() => handleAllocate(asset.id)}
+                                      className="h-8 w-8"
+                                    >
+                                      <UserPlus className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>分配用户</p>
+                                  </TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        setDeletingId(asset.id)
+                                        setShowDeleteDialog(true)
+                                      }}
+                                      className="h-8 w-8 text-destructive hover:text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>删除</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* 分页 */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-muted-foreground">
+                        共 {totalCount} 条记录，第 {currentPage} / {totalPages} 页
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                          disabled={currentPage === 1 || loading}
+                        >
+                          上一页
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                          disabled={currentPage === totalPages || loading}
+                        >
+                          下一页
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </TooltipProvider>
 
       {/* 分配对话框 */}
       <Dialog open={showAllocate} onOpenChange={setShowAllocate}>
@@ -912,6 +1043,48 @@ export default function IpManagementPage() {
             </Button>
             <Button onClick={confirmAllocate} disabled={loading || selectedUserIds.length === 0}>
               确认分配
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 续期确认对话框 */}
+      <Dialog open={showRenewDialog} onOpenChange={setShowRenewDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认续期</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p>
+              当前账户余额为: <span className="font-bold">${balance?.toFixed(2) ?? '---'}</span>
+            </p>
+            <p>
+              确定要为该IP续期吗？
+            </p>
+            <div className="space-y-2">
+              <Label>续期时长 (月)</Label>
+              <Select
+                value={String(renewPeriod)}
+                onValueChange={(v) => setRenewPeriod(parseInt(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1个月</SelectItem>
+                  <SelectItem value="3">3个月</SelectItem>
+                  <SelectItem value="6">6个月</SelectItem>
+                  <SelectItem value="12">12个月</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRenewDialog(false)}>
+              取消
+            </Button>
+            <Button onClick={handleRenew} disabled={renewLoading}>
+              {renewLoading ? '续期中...' : '确认续期'}
             </Button>
           </DialogFooter>
         </DialogContent>
