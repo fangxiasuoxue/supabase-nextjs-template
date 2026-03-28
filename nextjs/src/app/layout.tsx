@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   description: "The best way to build your SaaS product.",
 };
 
+import { LanguageProvider } from "@/lib/context/LanguageContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -24,7 +26,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={theme}>
-        {children}
+        <LanguageProvider>
+          {children}
+        </LanguageProvider>
         <Analytics />
         <CookieConsent />
         {gaID && (

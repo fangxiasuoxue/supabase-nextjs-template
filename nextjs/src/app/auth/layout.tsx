@@ -29,65 +29,73 @@ export default function AuthLayout({
     ];
 
     return (
-        <div className="flex min-h-screen">
-            <div className="w-full lg:w-1/2 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-white relative">
-                <Link
-                    href="/"
-                    className="absolute left-8 top-8 flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to Homepage
-                </Link>
+        <div className="flex min-h-screen bg-[#020617] text-foreground font-sans overflow-hidden items-center justify-center p-4">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(6,182,212,0.05),transparent_50%)]" />
+            
+            <div className="w-full max-w-6xl grid lg:grid-cols-2 glass-card-premium rounded-[3rem] border border-white/5 shadow-2xl overflow-hidden relative z-10">
+                {/* Visual Side */}
+                <div className="hidden lg:flex flex-col justify-between p-12 bg-gradient-to-br from-primary/10 via-transparent to-transparent border-r border-white/5">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center">
+                                <span className="text-primary font-black text-xs">J</span>
+                            </div>
+                            <span className="text-xl font-black tracking-tighter uppercase">{productName} <span className="text-primary">PRO</span></span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.4em] font-black opacity-40">Next-Gen Node Infrastructure</p>
+                    </div>
 
-                <div className="sm:mx-auto sm:w-full sm:max-w-md">
-                    <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
-                        {productName}
-                    </h2>
-                </div>
-
-                <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-                    {children}
-                </div>
-            </div>
-
-            <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary-600 to-primary-800">
-                <div className="w-full flex items-center justify-center p-12">
-                    <div className="space-y-6 max-w-lg">
-                        <h3 className="text-white text-2xl font-bold mb-8">
-                            Trusted by developers worldwide
+                    <div className="space-y-8">
+                        <h3 className="text-4xl font-black tracking-tighter leading-none uppercase">
+                            Secure <br />
+                            <span className="text-primary">Identity</span> <br />
+                            Terminal
                         </h3>
-                        {testimonials.map((testimonial, index) => (
-                            <div
-                                key={index}
-                                className="relative bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 shadow-xl"
-                            >
-                                <div className="flex items-start space-x-4">
-                                    <div className="flex-shrink-0">
-                                        <div className="w-10 h-10 rounded-full bg-primary-400/30 flex items-center justify-center text-white font-semibold">
+                        <div className="space-y-4">
+                            {testimonials.slice(0, 2).map((testimonial, index) => (
+                                <div
+                                    key={index}
+                                    className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 backdrop-blur-md"
+                                >
+                                    <p className="text-xs text-muted-foreground font-medium leading-relaxed italic mb-4 opacity-80">
+                                        "{testimonial.quote}"
+                                    </p>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-black text-primary border border-primary/20">
                                             {testimonial.avatar}
                                         </div>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm text-white/90 mb-2 font-light leading-relaxed">
-                                            &#34;{testimonial.quote}&#34;
-                                        </p>
-                                        <div className="mt-3">
-                                            <p className="text-sm font-medium text-white">
-                                                {testimonial.author}
-                                            </p>
-                                            <p className="text-sm text-primary-200">
-                                                {testimonial.role}
-                                            </p>
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest">{testimonial.author}</p>
+                                            <p className="text-[8px] text-primary/60 font-black uppercase tracking-tighter lowercase">{testimonial.role}</p>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                        <div className="mt-8 text-center">
-                            <p className="text-primary-100 text-sm">
-                                Join thousands of developers building with {productName}
-                            </p>
+                            ))}
                         </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-8 border-t border-white/5">
+                        <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Protocol v4.0.2</span>
+                        <div className="flex gap-4">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary/40" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary/40" />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Interaction Side */}
+                <div className="relative flex flex-col justify-center py-16 px-8 sm:px-12 lg:px-16 bg-white/[0.01]">
+                    <Link
+                        href="/"
+                        className="absolute left-10 top-10 flex items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-primary transition-all group"
+                    >
+                        <ArrowLeft className="w-3.5 h-3.5 mr-2 group-hover:-translate-x-1 transition-transform" />
+                        Return to Origin
+                    </Link>
+
+                    <div className="w-full max-w-sm mx-auto">
+                        {children}
                     </div>
                 </div>
             </div>

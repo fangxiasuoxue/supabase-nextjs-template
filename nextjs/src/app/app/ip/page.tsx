@@ -14,7 +14,23 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Activity, Edit, Clock, UserPlus, Trash2 } from "lucide-react";
+import { 
+  Activity, 
+  Edit, 
+  Clock, 
+  UserPlus, 
+  Trash2, 
+  Search, 
+  Globe, 
+  Shield, 
+  Zap, 
+  BarChart3, 
+  Layers,
+  Terminal,
+  Database,
+  ArrowRightLeft,
+  Plus
+} from "lucide-react";
 
 type IpAsset = {
   id: number
@@ -611,406 +627,505 @@ export default function IpManagementPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
       <TooltipProvider>
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>IP管理</CardTitle>
-                <CardDescription>管理IP资产，支持查询、创建、编辑和分配</CardDescription>
+        {/* Header / Command Center Info */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 pb-4 relative">
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 text-primary-400 mb-4 group cursor-default">
+              <div className="p-2 rounded-lg bg-primary-500/10 border border-primary-500/20 group-hover:bg-primary-500/20 transition-colors">
+                <Terminal className="h-4 w-4" />
               </div>
-              {canManage && balance !== null && (
-                <div className="text-sm font-medium bg-secondary px-4 py-2 rounded-md">
-                  当前余额: ${balance.toFixed(2)}
-                </div>
-              )}
+              <div className="flex flex-col">
+                <span className="text-[10px] uppercase tracking-[0.3em] font-black text-primary-400/80">Edge Network Console</span>
+                <span className="text-[8px] text-muted-foreground uppercase tracking-widest -mt-0.5">Proxy Asset Management v4.2</span>
+              </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+            <h1 className="text-5xl font-black tracking-tighter text-foreground leading-none">
+              IP 资产管理 <span className="text-primary-500 drop-shadow-[0_0_15px_rgba(6,182,212,0.5)]">.</span>
+            </h1>
+            <p className="text-muted-foreground/80 mt-4 max-w-2xl text-sm font-medium leading-relaxed">
+              管理全球分布式代理 IP 资源，实时监控延迟指标、流量配额与资产状态。
+              <br className="hidden md:block" />
+              集成 Proxy-Cheap API，支持自动化同步与续期。
+            </p>
+          </div>
+          
+          {canManage && balance !== null && (
+            <div className="glass-card-premium px-8 py-5 rounded-3xl border border-primary-500/20 flex flex-col items-end relative group overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-primary-500/5 blur-3xl -mr-8 -mt-8 group-hover:bg-primary-500/10 transition-colors" />
+              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2 relative z-10">Command Funds</span>
+              <div className="flex items-baseline gap-1 relative z-10">
+                <span className="text-sm font-bold text-primary-500/60">$</span>
+                <span className="text-3xl font-black tech-mono text-primary-400 tracking-tighter">{balance.toFixed(2)}</span>
+              </div>
+              <div className="mt-2 w-full h-1 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                <div className="h-full bg-gradient-to-r from-primary-600 to-primary-400 w-3/4 shadow-[0_0_8px_rgba(6,182,212,0.4)]" />
+              </div>
+            </div>
+          )}
+        </div>
 
-            {/* 第一部分：查询区域 */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">查询条件</h3>
-              <div className="grid gap-4 md:grid-cols-4">
+        {/* Quick Stats Grid - Bento Style */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { label: "在线资产", value: ipAssets.filter(a => a.status === 'active').length, sub: "Nodes Active", icon: Globe, color: "text-emerald-400", bg: "from-emerald-500/20 to-transparent" },
+            { label: "平均延迟", value: "124ms", sub: "Global Avg", icon: Zap, color: "text-amber-400", bg: "from-amber-500/20 to-transparent" },
+            { label: "流量吞吐", value: "85GB", sub: "Last 24h", icon: BarChart3, color: "text-primary-400", bg: "from-primary-500/20 to-transparent" },
+            { label: "安全防御", value: "1.2k", sub: "Packets Filtered", icon: Shield, color: "text-blue-400", bg: "from-blue-500/20 to-transparent" },
+          ].map((stat, i) => (
+            <div key={i} className="glass-card-premium p-6 rounded-3xl border border-white/5 hover:border-white/10 group transition-all duration-500 hover:-translate-y-1 overflow-hidden relative">
+              <div className={`absolute -right-4 -bottom-4 w-24 h-24 bg-gradient-to-br ${stat.bg} blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700`} />
+              
+              <div className="flex items-center justify-between mb-4 relative z-10">
+                <div className={`p-2.5 rounded-xl bg-white/5 border border-white/5 group-hover:border-white/10 transition-colors ${stat.color}`}>
+                  <stat.icon className="h-5 w-5 drop-shadow-[0_0_8px_currentColor]" />
+                </div>
+                <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{stat.label}</span>
+                    <span className="text-[8px] text-muted-foreground/40 uppercase font-bold tracking-tighter">{stat.sub}</span>
+                </div>
+              </div>
+              <div className="text-3xl font-black tech-mono uppercase tracking-tighter relative z-10 group-hover:text-foreground transition-colors">{stat.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {error && (
+          <Alert variant="destructive" className="bg-red-500/10 border-red-500/20 text-red-400 rounded-2xl">
+            <AlertDescription className="tech-mono text-xs uppercase">{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Dashboard Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 items-start">
+          
+          {/* Left Column: Controls & Forms */}
+          <div className="xl:col-span-1 space-y-10">
+            
+            {/* Search & Management Card */}
+            <div className="glass-card-premium p-8 rounded-[2.5rem] border border-white/5 space-y-8 relative overflow-hidden group/search">
+              <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover/search:opacity-10 transition-opacity">
+                <Search className="h-24 w-24" />
+              </div>
+
+              <div className="flex items-center gap-4 mb-2">
+                <div className="p-2.5 bg-primary-500/10 rounded-xl border border-primary-500/20 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
+                  <Search className="h-4 w-4 text-primary-400" />
+                </div>
+                <div className="flex flex-col">
+                    <h3 className="text-sm font-black uppercase tracking-[0.1em]">智能检索</h3>
+                    <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Asset Query Engine</span>
+                </div>
+              </div>
+              
+              <div className="space-y-6 relative z-10">
                 <div className="space-y-2">
-                  <Label>备注</Label>
+                  <Label className="text-[10px] uppercase font-black text-muted-foreground/60 ml-1 tracking-widest">备注关键词 / REMARK</Label>
                   <Input
-                    placeholder="输入备注进行模糊查询"
+                    placeholder="Filter by identifier..."
                     value={searchRemark}
                     onChange={(e) => setSearchRemark(e.target.value)}
+                    className="bg-black/40 border-white/5 rounded-2xl h-12 focus:ring-primary-500/40 focus:border-primary-500/40 transition-all tech-mono text-sm"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>IP地址</Label>
+                  <Label className="text-[10px] uppercase font-black text-muted-foreground/60 ml-1 tracking-widest">IP 地址 / INTERFACE</Label>
                   <Input
-                    placeholder="输入IP地址进行查询"
+                    placeholder="Filter by IP range..."
                     value={searchIp}
                     onChange={(e) => setSearchIp(e.target.value)}
+                    className="bg-black/40 border-white/5 rounded-2xl h-12 focus:ring-primary-500/40 focus:border-primary-500/40 transition-all tech-mono text-sm"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>订单号</Label>
+                  <Label className="text-[10px] uppercase font-black text-muted-foreground/60 ml-1 tracking-widest">订单 ID / PROVIDER ID</Label>
                   <Input
-                    placeholder="输入订单号"
+                    placeholder="Search source ID..."
                     value={searchProviderId}
                     onChange={(e) => setSearchProviderId(e.target.value)}
+                    className="bg-black/40 border-white/5 rounded-2xl h-12 focus:ring-primary-500/40 focus:border-primary-500/40 transition-all tech-mono text-sm"
                   />
                 </div>
-                <div className="space-y-2 flex items-end">
-                  <Button onClick={handleClearSearch} variant="outline" className="w-full">
-                    清空条件
-                  </Button>
-                </div>
+                <Button onClick={handleClearSearch} variant="secondary" className="w-full text-[10px] font-black uppercase tracking-[0.2em] bg-white/[0.03] hover:bg-white/5 border-white/5 rounded-2xl h-12">
+                  RESET FILTERS
+                </Button>
+              </div>
+
+              <div className="pt-8 border-t border-white/5 flex gap-4 relative z-10">
+                {canManage && (
+                  <>
+                    <Button onClick={handleSync} variant="outline" className="flex-1 border-white/10 hover:bg-white/5 rounded-2xl h-12 gap-3 text-[10px] font-black uppercase tracking-widest transition-all hover:border-primary-500/30" disabled={loading}>
+                      <ArrowRightLeft className="h-4 w-4 text-primary-400" />
+                      SYNC
+                    </Button>
+                    <Button onClick={handleTestAll} variant="outline" className="flex-1 border-white/10 hover:bg-white/5 rounded-2xl h-12 gap-3 text-[10px] font-black uppercase tracking-widest transition-all hover:border-primary-500/30" disabled={loading || isTestingAll}>
+                      <Zap className={`h-4 w-4 ${isTestingAll ? 'animate-pulse text-amber-400' : 'text-primary-400'}`} />
+                      {isTestingAll ? 'RUNNING' : 'TEST ALL'}
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
 
-            {/* 第二部分：表单区域 */}
-            <div className="space-y-4 border-t pt-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">{formMode === "create" ? "创建IP资产" : "编辑IP资产"}</h3>
-                {formMode === "create" && (
-                  <div className="flex gap-2">
-                    {canManage && (
-                      <>
-                        <Button onClick={handleTestAll} variant="outline" disabled={loading || isTestingAll}>
-                          {isTestingAll ? '测试中...' : '测试全部'}
-                        </Button>
-                        <Button onClick={handleSync} variant="outline" disabled={loading}>
-                          同步
-                        </Button>
-                      </>
-                    )}
-                    <Button onClick={handleCreate} variant="outline">
-                      新建
-                    </Button>
-                  </div>
-                )}
+            {/* Asset Entry Card (Create/Edit) */}
+            <div className="glass-card-premium p-8 rounded-[2.5rem] border border-white/5 relative overflow-hidden group/entry shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+              <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover/entry:opacity-10 transition-opacity rotate-12">
+                <Plus className="h-32 w-32" />
               </div>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>备注 *</Label>
-                  <Input
-                    placeholder="给IP取一个独立的名字便于记录"
-                    value={formData.remark}
-                    onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
-                  />
+              
+              <div className="flex items-center gap-4 mb-8">
+                <div className="p-2.5 bg-primary-500/10 rounded-xl border border-primary-500/20">
+                  <Plus className="h-4 w-4 text-primary-400" />
                 </div>
-                <div className="space-y-2">
-                  <Label>国家</Label>
-                  <Input
-                    placeholder="国家代码，如 CN, US"
-                    value={formData.country_code}
-                    onChange={(e) => setFormData({ ...formData, country_code: e.target.value })}
-                  />
+                <div className="flex flex-col">
+                    <h3 className="text-sm font-black uppercase tracking-[0.1em]">
+                      {formMode === "create" ? "资产入库" : "资产修订"}
+                    </h3>
+                    <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Manual Provisioning</span>
                 </div>
-                <div className="space-y-2">
-                  <Label>供应商</Label>
-                  <Input
-                    value={formData.isp_name}
-                    onChange={(e) => setFormData({ ...formData, isp_name: e.target.value })}
-                  />
+              </div>
+
+              <div className="space-y-6 relative z-10">
+                <div className="grid grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase font-black text-muted-foreground/60 ml-1 tracking-widest">资产标识 *</Label>
+                    <Input
+                      placeholder="Remark"
+                      value={formData.remark}
+                      onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
+                      className="bg-black/40 border-white/5 rounded-2xl h-12 focus:ring-primary-400/30"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase font-black text-muted-foreground/60 ml-1 tracking-widest">地区代码</Label>
+                    <Input
+                      placeholder="e.g. US"
+                      value={formData.country_code}
+                      onChange={(e) => setFormData({ ...formData, country_code: e.target.value })}
+                      className="bg-black/40 border-white/5 rounded-2xl h-12 focus:ring-primary-400/30 font-bold tech-mono"
+                    />
+                  </div>
                 </div>
+
                 <div className="space-y-2">
-                  <Label>来源 (Provider)</Label>
+                  <Label className="text-[10px] uppercase font-black text-muted-foreground/60 ml-1 tracking-widest">IP 地址 *</Label>
                   <Input
-                    placeholder="来源/供应商标识"
-                    value={formData.provider}
-                    onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>IP地址 *</Label>
-                  <Input
-                    placeholder="IP地址，必填"
+                    placeholder="0.0.0.0"
                     value={formData.ip}
                     onChange={(e) => setFormData({ ...formData, ip: e.target.value })}
+                    className="bg-black/40 border-white/5 rounded-2xl h-12 focus:ring-primary/40 text-primary font-bold tech-mono text-lg"
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>协议</Label>
-                  <Select
-                    value={formData.proxy_type}
-                    onValueChange={(value: "socks5" | "http" | "https") => setFormData({ ...formData, proxy_type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="选择协议类型" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="socks5">SOCKS5</SelectItem>
-                      <SelectItem value="http">HTTP</SelectItem>
-                      <SelectItem value="https">HTTPS</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {formData.proxy_type === "socks5" && (
+
+                <div className="grid grid-cols-2 gap-5">
                   <div className="space-y-2">
-                    <Label>SOCKS5端口</Label>
+                    <Label className="text-[10px] uppercase font-black text-muted-foreground/60 ml-1 tracking-widest">传输协议</Label>
+                    <Select
+                      value={formData.proxy_type}
+                      onValueChange={(value: "socks5" | "http" | "https") => setFormData({ ...formData, proxy_type: value })}
+                    >
+                      <SelectTrigger className="bg-black/40 border-white/5 rounded-2xl h-12 focus:ring-primary-400/30">
+                        <SelectValue placeholder="Protocol" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-secondary/95 backdrop-blur-2xl border-white/10 rounded-2xl">
+                        <SelectItem value="socks5" className="font-bold tech-mono">SOCKS5</SelectItem>
+                        <SelectItem value="http" className="font-bold tech-mono">HTTP</SelectItem>
+                        <SelectItem value="https" className="font-bold tech-mono">HTTPS</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase font-black text-muted-foreground/60 ml-1 tracking-widest">端口</Label>
                     <Input
                       type="number"
-                      placeholder="端口号"
-                      value={formData.socks5_port}
-                      onChange={(e) => setFormData({ ...formData, socks5_port: e.target.value })}
+                      placeholder="Port"
+                      value={formData.proxy_type === "socks5" ? formData.socks5_port : formData.proxy_type === "http" ? formData.http_port : formData.https_port}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (formData.proxy_type === "socks5") setFormData({ ...formData, socks5_port: val });
+                        else if (formData.proxy_type === "http") setFormData({ ...formData, http_port: val });
+                        else if (formData.proxy_type === "https") setFormData({ ...formData, https_port: val });
+                      }}
+                      className="bg-black/40 border-white/5 rounded-2xl h-12 tech-mono font-bold"
                     />
                   </div>
-                )}
-                {formData.proxy_type === "http" && (
+                </div>
+
+                <div className="grid grid-cols-2 gap-5">
                   <div className="space-y-2">
-                    <Label>HTTP端口</Label>
+                    <Label className="text-[10px] uppercase font-black text-muted-foreground/60 ml-1 tracking-widest">验证账号</Label>
                     <Input
-                      type="number"
-                      placeholder="端口号"
-                      value={formData.http_port}
-                      onChange={(e) => setFormData({ ...formData, http_port: e.target.value })}
+                      placeholder="Username"
+                      value={formData.auth_username}
+                      onChange={(e) => setFormData({ ...formData, auth_username: e.target.value })}
+                      className="bg-black/40 border-white/5 rounded-2xl h-12"
                     />
                   </div>
-                )}
-                {formData.proxy_type === "https" && (
                   <div className="space-y-2">
-                    <Label>HTTPS端口</Label>
+                    <Label className="text-[10px] uppercase font-black text-muted-foreground/60 ml-1 tracking-widest">验证密码</Label>
                     <Input
-                      type="number"
-                      placeholder="端口号"
-                      value={formData.https_port}
-                      onChange={(e) => setFormData({ ...formData, https_port: e.target.value })}
+                      type="password"
+                      placeholder="Password"
+                      value={formData.auth_password}
+                      onChange={(e) => setFormData({ ...formData, auth_password: e.target.value })}
+                      className="bg-black/40 border-white/5 rounded-2xl h-12"
                     />
                   </div>
-                )}
-                <div className="space-y-2">
-                  <Label>用户名</Label>
-                  <Input
-                    placeholder="认证用户名"
-                    value={formData.auth_username}
-                    onChange={(e) => setFormData({ ...formData, auth_username: e.target.value })}
-                  />
                 </div>
-                <div className="space-y-2">
-                  <Label>密码</Label>
-                  <Input
-                    type="password"
-                    placeholder="认证密码"
-                    value={formData.auth_password}
-                    onChange={(e) => setFormData({ ...formData, auth_password: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>到期时间</Label>
-                  <Input
-                    type="datetime-local"
-                    value={formData.expires_at}
-                    onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleSave} disabled={loading} className="bg-primary-600 text-white hover:bg-primary-700">
-                  保存
-                </Button>
-                {formMode === "edit" && (
-                  <Button onClick={handleCancel} variant="outline" disabled={loading}>
-                    取消
+
+                <div className="pt-6 flex gap-4">
+                  <Button onClick={handleSave} disabled={loading} className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl h-14 font-black uppercase tracking-widest shadow-[0_10px_30px_hsl(var(--primary)/0.3)] transition-all active:scale-[0.98]">
+                    {loading ? 'EXECUTING...' : 'COMMIT CHANGES'}
                   </Button>
-                )}
+                  {(formMode === "edit" || formData.ip) && (
+                    <Button onClick={handleCancel} variant="secondary" className="px-6 border border-white/5 hover:bg-white/5 rounded-2xl h-14 font-black uppercase tracking-widest text-[10px]">
+                      ABORT
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
-
-            {/* 第三部分：列表区域 */}
-            <div className="space-y-4 border-t pt-6">
-              <h3 className="text-lg font-semibold">IP列表</h3>
-              {loading && ipAssets.length === 0 ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+          </div>
+          {/* Right Column: Asset List */}
+          <div className="xl:col-span-2 space-y-6">
+            <div className="glass-card-premium rounded-[2.5rem] border border-white/5 overflow-hidden flex flex-col min-h-[700px] shadow-[0_20px_50px_rgba(0,0,0,0.2)]">
+              <div className="p-8 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-2.5 bg-primary/10 rounded-xl border border-primary/20 shadow-[0_0_15px_hsl(var(--primary)/0.1)]">
+                    <Database className="h-5 w-5 text-primary-400" />
+                  </div>
+                  <div className="flex flex-col">
+                    <h3 className="text-sm font-black uppercase tracking-[0.1em]">资产核心清单</h3>
+                    <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Global Asset Index</span>
+                  </div>
+                  <div className="ml-6 flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/5">
+                    <div className="w-1 h-1 rounded-full bg-primary-500 animate-pulse" />
+                    <span className="text-[10px] font-black tech-mono text-primary-400/80">
+                      {totalCount} RECORDS FOUND
+                    </span>
+                  </div>
                 </div>
-              ) : ipAssets.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">暂无IP资产</p>
-              ) : (
-                <>
-                  <div className="border rounded-lg overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>备注</TableHead>
-                          <TableHead>状态</TableHead>
-                          <TableHead>延迟/速度</TableHead>
-                          <TableHead>国家</TableHead>
-                          <TableHead>供应商ISP</TableHead>
-                          <TableHead>订单号</TableHead>
-                          <TableHead>IP地址</TableHead>
-                          <TableHead>已用流量</TableHead>
-                          <TableHead>到期时间</TableHead>
-                          <TableHead className="text-right">操作</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {ipAssets.map((asset) => (
-                          <TableRow key={asset.id}>
-                            <TableCell>{asset.remark || "-"}</TableCell>
-                            <TableCell>
-                              <span className={getStatusColor(asset.status)}>
-                                {asset.status || '未知'}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-sm">
-                                <div>{asset.last_latency_ms ? `${asset.last_latency_ms}ms` : '-'}</div>
-                                <div>{asset.last_speed_kbps ? `${(asset.last_speed_kbps / 1024).toFixed(2)} MB/s` : '-'}</div>
+              </div>
+
+              <div className="flex-1 overflow-x-auto scrollbar-hide">
+                <Table>
+                  <TableHeader className="bg-white/[0.01]">
+                    <TableRow className="border-white/5 hover:bg-transparent h-14">
+                      <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] pl-8">资产识别 / ATTRIBUTES</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em]">遥测数据 / STATUS</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] text-center">地址协议 / INTERFACE</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] text-right pr-8">指挥控制 / ACTIONS</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loading && ipAssets.length === 0 ? (
+                      <TableRow className="border-none">
+                        <TableCell colSpan={4} className="h-[500px] text-center">
+                          <div className="flex flex-col items-center justify-center gap-6">
+                            <div className="relative">
+                                <div className="absolute inset-0 bg-primary-500/20 blur-2xl animate-pulse rounded-full" />
+                                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-r-2 border-primary-500 relative z-10"></div>
+                            </div>
+                            <span className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em] animate-pulse">正在建立神经元连接...</span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : ipAssets.length === 0 ? (
+                      <TableRow className="border-none">
+                        <TableCell colSpan={4} className="h-[500px] text-center">
+                          <div className="flex flex-col items-center justify-center gap-6 py-20 opacity-30 group cursor-default">
+                             <div className="p-6 rounded-full bg-white/5 border border-white/5 group-hover:bg-white/10 transition-colors">
+                                <Database className="h-12 w-12" />
+                             </div>
+                             <span className="text-xs font-black uppercase tracking-[0.3em]">尚未检测到任何活跃资产</span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      ipAssets.map((asset) => (
+                        <TableRow key={asset.id} className="border-white/5 hover:bg-white/[0.03] transition-all duration-300 group/row h-20">
+                          <TableCell className="pl-8 py-5">
+                            <div className="flex flex-col gap-1.5">
+                              <span className="text-sm font-black text-foreground group-hover/row:text-primary-400 transition-colors uppercase tracking-tight">{asset.remark || "Legacy Module"}</span>
+                              <div className="flex items-center gap-3">
+                                <span className="px-2 py-0.5 rounded-md bg-secondary border border-white/5 text-[9px] font-black text-primary/80 uppercase tracking-widest">
+                                  {asset.country_code || "XZ"}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-tight truncate max-w-[140px]">
+                                  {asset.isp_name || "Shadow Network"}
+                                </span>
                               </div>
-                            </TableCell>
-                            <TableCell>{asset.country_code || "-"}</TableCell>
-                            <TableCell>{asset.isp_name || "-"}</TableCell>
-                            <TableCell>{asset.provider_id || "-"}</TableCell>
-                            <TableCell>{asset.ip}</TableCell>
-                            <TableCell>
-                              {formatBandwidth(asset.bandwidth_used)}
-                              {asset.bandwidth_total && ` / ${formatBandwidth(asset.bandwidth_total)}`}
-                            </TableCell>
-                            <TableCell>{formatDateTime(asset.expires_at)}</TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex gap-1 justify-end">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      onClick={() => handleTest(asset.id)}
-                                      disabled={testingIds.has(asset.id)}
-                                      className="h-8 w-8"
-                                    >
-                                      <Activity className={`h-4 w-4 ${testingIds.has(asset.id) ? 'animate-spin' : ''}`} />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>测试连接</p>
-                                  </TooltipContent>
-                                </Tooltip>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-2">
+                                <div className="flex items-baseline gap-2">
+                                    <div className={`w-2 h-2 rounded-full ${asset.status === 'active' ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)]' : 'bg-zinc-700'}`} />
+                                    <span className={`text-[10px] font-black uppercase tracking-widest ${getStatusColor(asset.status)}`}>
+                                      {asset.status || 'OFFLINE'}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                   <div className="flex items-center gap-1.5">
+                                      <Activity className="h-3 w-3 text-muted-foreground/40" />
+                                      <span className="tech-mono text-[10px] font-bold text-muted-foreground/80">
+                                        {asset.last_latency_ms ? `${asset.last_latency_ms}ms` : '---'}
+                                      </span>
+                                   </div>
+                                   <div className="w-[1px] h-3 bg-white/5" />
+                                   <div className="flex items-center gap-1.5">
+                                      <Zap className="h-3 w-3 text-muted-foreground/40" />
+                                      <span className="tech-mono text-[10px] font-bold text-muted-foreground/80 lowercase">
+                                        {asset.last_speed_kbps ? `${(asset.last_speed_kbps / 1024).toFixed(1)}mb/s` : '---'}
+                                      </span>
+                                   </div>
+                                </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center px-4">
+                            <div className="inline-flex flex-col items-center gap-1 p-2 rounded-xl bg-black/20 border border-white/5 group-hover/row:border-primary-500/20 transition-all">
+                              <span className="tech-mono text-[11px] text-primary-400 font-black tracking-tight">{asset.ip}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[8px] font-black uppercase text-muted-foreground/40 tracking-widest">{asset.proxy_type || 'TCP'}</span>
+                                <span className="tech-mono text-[10px] text-primary-500/60 font-black">
+                                  {asset.http_port || asset.https_port || asset.socks5_port || "NULL"}
+                                </span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right pr-8">
+                            <div className="flex gap-2 justify-end opacity-0 group-hover/row:opacity-100 transition-all duration-300 translate-x-4 group-hover/row:translate-x-0">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => handleTest(asset.id)}
+                                    disabled={testingIds.has(asset.id)}
+                                    className="h-9 w-9 bg-white/5 hover:bg-primary-500/10 rounded-xl"
+                                  >
+                                    <Activity className={`h-4 w-4 ${testingIds.has(asset.id) ? 'animate-spin text-primary-400' : 'text-primary-400'}`} />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-secondary-950 border-white/10 text-[10px] font-black uppercase text-primary-400">TELEMETRY_PING</TooltipContent>
+                              </Tooltip>
 
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      onClick={() => handleEdit(asset)}
-                                      className="h-8 w-8"
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>编辑</p>
-                                  </TooltipContent>
-                                </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => handleEdit(asset)}
+                                    className="h-9 w-9 bg-white/5 hover:bg-white/10 rounded-xl text-foreground"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-secondary-950 border-white/10 text-[10px] font-black uppercase">RECONFIGURE_ASSET</TooltipContent>
+                              </Tooltip>
 
-                                {canManage && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        onClick={() => {
-                                          setRenewingId(asset.id)
-                                          setShowRenewDialog(true)
-                                        }}
-                                        className="h-8 w-8"
-                                      >
-                                        <Clock className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>续期</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                )}
-
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      onClick={() => handleAllocate(asset.id)}
-                                      className="h-8 w-8"
-                                    >
-                                      <UserPlus className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>分配用户</p>
-                                  </TooltipContent>
-                                </Tooltip>
-
+                              {canManage && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button
                                       size="icon"
                                       variant="ghost"
                                       onClick={() => {
-                                        setDeletingId(asset.id)
-                                        setShowDeleteDialog(true)
+                                        setRenewingId(asset.id)
+                                        setShowRenewDialog(true)
                                       }}
-                                      className="h-8 w-8 text-destructive hover:text-destructive"
+                                      className="h-9 w-9 bg-white/5 hover:bg-amber-500/10 rounded-xl text-amber-500"
                                     >
-                                      <Trash2 className="h-4 w-4" />
+                                      <Clock className="h-4 w-4" />
                                     </Button>
                                   </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>删除</p>
-                                  </TooltipContent>
+                                  <TooltipContent className="bg-secondary-950 border-white/10 text-[10px] font-black uppercase text-amber-400">EXTEND_LEASE</TooltipContent>
                                 </Tooltip>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                              )}
 
-                  {/* 分页 */}
-                  {totalPages > 1 && (
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm text-muted-foreground">
-                        共 {totalCount} 条记录，第 {currentPage} / {totalPages} 页
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                          disabled={currentPage === 1 || loading}
-                        >
-                          上一页
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                          disabled={currentPage === totalPages || loading}
-                        >
-                          下一页
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => handleAllocate(asset.id)}
+                                    className="h-9 w-9 bg-white/5 hover:bg-blue-500/10 rounded-xl text-blue-400"
+                                  >
+                                    <UserPlus className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-secondary-950 border-white/10 text-[10px] font-black uppercase text-blue-400">DELEGATE_ACCESS</TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setDeletingId(asset.id)
+                                      setShowDeleteDialog(true)
+                                    }}
+                                    className="h-9 w-9 bg-white/5 hover:bg-red-500/10 rounded-xl text-red-500"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-secondary-950 border-white/10 text-[10px] font-black uppercase text-red-400">PURGE_DATA</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="p-6 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    PAGE {currentPage} OF {totalPages} <span className="mx-2 opacity-20">/</span> {totalCount} RECORDS
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1 || loading}
+                      className="border-white/10 hover:bg-white/5 rounded-lg px-4 text-[10px] font-bold"
+                    >
+                      PREV
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages || loading}
+                      className="border-white/10 hover:bg-white/5 rounded-lg px-4 text-[10px] font-bold"
+                    >
+                      NEXT
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </TooltipProvider>
 
-      {/* 分配对话框 */}
+      {/* Dialogs: Allocation */}
       <Dialog open={showAllocate} onOpenChange={setShowAllocate}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>分配IP资产</DialogTitle>
+        <DialogContent className="max-w-md bg-card/95 backdrop-blur-2xl border-white/10 rounded-3xl shadow-2xl">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-xl font-black uppercase tracking-tight">分配资产接口</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="space-y-2">
-              <Label>选择用户</Label>
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">目标用户列表 (Multiselect)</Label>
               <select
                 multiple
                 value={selectedUserIds}
@@ -1018,91 +1133,89 @@ export default function IpManagementPage() {
                   const opts = Array.from(e.target.selectedOptions).map((o) => o.value)
                   setSelectedUserIds(opts)
                 }}
-                className="w-full border rounded-md p-2 h-40 text-sm"
+                className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 h-48 text-sm focus:ring-primary-500/50 scrollbar-hide outline-none tech-mono"
               >
                 {users.map((u) => (
-                  <option key={u.id} value={u.id}>
+                  <option key={u.id} value={u.id} className="p-2 mb-1 rounded-lg hover:bg-white/5">
                     {u.email || u.id}
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-muted-foreground">按住Ctrl/Cmd键可多选</p>
+              <p className="text-[9px] text-muted-foreground uppercase font-bold text-right tracking-widest">Hold CTRL/CMD for Multiple</p>
             </div>
             <div className="space-y-2">
-              <Label>备注</Label>
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">同步备注说明</Label>
               <Input
-                placeholder="分配备注"
+                placeholder="Assign notes..."
                 value={allocateNotes}
                 onChange={(e) => setAllocateNotes(e.target.value)}
+                className="bg-black/20 border-white/5 rounded-2xl h-12"
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAllocate(false)}>
+          <DialogFooter className="mt-8 gap-3">
+            <Button variant="ghost" className="rounded-2xl h-12 px-6 font-bold text-xs uppercase" onClick={() => setShowAllocate(false)}>
               取消
             </Button>
-            <Button onClick={confirmAllocate} disabled={loading || selectedUserIds.length === 0}>
-              确认分配
+            <Button className="btn-primary rounded-2xl h-12 px-8 font-bold text-xs uppercase" onClick={confirmAllocate} disabled={loading || selectedUserIds.length === 0}>
+              确认资产分配
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* 续期确认对话框 */}
+      {/* Dialogs: Renewal */}
       <Dialog open={showRenewDialog} onOpenChange={setShowRenewDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>确认续期</DialogTitle>
+        <DialogContent className="max-w-sm bg-card/95 backdrop-blur-2xl border-white/10 rounded-3xl shadow-2xl">
+          <DialogHeader className="mb-4 text-center">
+            <DialogTitle className="text-xl font-black uppercase tracking-tight">资产配额续期</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p>
-              当前账户余额为: <span className="font-bold">${balance?.toFixed(2) ?? '---'}</span>
-            </p>
-            <p>
-              确定要为该IP续期吗？
-            </p>
-            <div className="space-y-2">
-              <Label>续期时长 (月)</Label>
-              <Select
-                value={String(renewPeriod)}
-                onValueChange={(v) => setRenewPeriod(parseInt(v))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1个月</SelectItem>
-                  <SelectItem value="3">3个月</SelectItem>
-                  <SelectItem value="6">6个月</SelectItem>
-                  <SelectItem value="12">12个月</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="space-y-6 py-4">
+            <div className="flex flex-col items-center gap-1 p-4 bg-primary-500/10 rounded-2xl border border-primary-500/20">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">AVAILABLE FUNDS</span>
+              <span className="text-2xl font-black tech-mono text-primary-400">${balance?.toFixed(2) ?? '---'}</span>
+            </div>
+            
+            <div className="space-y-4">
+               <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1 text-center block w-full">选择延长周期 (MONTHS)</Label>
+               <div className="grid grid-cols-2 gap-3">
+                  {[1, 3, 6, 12].map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setRenewPeriod(m)}
+                      className={`h-12 rounded-2xl border font-black tech-mono text-xs transition-all ${renewPeriod === m ? 'bg-primary-500 border-primary-500 text-primary-950' : 'bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10'}`}
+                    >
+                      {m} MON
+                    </button>
+                  ))}
+               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRenewDialog(false)}>
-              取消
+          <DialogFooter className="mt-4 gap-3">
+            <Button variant="ghost" className="w-full rounded-2xl h-12 font-bold text-xs uppercase" onClick={() => setShowRenewDialog(false)}>
+              ABORT
             </Button>
-            <Button onClick={handleRenew} disabled={renewLoading}>
-              {renewLoading ? '续期中...' : '确认续期'}
+            <Button className="btn-primary w-full rounded-2xl h-12 font-bold text-xs uppercase" onClick={handleRenew} disabled={renewLoading}>
+              {renewLoading ? 'PROCESSING...' : 'CONFIRM RENEWAL'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* 删除确认对话框 */}
+      {/* Dialogs: Purge Confirmation */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-card/95 backdrop-blur-2xl border-white/10 rounded-3xl shadow-2xl overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-red-500/50" />
           <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除这条IP记录吗？删除后将无法恢复。
+            <AlertDialogTitle className="text-xl font-black uppercase tracking-tight text-red-400">确认永久删除</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground text-xs font-bold leading-relaxed uppercase tracking-wider py-2">
+              此操作将从系统中永久移除该 IP 资产的所有关联数据（软删除标记）。此过程在逻辑上是不可逆的。
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDeletingId(null)}>取消</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              删除
+          <AlertDialogFooter className="mt-8 gap-3">
+            <AlertDialogCancel className="shadow-none border-none hover:bg-white/5 rounded-2xl h-12 font-bold text-xs uppercase" onClick={() => setDeletingId(null)}>CANCEL</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-600 text-white rounded-2xl h-12 px-8 font-bold text-xs uppercase border-none">
+              PURGE ASSET
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
