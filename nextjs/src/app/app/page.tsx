@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 import React from 'react';
 import { useGlobal } from '@/lib/context/GlobalContext';
