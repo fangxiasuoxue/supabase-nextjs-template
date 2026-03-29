@@ -18,7 +18,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { CheckCircle, Loader2, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { CheckCircle, Loader2, Plus, Trash2, AlertCircle, CalendarDays } from 'lucide-react';
+import { useLanguage } from '@/lib/context/LanguageContext';
 import Confetti from '@/components/Confetti';
 
 import { Database } from '@/lib/types';

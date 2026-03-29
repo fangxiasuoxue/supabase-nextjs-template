@@ -2,7 +2,7 @@
 // Generates QR codes for node URLs and uploads to Supabase Storage
 
 import QRCode from 'qrcode';
-import { createClient } from '@/lib/supabase/server';
+import { createSSRClient as createClient } from '@/lib/supabase/server';
 
 export class QRCodeService {
     /**

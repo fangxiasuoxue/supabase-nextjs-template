@@ -17,7 +17,6 @@ export class NodeUrlParser {
                 return this.parseVmess(url);
             case 'trojan':
                 return this.parseTrojan(url);
-            case 'ss':
             case 'shadowsocks':
                 return this.parseShadowsocks(url);
             case 'ssr':
