@@ -4,11 +4,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { nodeUrlParser } from '@/lib/parsers/node-url-parser';
 import type { ParseUrlRequest, ParseUrlResponse } from '@/types/nodes';
-import { createClient } from '@/lib/supabase/server';
+import { createSSRClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
     try {
-        const supabase = await createClient();
+        const supabase = await createSSRClient();
 
         // Get current user
         const { data: { user }, error: authError } = await supabase.auth.getUser();

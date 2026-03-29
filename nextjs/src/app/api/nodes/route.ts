@@ -1,13 +1,13 @@
 // API Route: GET /api/nodes
 // List all nodes with pagination and filtering
 
-import { createClient } from '@/lib/supabase/server';
+import { createSSRClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import type { NodeListParams, PaginatedResponse, Node } from '@/types/nodes';
 
 export async function GET(request: NextRequest) {
     try {
-        const supabase = await createClient();
+        const supabase = await createSSRClient();
 
         // Get current user
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const supabase = await createClient();
+        const supabase = await createSSRClient();
 
         // Get current user
         const { data: { user }, error: authError } = await supabase.auth.getUser();
