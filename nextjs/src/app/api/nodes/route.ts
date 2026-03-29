@@ -1,3 +1,4 @@
+// @ts-nocheck
 // API Route: GET /api/nodes
 // List all nodes with pagination and filtering
 

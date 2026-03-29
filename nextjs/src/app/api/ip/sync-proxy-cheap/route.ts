@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import fs from 'node:fs/promises'

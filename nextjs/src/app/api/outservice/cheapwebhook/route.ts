@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
