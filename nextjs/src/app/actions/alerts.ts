@@ -21,7 +21,7 @@ export async function ackAlertAction(alertId: string): Promise<{ success: boolea
     const adminClient = await createServerAdminClient()
     const { error } = await adminClient
       .from('alerts' as any)
-      .update({ status: 'acked', acked_by: user.id, acked_at: new Date().toISOString() })
+      .update({ status: 'acked', acked_by: user.id, acked_at: new Date().toISOString() } as any)
       .eq('id', alertId)
 
     if (error) return { success: false, error: error.message }
