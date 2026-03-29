@@ -19,7 +19,7 @@ export async function POST(
     .select('role')
     .eq('user_id', user.id)
     .single()
-  if (!roleData || !['admin'].includes(roleData.role)) {
+  if (!roleData || !['admin'].includes((roleData as any).role)) {
     return NextResponse.json({ error: 'Forbidden: admin only' }, { status: 403 })
   }
 
