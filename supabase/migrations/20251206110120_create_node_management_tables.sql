@@ -5,14 +5,13 @@
 -- ============================================
 -- Enable Extensions
 -- ============================================
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ============================================
 -- VPS Configuration Table
 -- ============================================
 CREATE TABLE IF NOT EXISTS vps_configs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     ip VARCHAR(45) NOT NULL,
     port INTEGER DEFAULT 22,
@@ -33,7 +32,7 @@ COMMENT ON COLUMN vps_configs.vps_module_id IS 'Optional link to VPS module ID';
 -- Node Source Configuration Table
 -- ============================================
 CREATE TABLE IF NOT EXISTS node_source_configs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     vps_id UUID REFERENCES vps_configs(id) ON DELETE CASCADE,
     source_type VARCHAR(50) NOT NULL CHECK (source_type IN ('3x-ui', 's-ui', 'xray-gateway', 'gost', 'xray-core')),
     api_url TEXT NOT NULL,
@@ -60,7 +59,7 @@ COMMENT ON COLUMN node_source_configs.extra_config IS 'Additional configuration 
 -- Nodes Table
 -- ============================================
 CREATE TABLE IF NOT EXISTS nodes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     vps_id UUID REFERENCES vps_configs(id) ON DELETE SET NULL,
     source_config_id UUID REFERENCES node_source_configs(id) ON DELETE SET NULL,
@@ -96,7 +95,7 @@ COMMENT ON COLUMN nodes.deleted_at IS 'Soft delete timestamp';
 -- Node Permissions Table
 -- ============================================
 CREATE TABLE IF NOT EXISTS node_permissions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     node_id UUID REFERENCES nodes(id) ON DELETE CASCADE,
     permission_type VARCHAR(20) NOT NULL CHECK (permission_type IN ('read', 'write', 'manage')),
@@ -113,7 +112,7 @@ COMMENT ON COLUMN node_permissions.permission_type IS 'read: view, write: modify
 -- Subscriptions Table
 -- ============================================
 CREATE TABLE IF NOT EXISTS subscriptions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     subscription_token VARCHAR(100) UNIQUE NOT NULL,
@@ -132,7 +131,7 @@ COMMENT ON COLUMN subscriptions.access_count IS 'Subscription access count stati
 -- Subscription Nodes Association Table
 -- ============================================
 CREATE TABLE IF NOT EXISTS subscription_nodes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     subscription_id UUID REFERENCES subscriptions(id) ON DELETE CASCADE NOT NULL,
     node_id UUID REFERENCES nodes(id) ON DELETE CASCADE NOT NULL,
     sort_order INTEGER DEFAULT 0,
@@ -147,7 +146,7 @@ COMMENT ON COLUMN subscription_nodes.sort_order IS 'Node order in subscription';
 -- Sync Logs Table
 -- ============================================
 CREATE TABLE IF NOT EXISTS sync_logs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     source_config_id UUID REFERENCES node_source_configs(id) ON DELETE CASCADE NOT NULL,
     sync_type VARCHAR(20) CHECK (sync_type IN ('full', 'incremental')),
     status VARCHAR(20) CHECK (status IN ('success', 'failed', 'partial')),
