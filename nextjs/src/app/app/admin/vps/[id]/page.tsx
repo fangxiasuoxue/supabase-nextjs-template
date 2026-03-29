@@ -84,7 +84,11 @@ export default function VpsDetailPage() {
         </TabsList>
 
         <TabsContent value="agent" className="mt-6">
-          <VpsAgentStatusPanel vpsId={id} />
+          <VpsAgentStatusPanel
+            vpsId={id}
+            lastSyncAt={vps.last_sync_at ?? null}
+            lastSyncBatchId={vps.last_sync_batch_id ?? null}
+          />
         </TabsContent>
 
         <TabsContent value="billing" className="mt-6">

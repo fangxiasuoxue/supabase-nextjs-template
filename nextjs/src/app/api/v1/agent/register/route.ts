@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     status: 'registered',
-    heartbeat_interval_sec: 60,
+    sync_interval_min: 180,
     features: ['inbounds', 'outbounds', 'routing', 'stats', 'panel', 'probe'],
   })
 }

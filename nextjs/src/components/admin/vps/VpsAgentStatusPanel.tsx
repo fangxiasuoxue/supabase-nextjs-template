@@ -15,6 +15,8 @@ interface AgentStatus {
 
 interface Props {
   vpsId: string
+  lastSyncAt?: string | null
+  lastSyncBatchId?: string | null
 }
 
 function ProgressBar({ value, warn = 80, crit = 95, label, unit = '%' }: {
@@ -34,7 +36,7 @@ function ProgressBar({ value, warn = 80, crit = 95, label, unit = '%' }: {
   )
 }
 
-export function VpsAgentStatusPanel({ vpsId }: Props) {
+export function VpsAgentStatusPanel({ vpsId, lastSyncAt, lastSyncBatchId }: Props) {
   const [status, setStatus] = useState<AgentStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -139,6 +141,19 @@ export function VpsAgentStatusPanel({ vpsId }: Props) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* 批量同步状态 */}
+      {lastSyncAt && (
+        <div className="pt-4 border-t border-white/5 flex items-center justify-between text-[10px] text-muted-foreground/50">
+          <span className="uppercase tracking-widest font-black">上次批量同步</span>
+          <span className="tech-mono flex items-center gap-2">
+            {new Date(lastSyncAt).toLocaleString()}
+            {Date.now() - new Date(lastSyncAt).getTime() > 4 * 3600 * 1000 && (
+              <span className="text-amber-400">⚠ 同步可能延迟</span>
+            )}
+          </span>
         </div>
       )}
     </div>

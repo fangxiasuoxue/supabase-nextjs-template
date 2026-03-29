@@ -348,11 +348,39 @@ export function VPSList() {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <div className="flex flex-col items-end">
+                                                <div className="flex flex-col items-end gap-1">
+                                                    {/* 原有余额 */}
                                                     <span className={`tech-mono text-sm font-black tracking-tighter ${instance.billingRemaining < 0 ? 'text-rose-500' : 'text-emerald-400'}`}>
                                                         ${instance.billingRemaining.toFixed(2)}
                                                     </span>
-                                                    <span className="text-[9px] text-muted-foreground/40 font-bold uppercase tracking-widest">Remaining Credit</span>
+                                                    <span className="text-[8px] text-muted-foreground/40 font-bold uppercase tracking-widest">Remaining</span>
+                                                    {/* 赠金 */}
+                                                    {instance.creditRemaining != null && (
+                                                        <span className={`tech-mono text-xs font-bold tracking-tighter ${instance.creditRemaining < 0 ? 'text-rose-400' : instance.creditRemaining < 5 ? 'text-amber-400' : 'text-sky-400'}`}>
+                                                            赠金 ${instance.creditRemaining.toFixed(2)}
+                                                        </span>
+                                                    )}
+                                                    {/* 近30天费用 */}
+                                                    {instance.cost30d != null && (
+                                                        <span className="tech-mono text-[10px] text-muted-foreground/60">
+                                                            30d ${instance.cost30d.toFixed(2)}
+                                                        </span>
+                                                    )}
+                                                    {/* 上下行流量 */}
+                                                    {(instance.uploadBytes != null || instance.downloadBytes != null) && (
+                                                        <div className="flex gap-1.5 text-[9px] text-muted-foreground/50 font-bold">
+                                                            {instance.uploadBytes != null && (
+                                                                <span>↑{(instance.uploadBytes / 1073741824).toFixed(1)}G</span>
+                                                            )}
+                                                            {instance.downloadBytes != null && (
+                                                                <span>↓{(instance.downloadBytes / 1073741824).toFixed(1)}G</span>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    {/* 来源标注 */}
+                                                    {(instance.creditRemaining != null || instance.cost30d != null) && (
+                                                        <span className="text-[8px] text-muted-foreground/30 italic">来自账单系统</span>
+                                                    )}
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right pr-10">

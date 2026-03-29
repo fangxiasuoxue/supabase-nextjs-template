@@ -18,7 +18,7 @@ interface TestResult {
   test_method: 'vercel' | 'agent'
   tested_from_ip: string | null
   error_message: string | null
-  created_at: string
+  tested_at: string
 }
 
 export function IpTestResultPanel() {
@@ -146,7 +146,7 @@ export function IpTestResultPanel() {
                   </TableCell>
                   <TableCell className="pr-6">
                     <span className="text-[9px] text-muted-foreground/40">
-                      {new Date(r.created_at).toLocaleString()}
+                      {new Date(r.tested_at).toLocaleString()}
                     </span>
                   </TableCell>
                 </TableRow>

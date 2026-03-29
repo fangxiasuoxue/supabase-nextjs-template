@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
   let query = adminClient
     .from('proxy_test_results' as any)
     .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
+    .order('tested_at', { ascending: false })
     .range(offset, offset + limit - 1)
 
   if (method) {
