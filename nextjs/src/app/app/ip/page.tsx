@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/lib/context/LanguageContext";
 import { useGlobal } from "@/lib/context/GlobalContext";
+import { IpTestDispatcher } from "@/components/admin/ip/IpTestDispatcher";
+import { IpTestResultPanel } from "@/components/admin/ip/IpTestResultPanel";
 import { createSPASassClientAuthenticated as createSPASassClient } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -1220,6 +1222,20 @@ export default function IpManagementPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Phase-2: Agent 测试结果面板 */}
+      <div className="mt-10 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary/10 rounded-xl border border-primary/20">
+            <Activity className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-sm font-black uppercase tracking-widest">Agent 测试结果</h3>
+            <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Test Results via jiedian-agent</span>
+          </div>
+        </div>
+        <IpTestResultPanel />
+      </div>
     </div>
   )
 }
