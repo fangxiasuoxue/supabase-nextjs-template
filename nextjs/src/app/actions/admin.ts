@@ -51,10 +51,11 @@ export async function getUsersAction(page: number = 1, limit: number = 10, searc
     // but for a scalable solution we might need a different approach. 
     // For now, we'll use listUsers and basic pagination.
 
-    const { data: { users }, error: usersError } = await adminClient.auth.admin.listUsers({
+    const { data: { users: usersRaw }, error: usersError } = await adminClient.auth.admin.listUsers({
       page: page,
       perPage: limit,
     })
+    const users: any[] = usersRaw as any[]
 
     if (usersError) throw usersError
 
@@ -219,7 +220,8 @@ export async function getNonAdminUsersAction() {
     const adminClient = await createServerAdminClient()
 
     // 获取所有用户
-    const { data: { users }, error: usersError } = await adminClient.auth.admin.listUsers()
+    const { data: { users: usersRaw2 }, error: usersError } = await adminClient.auth.admin.listUsers()
+    const users: any[] = usersRaw2 as any[]
     if (usersError) throw usersError
 
     // 获取所有管理员用户ID
