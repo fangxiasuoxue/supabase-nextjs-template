@@ -19,9 +19,11 @@ export async function ackAlertAction(alertId: string): Promise<{ success: boolea
     }
 
     const adminClient = await createServerAdminClient()
-    const { error } = await adminClient
-      .from('alerts' as any)
-      .update({ status: 'acked', acked_by: user.id, acked_at: new Date().toISOString() } as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = adminClient as any
+    const { error } = await db
+      .from('alerts')
+      .update({ status: 'acked', acked_by: user.id, acked_at: new Date().toISOString() })
       .eq('id', alertId)
 
     if (error) return { success: false, error: error.message }
