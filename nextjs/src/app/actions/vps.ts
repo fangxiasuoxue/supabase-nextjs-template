@@ -89,7 +89,13 @@ export async function getVPSInstancesAction(): Promise<{ data: VPSData | null, e
             trafficSent: i.traffic_sent,
             billingUsed: i.billing_used,
             billingRemaining: i.billing_remaining,
-            lastUpdated: i.last_updated
+            lastUpdated: i.last_updated,
+            // Phase-2: openclaw 账单字段（如存在）
+            creditRemaining: i.credit_remaining ?? null,
+            cost30d: i.cost_30d ?? null,
+            uploadBytes: i.upload_bytes ?? null,
+            downloadBytes: i.download_bytes ?? null,
+            billingUpdatedAt: i.billing_updated_at ?? null,
         }))
 
         return {

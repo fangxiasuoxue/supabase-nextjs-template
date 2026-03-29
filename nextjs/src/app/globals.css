@@ -261,10 +261,10 @@
 }
 
 .theme-jiedian-pro {
-    --color-background: #020617;
-    --color-foreground: #f8fafc;
+    --color-background: #0d1117;
+    --color-foreground: #e6edf3;
 
-    /* Cyber Cyan Primary - More vibrant for technical feel */
+    /* Cyber Cyan Primary */
     --color-primary-50: #ecfeff;
     --color-primary-100: #cffafe;
     --color-primary-200: #a5f3fc;
@@ -276,7 +276,7 @@
     --color-primary-800: #155e75;
     --color-primary-900: #164e63;
 
-    /* Slate/Zinc Secondary - Deep space aesthetic */
+    /* Slate/Zinc Secondary */
     --color-secondary-50: #f8fafc;
     --color-secondary-100: #f1f5f9;
     --color-secondary-200: #e2e8f0;
@@ -293,25 +293,25 @@
     --color-success-500: #10b981;
     --color-error-500: #ef4444;
 
-    /* Shadcn Overrides for Dark Mode Pro - Adjusted for better contrast */
-    --background: 222 47% 4%;
-    --foreground: 213 31% 96%; /* Even brighter */
-    --card: 222 47% 4%;
-    --card-foreground: 213 31% 96%;
-    --popover: 222 47% 4%;
-    --popover-foreground: 210 40% 98%;
+    /* Shadcn Overrides — 提升可读性：背景提亮、字体降亮、对比度舒适化 */
+    --background: 216 28% 7%;        /* #0d1117 — 比 #020617 更亮，眼睛不累 */
+    --foreground: 213 27% 90%;       /* #e6edf3 — 降低纯白刺激感 */
+    --card: 216 28% 9%;              /* 卡片稍亮于背景，层次清晰 */
+    --card-foreground: 213 27% 90%;
+    --popover: 216 28% 9%;
+    --popover-foreground: 213 27% 90%;
     --primary: 189 94% 43%;
     --primary-foreground: 222 47% 11%;
-    --secondary: 217 33% 25%; /* Lightened further from 20% */
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 25%; 
-    --muted-foreground: 215 20% 88%; /* Significantly lightened to 88% for high legibility */
-    --accent: 217 33% 28%;
-    --accent-foreground: 210 40% 98%;
+    --secondary: 217 20% 16%;        /* 次要背景，明显但不刺眼 */
+    --secondary-foreground: 213 27% 88%;
+    --muted: 217 20% 14%;
+    --muted-foreground: 215 15% 62%; /* 次要文字：不过亮也不过暗 */
+    --accent: 217 20% 18%;
+    --accent-foreground: 213 27% 90%;
     --destructive: 0 63% 40%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 28%; /* Clearer borders */
-    --input: 217 33% 28%;
+    --border: 217 20% 18%;           /* 边框明显但柔和 */
+    --input: 217 20% 14%;
     --ring: 189 94% 43%;
 }
 
@@ -330,11 +330,11 @@
     }
 
     .glass-card {
-        @apply bg-[#030712]/60 backdrop-blur-xl border border-white/[0.05] shadow-[0_8px_32px_rgba(0,0,0,0.4)];
+        @apply bg-[#161b22]/80 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3)];
     }
 
     .glass-card-premium {
-        @apply relative bg-[#030712]/40 backdrop-blur-2xl border border-white/[0.08] shadow-[0_20px_50px_rgba(0,0,0,0.5)];
+        @apply relative bg-[#161b22]/60 backdrop-blur-2xl border border-white/[0.10] shadow-[0_20px_50px_rgba(0,0,0,0.4)];
     }
 
     .glass-card-premium::before {
