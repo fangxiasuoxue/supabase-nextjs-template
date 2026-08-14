@@ -7,11 +7,15 @@ import { gunzipSync } from 'zlib'
 const HEARTBEAT_SECRET = process.env.HEARTBEAT_SECRET ?? ''
 
 function verifyHmac(instanceId: string, timestamp: number, hmac: string): boolean {
+  if (typeof hmac !== 'string' || !/^[0-9a-fA-F]+$/.test(hmac)) return false
   const expected = crypto
     .createHmac('sha256', HEARTBEAT_SECRET)
     .update(`${instanceId}:${timestamp}`)
     .digest('hex')
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(hmac))
+  const expBuf = Buffer.from(expected, 'hex')
+  const gotBuf = Buffer.from(hmac, 'hex')
+  if (expBuf.length !== gotBuf.length) return false
+  return crypto.timingSafeEqual(expBuf, gotBuf)
 }
 
 async function parseBody(request: NextRequest): Promise<unknown> {

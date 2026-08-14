@@ -6,11 +6,17 @@ import crypto from 'crypto'
 const HEARTBEAT_SECRET = process.env.HEARTBEAT_SECRET ?? ''
 
 function verifyHmac(instanceId: string, timestamp: number, hmac: string): boolean {
+  // 格式校验:hmac 必须是 hex 字符串,否则直接拒(防止 timingSafeEqual 因非法输入抛异常)
+  if (typeof hmac !== 'string' || !/^[0-9a-fA-F]+$/.test(hmac)) return false
   const expected = crypto
     .createHmac('sha256', HEARTBEAT_SECRET)
     .update(`${instanceId}:${timestamp}`)
     .digest('hex')
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(hmac))
+  const expBuf = Buffer.from(expected, 'hex')
+  const gotBuf = Buffer.from(hmac, 'hex')
+  // 长度不等时 timingSafeEqual 会抛异常,先校验长度再常量时间比较
+  if (expBuf.length !== gotBuf.length) return false
+  return crypto.timingSafeEqual(expBuf, gotBuf)
 }
 
 // POST /api/v1/agent/register — agent 首次注册
@@ -36,7 +42,7 @@ export async function POST(request: NextRequest) {
   const adminClient = await createServerAdminClient()
 
   // 按 gcp_instance_name 找到对应记录并更新
-  const { error } = await adminClient
+  const { data: updated, error } = await adminClient
     .from('vps_instances' as any)
     .update({
       public_ip,
@@ -46,9 +52,16 @@ export async function POST(request: NextRequest) {
       last_heartbeat_at: new Date().toISOString(),
     })
     .eq('gcp_instance_name', instance_id)
+    .select('id')
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // 命中行校验:instance_id 在 vps_instances 无对应记录时,update 不报错但影响 0 行,
+  // 不能返回 registered(否则任何通过 HMAC 的未知实例都"注册成功")。
+  if (!updated || updated.length === 0) {
+    return NextResponse.json({ error: 'Unknown instance_id' }, { status: 404 })
   }
 
   return NextResponse.json({

@@ -35,11 +35,11 @@ function verifyWebhookSignature(
             .update(input)
             .digest('hex');
 
-        // 使用时间安全比较防止时序攻击
-        return crypto.timingSafeEqual(
-            Buffer.from(hash),
-            Buffer.from(expectedHash)
-        );
+        // 使用时间安全比较防止时序攻击;先校验长度,不等长 timingSafeEqual 会抛异常
+        const hashBuf = Buffer.from(hash);
+        const expBuf = Buffer.from(expectedHash);
+        if (hashBuf.length !== expBuf.length) return false;
+        return crypto.timingSafeEqual(hashBuf, expBuf);
     } catch (error) {
         console.error('Signature verification error:', error);
         return false;
