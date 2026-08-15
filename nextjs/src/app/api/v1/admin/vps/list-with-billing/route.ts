@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { createSSRClient } from '@/lib/supabase/server'
@@ -25,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   // 查询 vps_instances 基础信息
   const { data: vpsList, error: vpsErr } = await adminClient
-    .from('vps_instances' as any)
+    .from('vps_instances')
     .select('*')
     .order('created_at', { ascending: false })
 
@@ -47,7 +46,7 @@ export async function GET(request: NextRequest) {
   if (instanceNames.length > 0) {
     // 查 vm_instances → gcp_accounts + traffic_snapshots
     const { data: vmRows } = await adminClient
-      .from('vm_instances' as any)
+      .from('vm_instances')
       .select('id, instance_name, account_id')
       .in('instance_name', instanceNames)
 
@@ -56,14 +55,14 @@ export async function GET(request: NextRequest) {
 
       // 账单余额
       const { data: gcpAccounts } = await adminClient
-        .from('gcp_accounts' as any)
+        .from('gcp_accounts')
         .select('id, credit_remaining')
         .in('id', accountIds)
 
       // 近30天费用（在应用层聚合）
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
       const { data: billingRows } = await adminClient
-        .from('billing_snapshots' as any)
+        .from('billing_snapshots')
         .select('account_id, amount')
         .in('account_id', accountIds)
         .gte('snapshot_date', thirtyDaysAgo)
@@ -71,7 +70,7 @@ export async function GET(request: NextRequest) {
       // 最新流量快照（每个 vm_instance 取最近一条）
       const vmInstanceIds = (vmRows as any[]).map((r: any) => r.id).filter(Boolean)
       const { data: trafficRows } = await adminClient
-        .from('traffic_snapshots' as any)
+        .from('traffic_snapshots')
         .select('vm_instance_id, egress_bytes, ingress_bytes, snapshot_date')
         .in('vm_instance_id', vmInstanceIds)
         .order('snapshot_date', { ascending: false })

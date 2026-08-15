@@ -22,7 +22,7 @@ export async function assignResourceAction(
         // Check if user has manage permission for this module
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: permission } = await adminClient
-            .from('module_permissions' as any)
+            .from('module_permissions')
             .select('can_manage')
             .eq('user_id', user.id)
             .eq('module', resourceType.replace('_', ''))
@@ -67,7 +67,7 @@ export async function revokeResourceAssignmentAction(assignmentId: string) {
         // Get assignment to check resource type
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: assignment } = await adminClient
-            .from('resource_assignments' as any)
+            .from('resource_assignments')
             .select('resource_type')
             .eq('id', assignmentId)
             .single()
@@ -77,7 +77,7 @@ export async function revokeResourceAssignmentAction(assignmentId: string) {
         // Check if user has manage permission for this module
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: permission } = await adminClient
-            .from('module_permissions' as any)
+            .from('module_permissions')
             .select('can_manage')
             .eq('user_id', user.id)
             // eslint-disable-next-line @typescript-eslint/no-explicit-any

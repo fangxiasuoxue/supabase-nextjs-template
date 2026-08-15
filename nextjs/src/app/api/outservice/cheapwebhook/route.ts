@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
@@ -79,7 +78,7 @@ export async function POST(request: NextRequest) {
         // 从系统配置中获取 webhook secret
         const adminClient = await createServerAdminClient();
         const { data: configData, error: configError } = await adminClient
-            .from('system_configs' as any)
+            .from('system_configs')
             .select('value')
             .eq('key', 'message.cheap.webhook.secret')
             .single();
@@ -125,7 +124,7 @@ export async function POST(request: NextRequest) {
 
         // 检查事件ID是否已存在(幂等性)
         const { data: existingMessage } = await adminClient
-            .from('external_messages' as any)
+            .from('external_messages')
             .select('id')
             .eq('event_id', eventId)
             .single();
@@ -141,7 +140,7 @@ export async function POST(request: NextRequest) {
 
         // 保存消息到数据库
         const { data: insertedData, error: insertError } = await (adminClient
-            .from('external_messages' as any) as any)
+            .from('external_messages') as any)
             .insert({
                 source: 'proxy-cheap',
                 event_type: eventName,

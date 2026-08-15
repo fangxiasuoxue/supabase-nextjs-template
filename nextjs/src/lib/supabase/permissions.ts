@@ -18,7 +18,7 @@ export async function hasModulePermission(
 
   const { data } = await client
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .from('module_permissions' as any)
+    .from('module_permissions')
     .select('can_menu, can_read, can_write, can_manage')
     .eq('user_id', uid)
     .eq('module', module)
@@ -90,7 +90,7 @@ export async function isResourceAssigned(
 
   const { data } = await client
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .from('resource_assignments' as any)
+    .from('resource_assignments')
     .select('id')
     .eq('resource_type', resourceType)
     .eq('resource_id', resourceId)
@@ -212,7 +212,7 @@ export async function getUserModulePermissions(
 
   const { data } = await client
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .from('module_permissions' as any)
+    .from('module_permissions')
     .select('can_menu, can_read, can_write, can_manage')
     .eq('user_id', uid)
     .eq('module', module)

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { createSSRClient } from '@/lib/supabase/server'
@@ -27,7 +26,7 @@ export async function GET(request: NextRequest) {
   const method = searchParams.get('method') // 'vercel' | 'agent' | null
 
   let query = adminClient
-    .from('proxy_test_results' as any)
+    .from('proxy_test_results')
     .select('*', { count: 'exact' })
     .order('tested_at', { ascending: false })
     .range(offset, offset + limit - 1)

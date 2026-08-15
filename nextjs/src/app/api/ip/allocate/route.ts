@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextResponse } from 'next/server'
 import { createSSRClient } from '@/lib/supabase/server'
 
@@ -14,10 +13,10 @@ export async function POST(req: Request) {
   const { data: auth } = await ssr.auth.getUser()
   const uid = auth.user?.id
   if (!uid) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
-  const { data: role } = await ssr.from('user_roles' as any).select('role').eq('user_id', uid).limit(1).maybeSingle()
+  const { data: role } = await ssr.from('user_roles').select('role').eq('user_id', uid).limit(1).maybeSingle()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const isAdmin = (role as any)?.role === 'admin'
-  const { data: perm } = await ssr.from('module_permissions' as any).select('can_write, can_manage').eq('user_id', uid).eq('module', 'ip').limit(1).maybeSingle()
+  const { data: perm } = await ssr.from('module_permissions').select('can_write, can_manage').eq('user_id', uid).eq('module', 'ip').limit(1).maybeSingle()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const canWrite = isAdmin || !!(perm as any)?.can_write || !!(perm as any)?.can_manage
   if (!canWrite) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -31,7 +30,7 @@ export async function POST(req: Request) {
     assignee_user_id: assignee,
   }))
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await ssr.from('ip_allocations' as any).insert(rows as any)
+  const { error } = await ssr.from('ip_allocations').insert(rows as any)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ count: rows.length })
 }

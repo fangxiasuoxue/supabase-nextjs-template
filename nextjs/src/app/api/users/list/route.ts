@@ -14,7 +14,7 @@ export async function GET() {
 
   // 2) 必须是 admin
   const { data: roleData } = await authClient
-    .from('user_roles' as any)
+    .from('user_roles')
     .select('role')
     .eq('user_id', user.id)
     .single()

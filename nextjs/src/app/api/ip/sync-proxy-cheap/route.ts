@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { createSSRClient } from '@/lib/supabase/server'
@@ -61,7 +60,7 @@ export async function POST() {
       }
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await admin.from('ip_assets' as any).upsert(rows as any, { onConflict: 'provider,public_ip' })
+    const { error } = await admin.from('ip_assets').upsert(rows as any, { onConflict: 'provider,public_ip' })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ count: rows.length })
   }

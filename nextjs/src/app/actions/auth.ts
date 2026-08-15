@@ -16,7 +16,7 @@ export async function checkIsAdmin(): Promise<boolean> {
         const adminClient = await createServerAdminClient()
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data } = await adminClient
-            .from('user_roles' as any)
+            .from('user_roles')
             .select('role')
             .eq('user_id', user.id)
             .single()
@@ -40,7 +40,7 @@ export async function getUserPermissionsAction() {
         const adminClient = await createServerAdminClient()
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data } = await adminClient
-            .from('module_permissions' as any)
+            .from('module_permissions')
             .select('module, can_menu, can_read, can_write, can_manage')
             .eq('user_id', user.id)
 

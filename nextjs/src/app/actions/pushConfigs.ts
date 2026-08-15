@@ -17,7 +17,7 @@ export async function getPushConfigsAction(): Promise<{ data: PushConfig[], erro
 
         // Get all bot URL and auto-push configs
         const { data: configs, error } = await adminClient
-            .from('system_configs' as any)
+            .from('system_configs')
             .select('key, value')
             .or('key.like.message.cheap.push.qywxboturl.%,key.like.message.cheap.push.auto.%')
 
@@ -67,20 +67,20 @@ export async function updatePushConfigAction(userId: string, botUrl: string, aut
 
         // Update or insert bot URL
         const { data: existingBot } = await adminClient
-            .from('system_configs' as any)
+            .from('system_configs')
             .select('key')
             .eq('key', botUrlKey)
             .single()
 
         if (existingBot) {
             const { error } = await (adminClient
-                .from('system_configs' as any) as any)
+                .from('system_configs') as any)
                 .update({ value: botUrl, updated_at: new Date().toISOString() })
                 .eq('key', botUrlKey)
             if (error) return { success: false, error: error.message }
         } else {
             const { error } = await (adminClient
-                .from('system_configs' as any) as any)
+                .from('system_configs') as any)
                 .insert({
                     key: botUrlKey,
                     value: botUrl,
@@ -92,20 +92,20 @@ export async function updatePushConfigAction(userId: string, botUrl: string, aut
 
         // Update or insert auto-push setting
         const { data: existingAuto } = await adminClient
-            .from('system_configs' as any)
+            .from('system_configs')
             .select('key')
             .eq('key', autoKey)
             .single()
 
         if (existingAuto) {
             const { error } = await (adminClient
-                .from('system_configs' as any) as any)
+                .from('system_configs') as any)
                 .update({ value: autoEnabled.toString(), updated_at: new Date().toISOString() })
                 .eq('key', autoKey)
             if (error) return { success: false, error: error.message }
         } else {
             const { error } = await (adminClient
-                .from('system_configs' as any) as any)
+                .from('system_configs') as any)
                 .insert({
                     key: autoKey,
                     value: autoEnabled.toString(),
@@ -133,12 +133,12 @@ export async function deletePushConfigAction(userId: string): Promise<{ success:
 
         // Delete both configs
         await adminClient
-            .from('system_configs' as any)
+            .from('system_configs')
             .delete()
             .eq('key', botUrlKey)
 
         await adminClient
-            .from('system_configs' as any)
+            .from('system_configs')
             .delete()
             .eq('key', autoKey)
 

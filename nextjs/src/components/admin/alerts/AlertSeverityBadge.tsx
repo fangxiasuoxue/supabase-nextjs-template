@@ -1,4 +1,3 @@
-// @ts-nocheck
 interface Props {
   severity: 'info' | 'warning' | 'critical'
 }

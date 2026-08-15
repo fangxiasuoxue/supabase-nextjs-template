@@ -21,7 +21,7 @@ export async function debugVPSAuthAction(userId: string) {
         // 2. Check allocations for this user
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: allocations, error: allocError } = await adminClient
-            .from('vps_allocations' as any)
+            .from('vps_allocations')
             .select('*')
             .eq('owner', userId)
 
@@ -30,7 +30,7 @@ export async function debugVPSAuthAction(userId: string) {
         // 3. Check what VPS instances the user can see (using their client)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: visibleInstances, error: visibleError } = await userClient
-            .from('vps_instances' as any)
+            .from('vps_instances')
             .select('*')
 
         console.log('Visible instances for user:', visibleInstances, visibleError)
@@ -38,7 +38,7 @@ export async function debugVPSAuthAction(userId: string) {
         // 4. Check RLS policies
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: policies, error: policiesError } = await adminClient
-            .from('pg_policies' as any)
+            .from('pg_policies')
             .select('*')
             .eq('tablename', 'vps_instances')
 

@@ -13,7 +13,7 @@ export async function callAgent(
 
   // 查询有效的 agent token
   const { data: tokenRow, error: tokenErr } = await adminClient
-    .from('agent_tokens' as any)
+    .from('agent_tokens')
     .select('token_hash, instance_id')
     .eq('instance_id', vpsId)
     .eq('status', 'active')
@@ -25,7 +25,7 @@ export async function callAgent(
 
   // 查询 VPS 公网 IP
   const { data: vps, error: vpsErr } = await adminClient
-    .from('vps_instances' as any)
+    .from('vps_instances')
     .select('public_ip')
     .eq('id', vpsId)
     .single()

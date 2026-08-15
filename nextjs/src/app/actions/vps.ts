@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use server'
 
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
@@ -17,7 +16,7 @@ async function checkPermission(permission: 'read' | 'manage') {
     // Check if admin
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: roleData } = await adminClient
-        .from('user_roles' as any)
+        .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
         .single()
@@ -28,7 +27,7 @@ async function checkPermission(permission: 'read' | 'manage') {
     // Check module permission
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: permData } = await adminClient
-        .from('module_permissions' as any)
+        .from('module_permissions')
         .select('*')
         .eq('user_id', user.id)
         .eq('module', 'vps')
@@ -51,7 +50,7 @@ async function getGCPConfigs() {
     const adminClient = await createServerAdminClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: configs } = await adminClient
-        .from('system_configs' as any)
+        .from('system_configs')
         .select('*')
         .like('key', 'vps.gcp.key.%')
 
@@ -67,7 +66,7 @@ export async function getVPSInstancesAction(): Promise<{ data: VPSData | null, e
         // Use SSR client which has user context, RLS will handle permission check
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: instances, error } = await supabase
-            .from('vps_instances' as any)
+            .from('vps_instances')
             .select('*')
             .order('account', { ascending: true })
             .order('name', { ascending: true })
@@ -168,7 +167,7 @@ export async function syncAccountVPSAction(accountAlias: string): Promise<{ succ
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const { error } = await adminClient
-                .from('vps_instances' as any)
+                .from('vps_instances')
                 .upsert(dbRecord as any, { onConflict: 'instance_id' })
 
             if (error) throw error
@@ -178,7 +177,7 @@ export async function syncAccountVPSAction(accountAlias: string): Promise<{ succ
         if (instanceIds.length > 0) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const { error: deleteError } = await adminClient
-                .from('vps_instances' as any)
+                .from('vps_instances')
                 .delete()
                 .eq('account', accountAlias)
                 .not('instance_id', 'in', `(${instanceIds.map(id => `"${id}"`).join(',')})`)
@@ -190,7 +189,7 @@ export async function syncAccountVPSAction(accountAlias: string): Promise<{ succ
             // If no instances found in GCP, delete all for this account
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const { error: deleteError } = await adminClient
-                .from('vps_instances' as any)
+                .from('vps_instances')
                 .delete()
                 .eq('account', accountAlias)
 
@@ -248,7 +247,7 @@ export async function allocateVPSAction(vpsId: string, userId: string, notes?: s
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error } = await adminClient
-            .from('vps_allocations' as any)
+            .from('vps_allocations')
             .insert(allocationData as any)
 
         if (error) throw error
@@ -289,7 +288,7 @@ export async function getVPSAllocationsAction(vpsId: string) {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data, error } = await supabase
-            .from('vps_allocations' as any)
+            .from('vps_allocations')
             .select('*')
             .eq('vps_id', vpsId)
             .eq('state', 'allocated')

@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 import { useState, useEffect } from 'react';
 import { createSPASassClient } from '@/lib/supabase/client';

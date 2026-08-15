@@ -17,7 +17,7 @@ async function checkPermission(requiredPermission: 'read' | 'write' | 'manage') 
 
     // 检查是否为管理员
     const { data: roleData } = await adminClient
-        .from('user_roles' as any)
+        .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
         .single()
@@ -31,7 +31,7 @@ async function checkPermission(requiredPermission: 'read' | 'write' | 'manage') 
 
     // 查询用户在该模块的所有权限
     const { data: permData } = await adminClient
-        .from('module_permissions' as any)
+        .from('module_permissions')
         .select('can_read, can_write, can_manage')
         .eq('user_id', user.id)
         .eq('module', 'messages')
@@ -61,7 +61,7 @@ export async function getMessagesAction(filter?: MessageFilter) {
         const adminClient = await createServerAdminClient()
 
         let query = adminClient
-            .from('external_messages' as any)
+            .from('external_messages')
             .select('*', { count: 'exact' })
             .is('deleted_at', null)
 
@@ -133,7 +133,7 @@ export async function updateMessageAction(id: number, updates: { is_read?: boole
         const adminClient = await createServerAdminClient()
 
         const { data, error } = await (adminClient
-            .from('external_messages' as any) as any)
+            .from('external_messages') as any)
             .update({
                 ...updates,
                 updated_at: new Date().toISOString()
@@ -160,7 +160,7 @@ export async function deleteMessageAction(id: number) {
         const adminClient = await createServerAdminClient()
 
         const { error } = await (adminClient
-            .from('external_messages' as any) as any)
+            .from('external_messages') as any)
             .update({
                 deleted_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
@@ -209,7 +209,7 @@ export async function batchUpdateMessagesAction(action: BatchMessageAction, ids:
         }
 
         const { error } = await (adminClient
-            .from('external_messages' as any) as any)
+            .from('external_messages') as any)
             .update(updates)
             .in('id', ids)
 
@@ -231,7 +231,7 @@ export async function getMessageAction(id: number) {
         const adminClient = await createServerAdminClient()
 
         const { data, error } = await adminClient
-            .from('external_messages' as any)
+            .from('external_messages')
             .select('*')
             .eq('id', id)
             .single()

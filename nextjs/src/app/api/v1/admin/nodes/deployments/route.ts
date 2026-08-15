@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { createSSRClient } from '@/lib/supabase/server'
@@ -26,7 +25,7 @@ export async function GET(request: NextRequest) {
   const offset = Number(searchParams.get('offset') ?? 0)
 
   const { data, error, count } = await adminClient
-    .from('node_deployments' as any)
+    .from('node_deployments')
     .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)

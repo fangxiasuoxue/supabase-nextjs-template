@@ -15,7 +15,7 @@ async function checkAdmin() {
     const adminClient = await createServerAdminClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: roleData } = await adminClient
-        .from('user_roles' as any)
+        .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
         .single()
@@ -32,7 +32,7 @@ export async function getConfigsAction(filter?: ConfigFilter) {
         const adminClient = await createServerAdminClient()
 
         let query = adminClient
-            .from('system_configs' as any)
+            .from('system_configs')
             .select('*')
             .order('created_at', { ascending: false })
 
@@ -63,7 +63,7 @@ export async function upsertConfigAction(params: CreateConfigParams | UpdateConf
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data, error } = await adminClient
-            .from('system_configs' as any)
+            .from('system_configs')
             .upsert(params as any)
             .select()
             .single()
@@ -84,7 +84,7 @@ export async function deleteConfigAction(id: string) {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error } = await adminClient
-            .from('system_configs' as any)
+            .from('system_configs')
             .delete()
             .eq('id', id)
 

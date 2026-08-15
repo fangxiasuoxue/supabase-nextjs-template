@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use server'
 
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'

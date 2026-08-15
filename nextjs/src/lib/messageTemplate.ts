@@ -50,7 +50,7 @@ export async function getTemplate(
         const key = `message.template.${channel}.${eventType}`
 
         const { data, error } = await adminClient
-            .from('system_configs' as any)
+            .from('system_configs')
             .select('value')
             .eq('key', key)
             .single()

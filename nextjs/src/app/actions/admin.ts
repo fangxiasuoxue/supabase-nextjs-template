@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use server'
 
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
@@ -30,7 +29,7 @@ async function checkAdmin() {
   const adminClient = await createServerAdminClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: roleData } = await adminClient
-    .from('user_roles' as any)
+    .from('user_roles')
     .select('role')
     .eq('user_id', user.id)
     .single()
@@ -71,14 +70,14 @@ export async function getUsersAction(page: number = 1, limit: number = 10, searc
     // 2. Fetch roles
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: roles } = await adminClient
-      .from('user_roles' as any)
+      .from('user_roles')
       .select('*')
       .in('user_id', userIds)
 
     // 3. Fetch permissions
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: permissions } = await adminClient
-      .from('module_permissions' as any)
+      .from('module_permissions')
       .select('*')
       .in('user_id', userIds)
 
@@ -129,7 +128,7 @@ export async function updateUserRoleAction(userId: string, role: string) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await adminClient
-      .from('user_roles' as any)
+      .from('user_roles')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .upsert({ user_id: userId, role: role } as any)
 
@@ -149,7 +148,7 @@ export async function updateModulePermissionAction(userId: string, module: strin
     // First get existing permission row
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: existing } = await adminClient
-      .from('module_permissions' as any)
+      .from('module_permissions')
       .select('*')
       .eq('user_id', userId)
       .eq('module', module)
@@ -188,7 +187,7 @@ export async function updateModulePermissionAction(userId: string, module: strin
       if (existing) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error } = await adminClient
-          .from('module_permissions' as any)
+          .from('module_permissions')
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .delete()
           .eq('id', (existing as any).id)
@@ -202,7 +201,7 @@ export async function updateModulePermissionAction(userId: string, module: strin
     // Upsert the permission record
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await adminClient
-      .from('module_permissions' as any)
+      .from('module_permissions')
       .upsert(updateData, { onConflict: 'user_id, module' })
 
     if (error) throw error
@@ -228,7 +227,7 @@ export async function getNonAdminUsersAction() {
     // 获取所有管理员用户ID
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: adminRoles } = await adminClient
-      .from('user_roles' as any)
+      .from('user_roles')
       .select('user_id')
       .eq('role', 'admin')
 

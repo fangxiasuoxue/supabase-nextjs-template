@@ -20,7 +20,7 @@ export async function getTemplatesAction(): Promise<{ data: TemplateItem[], erro
 
         // Get all template configs
         const { data: configs, error } = await adminClient
-            .from('system_configs' as any)
+            .from('system_configs')
             .select('key, value')
             .like('key', 'message.template.%')
 
@@ -83,7 +83,7 @@ export async function updateTemplateAction(key: string, content: string): Promis
 
         // Check if config exists
         const { data: existing } = await adminClient
-            .from('system_configs' as any)
+            .from('system_configs')
             .select('key')
             .eq('key', key)
             .single()
@@ -91,7 +91,7 @@ export async function updateTemplateAction(key: string, content: string): Promis
         if (existing) {
             // Update existing
             const { error } = await (adminClient
-                .from('system_configs' as any) as any)
+                .from('system_configs') as any)
                 .update({ value: content, updated_at: new Date().toISOString() })
                 .eq('key', key)
 
@@ -101,7 +101,7 @@ export async function updateTemplateAction(key: string, content: string): Promis
         } else {
             // Insert new
             const { error } = await (adminClient
-                .from('system_configs' as any) as any)
+                .from('system_configs') as any)
                 .insert({
                     key,
                     value: content,
@@ -129,7 +129,7 @@ export async function resetTemplateAction(key: string): Promise<{ success: boole
 
         // Delete the config to use default
         const { error } = await adminClient
-            .from('system_configs' as any)
+            .from('system_configs')
             .delete()
             .eq('key', key)
 

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { createSSRClient } from '@/lib/supabase/server'
@@ -17,7 +16,7 @@ export async function POST(request: NextRequest) {
         const adminClient = await createServerAdminClient()
 
         const { data: roleData } = await adminClient
-            .from('user_roles' as any)
+            .from('user_roles')
             .select('role')
             .eq('user_id', user.id)
             .single()
@@ -26,7 +25,7 @@ export async function POST(request: NextRequest) {
 
         if (!isAdmin) {
             const { data: permData } = await adminClient
-                .from('module_permissions' as any)
+                .from('module_permissions')
                 .select('can_read, can_write, can_manage')
                 .eq('user_id', user.id)
                 .eq('module', 'messages')
@@ -47,7 +46,7 @@ export async function POST(request: NextRequest) {
 
         // 3. Get message details
         const { data: messageData, error: msgError } = await adminClient
-            .from('external_messages' as any)
+            .from('external_messages')
             .select('*')
             .eq('id', message_id)
             .single()
@@ -61,7 +60,7 @@ export async function POST(request: NextRequest) {
         // 4. Get WeChat Work Webhook URL from config
         const configKey = bot_key || 'message.cheap.push.qywxboturl'
         const { data: configData, error: configError } = await adminClient
-            .from('system_configs' as any)
+            .from('system_configs')
             .select('value')
             .eq('key', configKey)
             .single()

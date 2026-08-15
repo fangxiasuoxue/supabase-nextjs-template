@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextResponse } from 'next/server';
 import { createSSRClient } from '@/lib/supabase/server';
 
@@ -13,11 +12,11 @@ export async function GET() {
         }
 
         // Check permissions
-        const { data: role } = await ssr.from('user_roles' as any).select('role').eq('user_id', uid).limit(1).maybeSingle();
+        const { data: role } = await ssr.from('user_roles').select('role').eq('user_id', uid).limit(1).maybeSingle();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const isAdmin = (role as any)?.role === 'admin';
 
-        const { data: perm } = await ssr.from('module_permissions' as any).select('can_manage').eq('user_id', uid).eq('module', 'ip').limit(1).maybeSingle();
+        const { data: perm } = await ssr.from('module_permissions').select('can_manage').eq('user_id', uid).eq('module', 'ip').limit(1).maybeSingle();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const canManage = isAdmin || !!(perm as any)?.can_manage;
 

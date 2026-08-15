@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextResponse } from 'next/server';
 import { createSSRClient } from '@/lib/supabase/server';
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient';
@@ -30,7 +29,7 @@ export async function POST(req: Request) {
         }
 
         // Check permissions — 收紧为 admin/ops(续费花钱,与其它写路由一致)
-        const { data: role } = await ssr.from('user_roles' as any).select('role').eq('user_id', uid).limit(1).maybeSingle();
+        const { data: role } = await ssr.from('user_roles').select('role').eq('user_id', uid).limit(1).maybeSingle();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (!isRenewAllowed((role as any)?.role)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

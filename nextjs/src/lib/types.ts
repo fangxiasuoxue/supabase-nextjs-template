@@ -12,33 +12,411 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
+      agent_events: {
+        Row: {
+          agent_time: string
+          batch_id: string
+          created_at: string
+          event_type: string
+          id: string
+          instance_id: string
+          level: string
+          payload: Json | null
+          source: string
+        }
+        Insert: {
+          agent_time: string
+          batch_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          instance_id: string
+          level?: string
+          payload?: Json | null
+          source: string
+        }
+        Update: {
+          agent_time?: string
+          batch_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          instance_id?: string
+          level?: string
+          payload?: Json | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_events_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "vps_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_tokens: {
+        Row: {
+          id: string
+          instance_id: string
+          issued_at: string
+          last_used_at: string | null
+          revoked_at: string | null
+          status: string
+          token_hash: string
+        }
+        Insert: {
+          id?: string
+          instance_id: string
+          issued_at?: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+          status?: string
+          token_hash: string
+        }
+        Update: {
+          id?: string
+          instance_id?: string
+          issued_at?: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+          status?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_tokens_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "vps_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      alerts: {
+        Row: {
+          acked_at: string | null
+          acked_by: string | null
+          alert_type: string
+          content: string | null
+          created_at: string
+          id: string
+          resource_id: string
+          resource_type: string
+          severity: string
+          status: string
+          title: string
+        }
+        Insert: {
+          acked_at?: string | null
+          acked_by?: string | null
+          alert_type: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          resource_id: string
+          resource_type: string
+          severity: string
+          status?: string
+          title: string
+        }
+        Update: {
+          acked_at?: string | null
+          acked_by?: string | null
+          alert_type?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          resource_id?: string
+          resource_type?: string
+          severity?: string
+          status?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      auto_push_rules: {
+        Row: {
+          created_at: string | null
+          event_types: string[]
+          id: number
+          is_enabled: boolean | null
+          priority_filter: string | null
+          time_window: Json | null
+          updated_at: string | null
+          user_key: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_types: string[]
+          id?: number
+          is_enabled?: boolean | null
+          priority_filter?: string | null
+          time_window?: Json | null
+          updated_at?: string | null
+          user_key: string
+        }
+        Update: {
+          created_at?: string | null
+          event_types?: string[]
+          id?: number
+          is_enabled?: boolean | null
+          priority_filter?: string | null
+          time_window?: Json | null
+          updated_at?: string | null
+          user_key?: string
+        }
+        Relationships: []
+      }
+      billing_alerts: {
+        Row: {
+          account_id: string | null
+          alert_type: string
+          current_value: number | null
+          id: number
+          message: string | null
+          notified_at: string | null
+          notified_via: string | null
+          threshold: number | null
+        }
+        Insert: {
+          account_id?: string | null
+          alert_type: string
+          current_value?: number | null
+          id?: number
+          message?: string | null
+          notified_at?: string | null
+          notified_via?: string | null
+          threshold?: number | null
+        }
+        Update: {
+          account_id?: string | null
+          alert_type?: string
+          current_value?: number | null
+          id?: number
+          message?: string | null
+          notified_at?: string | null
+          notified_via?: string | null
+          threshold?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_alerts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "gcp_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_snapshots: {
+        Row: {
+          account_id: string | null
+          cost_30d: number | null
+          created_at: string | null
+          credit_balance: number | null
+          credit_total: number | null
+          error_msg: string | null
+          has_credit: boolean | null
+          id: number
+          raw_cost_text: string | null
+          raw_credit_text: string | null
+          screenshot_path: string | null
+          snapshot_date: string
+          source: string | null
+          success: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          cost_30d?: number | null
+          created_at?: string | null
+          credit_balance?: number | null
+          credit_total?: number | null
+          error_msg?: string | null
+          has_credit?: boolean | null
+          id?: number
+          raw_cost_text?: string | null
+          raw_credit_text?: string | null
+          screenshot_path?: string | null
+          snapshot_date?: string
+          source?: string | null
+          success?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          cost_30d?: number | null
+          created_at?: string | null
+          credit_balance?: number | null
+          credit_total?: number | null
+          error_msg?: string | null
+          has_credit?: boolean | null
+          id?: number
+          raw_cost_text?: string | null
+          raw_credit_text?: string | null
+          screenshot_path?: string | null
+          snapshot_date?: string
+          source?: string | null
+          success?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_snapshots_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "gcp_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      external_messages: {
+        Row: {
+          created_at: string | null
+          custom_content: string | null
+          deleted_at: string | null
+          event_id: string
+          event_type: string
+          id: number
+          is_read: boolean | null
+          notes: string | null
+          payload: Json
+          push_status: string | null
+          received_at: string
+          source: string
+          template_id: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_content?: string | null
+          deleted_at?: string | null
+          event_id: string
+          event_type: string
+          id?: never
+          is_read?: boolean | null
+          notes?: string | null
+          payload: Json
+          push_status?: string | null
+          received_at: string
+          source: string
+          template_id?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_content?: string | null
+          deleted_at?: string | null
+          event_id?: string
+          event_type?: string
+          id?: never
+          is_read?: boolean | null
+          notes?: string | null
+          payload?: Json
+          push_status?: string | null
+          received_at?: string
+          source?: string
+          template_id?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_messages_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "message_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gcp_accounts: {
+        Row: {
+          billing_id: string | null
+          created_at: string | null
+          gcloud_configured: boolean | null
+          gmail_email: string
+          id: string
+          is_active: boolean | null
+          label: string
+          notes: string | null
+          profile_cloak: string | null
+          profile_fox: string | null
+          project_id: string | null
+          proxy_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          billing_id?: string | null
+          created_at?: string | null
+          gcloud_configured?: boolean | null
+          gmail_email: string
+          id: string
+          is_active?: boolean | null
+          label: string
+          notes?: string | null
+          profile_cloak?: string | null
+          profile_fox?: string | null
+          project_id?: string | null
+          proxy_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          billing_id?: string | null
+          created_at?: string | null
+          gcloud_configured?: boolean | null
+          gmail_email?: string
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          notes?: string | null
+          profile_cloak?: string | null
+          profile_fox?: string | null
+          project_id?: string | null
+          proxy_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      gcp_instance_policies: {
+        Row: {
+          allowed_regions: Json
+          disk_type: string
+          id: string
+          is_active: boolean
+          machine_type: string
+          max_disk_gb: number
+          network_tier: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          allowed_regions?: Json
+          disk_type?: string
+          id?: string
+          is_active?: boolean
+          machine_type?: string
+          max_disk_gb?: number
+          network_tier?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          allowed_regions?: Json
+          disk_type?: string
+          id?: string
+          is_active?: boolean
+          machine_type?: string
+          max_disk_gb?: number
+          network_tier?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       ip_allocations: {
         Row: {
           allocated_at: string | null
@@ -218,6 +596,51 @@ export type Database = {
         }
         Relationships: []
       }
+      message_templates: {
+        Row: {
+          channels: string[]
+          content_template: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: number
+          is_active: boolean | null
+          name: string
+          title_template: string | null
+          type: string
+          updated_at: string | null
+          variables: Json | null
+        }
+        Insert: {
+          channels: string[]
+          content_template: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: number
+          is_active?: boolean | null
+          name: string
+          title_template?: string | null
+          type: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          channels?: string[]
+          content_template?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: number
+          is_active?: boolean | null
+          name?: string
+          title_template?: string | null
+          type?: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Relationships: []
+      }
       module_permissions: {
         Row: {
           can_manage: boolean | null
@@ -251,6 +674,486 @@ export type Database = {
         }
         Relationships: []
       }
+      node_deployments: {
+        Row: {
+          config_hash: string | null
+          created_at: string | null
+          deploy_mode: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          node_id: string
+          profile_id: string | null
+          rendered_config: Json | null
+          request_payload: Json | null
+          response_payload: Json | null
+          retry_count: number | null
+          rollback_to_id: string | null
+          scheduled_at: string
+          started_at: string | null
+          status: string
+          task_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          config_hash?: string | null
+          created_at?: string | null
+          deploy_mode?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          node_id: string
+          profile_id?: string | null
+          rendered_config?: Json | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          retry_count?: number | null
+          rollback_to_id?: string | null
+          scheduled_at?: string
+          started_at?: string | null
+          status?: string
+          task_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          config_hash?: string | null
+          created_at?: string | null
+          deploy_mode?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          node_id?: string
+          profile_id?: string | null
+          rendered_config?: Json | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          retry_count?: number | null
+          rollback_to_id?: string | null
+          scheduled_at?: string
+          started_at?: string | null
+          status?: string
+          task_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "node_deployments_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_deployments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "node_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_deployments_rollback_to_id_fkey"
+            columns: ["rollback_to_id"]
+            isOneToOne: false
+            referencedRelation: "node_deployments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      node_profiles: {
+        Row: {
+          config_template: Json
+          created_at: string | null
+          created_by: string | null
+          enabled: boolean
+          engine: string
+          id: string
+          inbound_port: number | null
+          name: string
+          transport_protocol: string
+          updated_at: string | null
+        }
+        Insert: {
+          config_template?: Json
+          created_at?: string | null
+          created_by?: string | null
+          enabled?: boolean
+          engine?: string
+          id?: string
+          inbound_port?: number | null
+          name: string
+          transport_protocol?: string
+          updated_at?: string | null
+        }
+        Update: {
+          config_template?: Json
+          created_at?: string | null
+          created_by?: string | null
+          enabled?: boolean
+          engine?: string
+          id?: string
+          inbound_port?: number | null
+          name?: string
+          transport_protocol?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      nodes: {
+        Row: {
+          config_hash: string | null
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          expires_at: string | null
+          id: string
+          inbound_tag: string | null
+          ip_resource_ids: string[] | null
+          last_deployed_at: string | null
+          name: string
+          order_id: string | null
+          outbound_strategy: string
+          port: number
+          profile_id: string | null
+          protocol: string
+          public_ip: unknown
+          remark: string | null
+          status: string | null
+          subscribe_token: string | null
+          updated_at: string | null
+          user_id: string | null
+          vps_instance_id: string | null
+        }
+        Insert: {
+          config_hash?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          expires_at?: string | null
+          id?: string
+          inbound_tag?: string | null
+          ip_resource_ids?: string[] | null
+          last_deployed_at?: string | null
+          name: string
+          order_id?: string | null
+          outbound_strategy?: string
+          port: number
+          profile_id?: string | null
+          protocol: string
+          public_ip?: unknown
+          remark?: string | null
+          status?: string | null
+          subscribe_token?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          vps_instance_id?: string | null
+        }
+        Update: {
+          config_hash?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          expires_at?: string | null
+          id?: string
+          inbound_tag?: string | null
+          ip_resource_ids?: string[] | null
+          last_deployed_at?: string | null
+          name?: string
+          order_id?: string | null
+          outbound_strategy?: string
+          port?: number
+          profile_id?: string | null
+          protocol?: string
+          public_ip?: unknown
+          remark?: string | null
+          status?: string | null
+          subscribe_token?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          vps_instance_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nodes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "node_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nodes_vps_instance_id_fkey"
+            columns: ["vps_instance_id"]
+            isOneToOne: false
+            referencedRelation: "vps_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          amount: number
+          billing_cycle: string
+          created_at: string | null
+          currency: string
+          expires_at: string | null
+          id: string
+          note: string | null
+          order_no: string | null
+          order_type: string
+          paid_at: string | null
+          payment_id: string | null
+          plan_name: string
+          started_at: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          billing_cycle?: string
+          created_at?: string | null
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          note?: string | null
+          order_no?: string | null
+          order_type?: string
+          paid_at?: string | null
+          payment_id?: string | null
+          plan_name: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          billing_cycle?: string
+          created_at?: string | null
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          note?: string | null
+          order_no?: string | null
+          order_type?: string
+          paid_at?: string | null
+          payment_id?: string | null
+          plan_name?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      page_scrape_logs: {
+        Row: {
+          account_id: string | null
+          created_at: string | null
+          error_msg: string | null
+          id: number
+          numeric_value: number | null
+          scrape_date: string | null
+          scrape_type: string
+          scraped_data: Json
+          source: string | null
+          success: boolean | null
+          target_url: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string | null
+          error_msg?: string | null
+          id?: number
+          numeric_value?: number | null
+          scrape_date?: string | null
+          scrape_type: string
+          scraped_data: Json
+          source?: string | null
+          success?: boolean | null
+          target_url?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string | null
+          error_msg?: string | null
+          id?: number
+          numeric_value?: number | null
+          scrape_date?: string | null
+          scrape_type?: string
+          scraped_data?: Json
+          source?: string | null
+          success?: boolean | null
+          target_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_scrape_logs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "gcp_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proxy_test_results: {
+        Row: {
+          download_mbps: number | null
+          download_speed_kbps: number | null
+          error_message: string | null
+          host: string | null
+          id: number
+          ip_address: string | null
+          is_reachable: boolean | null
+          latency_ms: number | null
+          port: number | null
+          proxy_id: number | null
+          test_method: string
+          tested_at: string | null
+          tested_from_ip: string | null
+          tested_from_vps_id: string | null
+          upload_mbps: number | null
+        }
+        Insert: {
+          download_mbps?: number | null
+          download_speed_kbps?: number | null
+          error_message?: string | null
+          host?: string | null
+          id?: number
+          ip_address?: string | null
+          is_reachable?: boolean | null
+          latency_ms?: number | null
+          port?: number | null
+          proxy_id?: number | null
+          test_method?: string
+          tested_at?: string | null
+          tested_from_ip?: string | null
+          tested_from_vps_id?: string | null
+          upload_mbps?: number | null
+        }
+        Update: {
+          download_mbps?: number | null
+          download_speed_kbps?: number | null
+          error_message?: string | null
+          host?: string | null
+          id?: number
+          ip_address?: string | null
+          is_reachable?: boolean | null
+          latency_ms?: number | null
+          port?: number | null
+          proxy_id?: number | null
+          test_method?: string
+          tested_at?: string | null
+          tested_from_ip?: string | null
+          tested_from_vps_id?: string | null
+          upload_mbps?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proxy_test_results_proxy_id_fkey"
+            columns: ["proxy_id"]
+            isOneToOne: false
+            referencedRelation: "ip_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proxy_test_results_tested_from_vps_id_fkey"
+            columns: ["tested_from_vps_id"]
+            isOneToOne: false
+            referencedRelation: "vps_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_configs: {
+        Row: {
+          channel: string
+          config_key: string
+          config_value: string
+          created_at: string | null
+          description: string | null
+          id: number
+          is_enabled: boolean | null
+          updated_at: string | null
+          user_key: string
+          user_name: string
+        }
+        Insert: {
+          channel: string
+          config_key: string
+          config_value: string
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          is_enabled?: boolean | null
+          updated_at?: string | null
+          user_key: string
+          user_name: string
+        }
+        Update: {
+          channel?: string
+          config_key?: string
+          config_value?: string
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          is_enabled?: boolean | null
+          updated_at?: string | null
+          user_key?: string
+          user_name?: string
+        }
+        Relationships: []
+      }
+      push_logs: {
+        Row: {
+          channel: string
+          error_message: string | null
+          id: number
+          message_id: number | null
+          pushed_at: string | null
+          response_time: number | null
+          status: string
+          template_id: number | null
+          user_key: string
+        }
+        Insert: {
+          channel: string
+          error_message?: string | null
+          id?: number
+          message_id?: number | null
+          pushed_at?: string | null
+          response_time?: number | null
+          status: string
+          template_id?: number | null
+          user_key: string
+        }
+        Update: {
+          channel?: string
+          error_message?: string | null
+          id?: number
+          message_id?: number | null
+          pushed_at?: string | null
+          response_time?: number | null
+          status?: string
+          template_id?: number | null
+          user_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_logs_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "external_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "message_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resource_assignments: {
         Row: {
           assigned_by: string | null
@@ -280,6 +1183,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      resource_bindings: {
+        Row: {
+          bind_type: string
+          bound_at: string
+          id: string
+          order_id: string
+          released_at: string | null
+          resource_id: string
+          status: string
+        }
+        Insert: {
+          bind_type: string
+          bound_at?: string
+          id?: string
+          order_id: string
+          released_at?: string | null
+          resource_id: string
+          status?: string
+        }
+        Update: {
+          bind_type?: string
+          bound_at?: string
+          id?: string
+          order_id?: string
+          released_at?: string | null
+          resource_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_bindings_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_configs: {
         Row: {
@@ -347,6 +1288,69 @@ export type Database = {
         }
         Relationships: []
       }
+      traffic_snapshots: {
+        Row: {
+          account_id: string | null
+          created_at: string | null
+          egress_gb: number | null
+          id: number
+          ingress_gb: number | null
+          is_warning: boolean | null
+          raw_data: Json | null
+          snapshot_date: string
+          source: string | null
+          traffic_limit_gb: number | null
+          updated_at: string | null
+          usage_pct: number | null
+          vm_id: number | null
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string | null
+          egress_gb?: number | null
+          id?: number
+          ingress_gb?: number | null
+          is_warning?: boolean | null
+          raw_data?: Json | null
+          snapshot_date?: string
+          source?: string | null
+          traffic_limit_gb?: number | null
+          updated_at?: string | null
+          usage_pct?: number | null
+          vm_id?: number | null
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string | null
+          egress_gb?: number | null
+          id?: number
+          ingress_gb?: number | null
+          is_warning?: boolean | null
+          raw_data?: Json | null
+          snapshot_date?: string
+          source?: string | null
+          traffic_limit_gb?: number | null
+          updated_at?: string | null
+          usage_pct?: number | null
+          vm_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "traffic_snapshots_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "gcp_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traffic_snapshots_vm_id_fkey"
+            columns: ["vm_id"]
+            isOneToOne: false
+            referencedRelation: "vm_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -364,6 +1368,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      vm_instances: {
+        Row: {
+          account_id: string | null
+          gcp_instance_id: string | null
+          id: number
+          is_active: boolean | null
+          machine_type: string | null
+          project_id: string
+          public_ip: string | null
+          status: string | null
+          updated_at: string | null
+          vm_name: string
+          zone: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          gcp_instance_id?: string | null
+          id?: number
+          is_active?: boolean | null
+          machine_type?: string | null
+          project_id: string
+          public_ip?: string | null
+          status?: string | null
+          updated_at?: string | null
+          vm_name: string
+          zone?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          gcp_instance_id?: string | null
+          id?: number
+          is_active?: boolean | null
+          machine_type?: string | null
+          project_id?: string
+          public_ip?: string | null
+          status?: string | null
+          updated_at?: string | null
+          vm_name?: string
+          zone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vm_instances_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "gcp_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vps_allocations: {
         Row: {
@@ -411,55 +1465,210 @@ export type Database = {
       }
       vps_instances: {
         Row: {
-          account: string
+          account: string | null
+          agent_version: string | null
           billing_remaining: number | null
+          billing_updated_at: string | null
           billing_used: number | null
+          cost_30d: number | null
           created_at: string | null
+          credit_remaining: number | null
+          disk_size_gb: number | null
+          disk_type: string | null
+          download_bytes: number | null
           external_ip: string | null
+          gcp_instance_name: string | null
+          gcp_project_id: string | null
+          heartbeat_status: string
           id: string
-          instance_id: string
+          instance_id: string | null
           internal_ip: string | null
+          last_heartbeat_at: string | null
+          last_sync_at: string | null
+          last_sync_batch_id: string | null
           last_updated: string | null
           machine_type: string | null
-          name: string
-          status: string
+          name: string | null
+          network_tier: string | null
+          provider: string
+          public_ip: unknown
+          region: string | null
+          runtime_stack: string | null
+          status: string | null
+          sync_cpu_percent: number | null
+          sync_disk_percent: number | null
+          sync_mem_percent: number | null
           traffic_received: number | null
           traffic_sent: number | null
-          zone: string
+          upload_bytes: number | null
+          zone: string | null
         }
         Insert: {
-          account: string
+          account?: string | null
+          agent_version?: string | null
           billing_remaining?: number | null
+          billing_updated_at?: string | null
           billing_used?: number | null
+          cost_30d?: number | null
           created_at?: string | null
+          credit_remaining?: number | null
+          disk_size_gb?: number | null
+          disk_type?: string | null
+          download_bytes?: number | null
           external_ip?: string | null
+          gcp_instance_name?: string | null
+          gcp_project_id?: string | null
+          heartbeat_status?: string
           id?: string
-          instance_id: string
+          instance_id?: string | null
           internal_ip?: string | null
+          last_heartbeat_at?: string | null
+          last_sync_at?: string | null
+          last_sync_batch_id?: string | null
           last_updated?: string | null
           machine_type?: string | null
-          name: string
-          status: string
+          name?: string | null
+          network_tier?: string | null
+          provider?: string
+          public_ip?: unknown
+          region?: string | null
+          runtime_stack?: string | null
+          status?: string | null
+          sync_cpu_percent?: number | null
+          sync_disk_percent?: number | null
+          sync_mem_percent?: number | null
           traffic_received?: number | null
           traffic_sent?: number | null
-          zone: string
+          upload_bytes?: number | null
+          zone?: string | null
         }
         Update: {
-          account?: string
+          account?: string | null
+          agent_version?: string | null
           billing_remaining?: number | null
+          billing_updated_at?: string | null
           billing_used?: number | null
+          cost_30d?: number | null
           created_at?: string | null
+          credit_remaining?: number | null
+          disk_size_gb?: number | null
+          disk_type?: string | null
+          download_bytes?: number | null
           external_ip?: string | null
+          gcp_instance_name?: string | null
+          gcp_project_id?: string | null
+          heartbeat_status?: string
           id?: string
-          instance_id?: string
+          instance_id?: string | null
           internal_ip?: string | null
+          last_heartbeat_at?: string | null
+          last_sync_at?: string | null
+          last_sync_batch_id?: string | null
           last_updated?: string | null
           machine_type?: string | null
-          name?: string
-          status?: string
+          name?: string | null
+          network_tier?: string | null
+          provider?: string
+          public_ip?: unknown
+          region?: string | null
+          runtime_stack?: string | null
+          status?: string | null
+          sync_cpu_percent?: number | null
+          sync_disk_percent?: number | null
+          sync_mem_percent?: number | null
           traffic_received?: number | null
           traffic_sent?: number | null
-          zone?: string
+          upload_bytes?: number | null
+          zone?: string | null
+        }
+        Relationships: []
+      }
+      vps_metrics: {
+        Row: {
+          cpu_percent: number | null
+          disk_percent: number | null
+          id: number
+          instance_id: string
+          mem_percent: number | null
+          recorded_at: string
+        }
+        Insert: {
+          cpu_percent?: number | null
+          disk_percent?: number | null
+          id?: number
+          instance_id: string
+          mem_percent?: number | null
+          recorded_at?: string
+        }
+        Update: {
+          cpu_percent?: number | null
+          disk_percent?: number | null
+          id?: number
+          instance_id?: string
+          mem_percent?: number | null
+          recorded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vps_metrics_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "vps_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vps_metrics_2026_03: {
+        Row: {
+          cpu_percent: number | null
+          disk_percent: number | null
+          id: number
+          instance_id: string
+          mem_percent: number | null
+          recorded_at: string
+        }
+        Insert: {
+          cpu_percent?: number | null
+          disk_percent?: number | null
+          id?: number
+          instance_id: string
+          mem_percent?: number | null
+          recorded_at?: string
+        }
+        Update: {
+          cpu_percent?: number | null
+          disk_percent?: number | null
+          id?: number
+          instance_id?: string
+          mem_percent?: number | null
+          recorded_at?: string
+        }
+        Relationships: []
+      }
+      vps_metrics_2026_04: {
+        Row: {
+          cpu_percent: number | null
+          disk_percent: number | null
+          id: number
+          instance_id: string
+          mem_percent: number | null
+          recorded_at: string
+        }
+        Insert: {
+          cpu_percent?: number | null
+          disk_percent?: number | null
+          id?: number
+          instance_id: string
+          mem_percent?: number | null
+          recorded_at?: string
+        }
+        Update: {
+          cpu_percent?: number | null
+          disk_percent?: number | null
+          id?: number
+          instance_id?: string
+          mem_percent?: number | null
+          recorded_at?: string
         }
         Relationships: []
       }
@@ -468,11 +1677,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_node_permission: {
+        Args: {
+          p_node_id: string
+          p_permission_type: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      gcp_billing_report_url: {
+        Args: { billing_id: string; project_id: string }
+        Returns: string
+      }
+      generate_subscription_token: { Args: never; Returns: string }
       has_module_permission: {
         Args: { m: string; p: string }
         Returns: boolean
       }
+      increment_subscription_access: {
+        Args: { p_token: string }
+        Returns: undefined
+      }
       is_admin: { Args: never; Returns: boolean }
+      restore_node: { Args: { node_uuid: string }; Returns: boolean }
+      soft_delete_node: { Args: { node_uuid: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
@@ -601,9 +1829,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

@@ -106,7 +106,7 @@ export class SassClient {
 
         const { data: role } = await this.client
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .from('user_roles' as any)
+            .from('user_roles')
             .select('role')
             .eq('user_id', uid)
             .limit(1)
@@ -116,7 +116,7 @@ export class SassClient {
 
         const { data } = await this.client
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .from('module_permissions' as any)
+            .from('module_permissions')
             .select('can_read, can_write, can_manage')
             .eq('user_id', uid)
             .eq('module', module)
@@ -136,7 +136,7 @@ export class SassClient {
 
     async listIpAssets(filters?: { provider?: string; remark?: string; status?: string }) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let q = this.client.from('ip_assets' as any).select('*').order('created_at', { ascending: false })
+        let q = this.client.from('ip_assets').select('*').order('created_at', { ascending: false })
         if (filters?.provider) q = q.eq('provider', filters.provider)
         if (filters?.remark) q = q.ilike('remark', `%${filters.remark}%`)
         if (filters?.status) q = q.eq('status', filters.status)
@@ -149,7 +149,7 @@ export class SassClient {
         const uid = userRes.user?.id
         if (!uid) return { error: { message: 'Not logged in' } }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return this.client.from('ip_assets' as any).insert({
+        return this.client.from('ip_assets').insert({
             provider: row.provider,
             ip: row.ip,
             remark: row.remark ?? null,
@@ -167,7 +167,7 @@ export class SassClient {
         const uid = userRes.user?.id
         if (!uid) return { error: { message: 'Not logged in' } }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return this.client.from('ip_allocations' as any).insert({
+        return this.client.from('ip_allocations').insert({
             ip_id,
             assigned_to,
             state: 'allocated',
@@ -179,7 +179,7 @@ export class SassClient {
 
     async releaseIp(allocation_id: number) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return this.client.from('ip_allocations' as any).update({
+        return this.client.from('ip_allocations').update({
             state: 'released',
             released_at: new Date().toISOString(),
         }).eq('id', allocation_id)

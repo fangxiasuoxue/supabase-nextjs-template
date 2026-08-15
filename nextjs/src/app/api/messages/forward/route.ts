@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { createSSRClient } from '@/lib/supabase/server'
@@ -20,7 +19,7 @@ export async function POST(request: NextRequest) {
         // Or we can reuse the checkPermission logic if we export it, but it's not exported.
         // Let's just do a quick check for admin or permission here
         const { data: roleData } = await adminClient
-            .from('user_roles' as any)
+            .from('user_roles')
             .select('role')
             .eq('user_id', user.id)
             .single()
@@ -30,7 +29,7 @@ export async function POST(request: NextRequest) {
         if (!isAdmin) {
             // Check module permission
             const { data: permData } = await adminClient
-                .from('module_permissions' as any)
+                .from('module_permissions')
                 .select('can_read, can_write, can_manage')
                 .eq('user_id', user.id)
                 .eq('module', 'messages')
@@ -56,7 +55,7 @@ export async function POST(request: NextRequest) {
 
         // 3. Get message details
         const { data: messageData, error: msgError } = await adminClient
-            .from('external_messages' as any)
+            .from('external_messages')
             .select('*')
             .eq('id', message_id)
             .single()
@@ -69,12 +68,12 @@ export async function POST(request: NextRequest) {
 
         // 4. Get target users emails
         const { data: users, error: usersError } = await adminClient
-            .from('auth_users_view' as any)
+            .from('auth_users_view')
             .select('id, email')
 
         // Get Resend configuration
         const { data: resendConfigData } = await adminClient
-            .from('system_configs' as any)
+            .from('system_configs')
             .select('key, value')
             .in('key', ['sys.resend.apikey', 'sys.resend.frommail'])
 

@@ -11,7 +11,7 @@ export async function autoPushMessage(messageId: number, message: any) {
 
         // Get all auto-push configurations
         const { data: configs, error } = await adminClient
-            .from('system_configs' as any)
+            .from('system_configs')
             .select('key, value')
             .like('key', 'message.cheap.push.auto.%')
 
@@ -36,7 +36,7 @@ export async function autoPushMessage(messageId: number, message: any) {
 
             // Get bot URL
             const { data: botConfig } = await adminClient
-                .from('system_configs' as any)
+                .from('system_configs')
                 .select('value')
                 .eq('key', botUrlKey)
                 .single()
