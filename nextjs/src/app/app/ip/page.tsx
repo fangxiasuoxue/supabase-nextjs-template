@@ -10,6 +10,7 @@ import { useLanguage } from "@/lib/context/LanguageContext";
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { IpTestDispatcher } from "@/components/admin/ip/IpTestDispatcher";
 import { IpTestResultPanel } from "@/components/admin/ip/IpTestResultPanel";
+import { ipExpiryStatus, compareByExpiry, EXPIRY_TONE_CLASS } from "@/lib/ipExpiry";
 import { createSPASassClientAuthenticated as createSPASassClient } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -560,6 +561,11 @@ export default function IpManagementPage() {
 
   const totalPages = Math.ceil(totalCount / pageSize)
 
+  // 到期治理:隐藏过期>30天,按到期升序(最紧急在前) — 需求 #2
+  const visibleAssets = [...ipAssets]
+    .filter(a => !ipExpiryStatus(a.expires_at).hidden)
+    .sort((x, y) => compareByExpiry(x.expires_at, y.expires_at))
+
   // 统计卡真实聚合(基于当前已加载的资产) — Bug #6
   const testedLatencies = ipAssets
     .map(a => a.last_latency_ms)
@@ -645,10 +651,10 @@ export default function IpManagementPage() {
   }
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-1000 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
       <TooltipProvider>
         {/* Header / Command Center Info */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 pb-4 relative">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 pb-4 relative">
           <div className="relative z-10">
             <div className="flex items-center gap-3 text-cyan-600 mb-4 group cursor-default">
               <div className="p-2 rounded-lg bg-cyan-50 border border-cyan-100 group-hover:bg-cyan-100 transition-colors">
@@ -670,7 +676,7 @@ export default function IpManagementPage() {
           </div>
           
           {canManage && balance !== null && (
-            <div className="glass-card-premium px-8 py-5 rounded-3xl flex flex-col items-end relative group overflow-hidden">
+            <div className="glass-card-premium px-8 py-3 rounded-3xl flex flex-col items-end relative group overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-100/50 blur-3xl -mr-8 -mt-8 group-hover:bg-cyan-100 transition-colors" />
               <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2 relative z-10">Command Funds</span>
               <div className="flex items-baseline gap-1 relative z-10">
@@ -718,13 +724,13 @@ export default function IpManagementPage() {
         )}
 
         {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 items-start">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
           
           {/* Left Column: Controls & Forms */}
-          <div className="xl:col-span-1 space-y-10">
+          <div className="xl:col-span-1 space-y-6">
             
             {/* Search & Management Card */}
-            <div className="glass-card-premium p-8 rounded-[2.5rem] space-y-8 relative overflow-hidden group/search">
+            <div className="glass-card-premium p-5 rounded-2xl space-y-5 relative overflow-hidden group/search">
               <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover/search:opacity-10 transition-opacity">
                 <Search className="h-24 w-24" />
               </div>
@@ -789,12 +795,12 @@ export default function IpManagementPage() {
             </div>
 
             {/* Asset Entry Card (Create/Edit) */}
-            <div className="glass-card-premium p-8 rounded-[2.5rem] relative overflow-hidden group/entry">
-              <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover/entry:opacity-10 transition-opacity rotate-12">
+            <div className="glass-card-premium p-5 rounded-2xl relative overflow-hidden group/entry">
+              <div className="absolute top-0 right-0 p-5 opacity-[0.02] group-hover/entry:opacity-10 transition-opacity rotate-12">
                 <Plus className="h-32 w-32" />
               </div>
               
-              <div className="flex items-center gap-4 mb-8">
+              <div className="flex items-center gap-4 mb-5">
                 <div className="p-2.5 bg-cyan-50 rounded-xl border border-cyan-100">
                   <Plus className="h-4 w-4 text-cyan-600" />
                 </div>
@@ -910,8 +916,8 @@ export default function IpManagementPage() {
           </div>
           {/* Right Column: Asset List */}
           <div className="xl:col-span-2 space-y-6">
-            <div className="glass-card-premium rounded-[2.5rem] overflow-hidden flex flex-col min-h-[700px]">
-              <div className="p-8 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+            <div className="glass-card-premium rounded-2xl overflow-hidden flex flex-col min-h-[700px]">
+              <div className="p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="p-2.5 bg-cyan-50 rounded-xl border border-cyan-100">
                     <Database className="h-5 w-5 text-cyan-600" />
@@ -952,7 +958,7 @@ export default function IpManagementPage() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ) : ipAssets.length === 0 ? (
+                    ) : visibleAssets.length === 0 ? (
                       <TableRow className="border-none">
                         <TableCell colSpan={4} className="h-[500px] text-center">
                           <div className="flex flex-col items-center justify-center gap-6 py-20 opacity-30 group cursor-default">
@@ -964,9 +970,9 @@ export default function IpManagementPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      ipAssets.map((asset) => (
-                        <TableRow key={asset.id} className="border-slate-200 hover:bg-slate-50 transition-all duration-300 group/row h-20">
-                          <TableCell className="pl-8 py-5">
+                      visibleAssets.map((asset) => (
+                        <TableRow key={asset.id} className="border-slate-200 hover:bg-slate-50 transition-all duration-300 group/row h-16">
+                          <TableCell className="pl-8 py-3">
                             <div className="flex flex-col gap-1.5">
                               <span className="text-sm font-black text-foreground group-hover/row:text-cyan-700 transition-colors uppercase tracking-tight">{asset.remark || "Legacy Module"}</span>
                               <div className="flex items-center gap-3">
@@ -977,6 +983,11 @@ export default function IpManagementPage() {
                                   {asset.isp_name || "Shadow Network"}
                                 </span>
                               </div>
+                              {/* 需求 #2:到期色标(黄=3天内到期 / 红=已过期 / 绿=正常) */}
+                              <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-widest ${EXPIRY_TONE_CLASS[ipExpiryStatus(asset.expires_at).tone]}`}>
+                                <Clock className="h-2.5 w-2.5" />
+                                {ipExpiryStatus(asset.expires_at).label}
+                              </span>
                             </div>
                           </TableCell>
                           <TableCell>
