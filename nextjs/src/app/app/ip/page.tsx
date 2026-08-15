@@ -133,6 +133,9 @@ export default function IpManagementPage() {
   const [testingIds, setTestingIds] = useState<Set<number>>(new Set())
   const [isTestingAll, setIsTestingAll] = useState(false)
 
+  // 需求:只看待续费(过期≤30天 + 3天内到期)
+  const [renewalOnly, setRenewalOnly] = useState(false)
+
   // 查询依赖项变化时重新获取数据
   useEffect(() => {
     if (user?.id) {
@@ -152,7 +155,7 @@ export default function IpManagementPage() {
 
     return () => clearTimeout(timeoutId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchRemark, searchIp, searchProviderId])
+  }, [searchRemark, searchIp, searchProviderId, renewalOnly])
 
   // 格式化流量
   const formatBandwidth = (bytes: number | null) => {
@@ -205,7 +208,13 @@ export default function IpManagementPage() {
 
       // 需求 #2:隐藏过期>30天(DB 层,保证计数/分页/列表一致)。show: 无到期日 OR 到期在30天内
       const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString()
-      query = query.or(`expires_at.is.null,expires_at.gte.${thirtyDaysAgo}`)
+      if (renewalOnly) {
+        // 只看待续费:到期在 [过期≤30天, 3天内到期] 区间(排除无到期日/远期)
+        const threeDaysAhead = new Date(Date.now() + 3 * 86400000).toISOString()
+        query = query.gte('expires_at', thirtyDaysAgo).lte('expires_at', threeDaysAhead)
+      } else {
+        query = query.or(`expires_at.is.null,expires_at.gte.${thirtyDaysAgo}`)
+      }
 
       if (searchRemark) {
         query = query.ilike('remark', `%${searchRemark}%`)
@@ -935,6 +944,16 @@ export default function IpManagementPage() {
                     </span>
                   </div>
                 </div>
+                {/* 只看待续费:过期≤30天 + 3天内到期,方便集中续费 */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setRenewalOnly(v => !v)}
+                  className={`rounded-xl h-9 text-[10px] font-black uppercase tracking-widest border ${renewalOnly ? 'bg-amber-600 hover:bg-amber-700 text-white border-amber-600' : 'bg-white hover:bg-amber-50 text-amber-700 border-slate-300'}`}
+                >
+                  <Clock className="h-3.5 w-3.5 mr-1.5" />
+                  {renewalOnly ? '显示全部' : '只看待续费'}
+                </Button>
               </div>
 
               <div className="flex-1 overflow-x-auto scrollbar-hide">
