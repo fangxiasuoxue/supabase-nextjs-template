@@ -46,7 +46,8 @@ export async function POST(request: NextRequest) {
       zone: vm.zone,
       gcp_project_id: vm.account_id ?? null,
       provider: 'gcp',
-      heartbeat_status: 'unknown',
+      // 不写 heartbeat_status：命中已有行会把 agent 心跳(online/offline)打回 unknown。
+      // 新行由 DB 列默认值 'unknown' 兜底(migration 20260814000001)，命中行保留原值。
     }))
 
   if (rows.length === 0) {

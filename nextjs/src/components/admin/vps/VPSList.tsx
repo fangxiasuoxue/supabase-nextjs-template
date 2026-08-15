@@ -2,6 +2,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import Link from 'next/link'
 import { getVPSInstancesAction, syncAllVPSAction, syncAccountVPSAction } from '@/app/actions/vps'
 import { checkIsAdmin, getUserPermissionsAction } from '@/app/actions/auth'
 import { VPSData, VPSInstance } from '@/types/vps'
@@ -22,6 +23,17 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { VPSAuthDialog } from './VPSAuthDialog'
+
+// B4: 纯函数兜底 —— status 归一化，null/undefined 不抛(测试见 ops/testing/vps/vpslist_guards.test.js)
+export function normalizeStatus(status?: string | null): string {
+    return (status ?? '').toUpperCase()
+}
+
+// B4: 流量格式化,入参为空时按 0 计,避免 NaN / null.toFixed 崩溃
+export function formatTraffic(gb?: number | null): string {
+    const n = gb ?? 0
+    return (Number.isFinite(n) ? n : 0).toFixed(2) + ' GB'
+}
 
 export function VPSList() {
     const [data, setData] = useState<VPSData | null>(null)
@@ -128,7 +140,7 @@ export function VPSList() {
     }
 
     const getStatusStyles = (status: string) => {
-        switch (status.toUpperCase()) {
+        switch (normalizeStatus(status)) {
             case 'RUNNING':
                 return 'text-green-700 bg-green-50 border-green-200'
             case 'TERMINATED':
@@ -141,17 +153,13 @@ export function VPSList() {
         }
     }
 
-    const formatTraffic = (gb: number) => {
-        return gb.toFixed(2) + ' GB'
-    }
-
     const filteredInstances = useMemo(() => {
         if (!data?.instances) return []
         return data.instances.filter(inst => {
             const matchIp = (inst.internalIp?.includes(filterIp) || inst.externalIp?.includes(filterIp)) || !filterIp
-            const matchName = inst.name.toLowerCase().includes(filterName.toLowerCase()) || !filterName
-            const matchStatus = inst.status.toLowerCase().includes(filterStatus.toLowerCase()) || !filterStatus
-            const matchAccount = inst.account.toLowerCase().includes(filterAccount.toLowerCase()) || !filterAccount
+            const matchName = (inst.name ?? '').toLowerCase().includes(filterName.toLowerCase()) || !filterName
+            const matchStatus = (inst.status ?? '').toLowerCase().includes(filterStatus.toLowerCase()) || !filterStatus
+            const matchAccount = (inst.account ?? '').toLowerCase().includes(filterAccount.toLowerCase()) || !filterAccount
             return matchIp && matchName && matchStatus && matchAccount
         })
     }, [data, filterIp, filterName, filterStatus, filterAccount])
@@ -248,7 +256,7 @@ export function VPSList() {
             <div className="grid gap-6 md:grid-cols-3">
                 {[
                     { title: t('vps.table.instance'), value: `${filteredInstances.length} / ${data?.instances.length || 0}`, icon: Server, sub: "Instances Online", color: "text-cyan-600" },
-                    { title: t('vps.table.traffic'), value: formatTraffic(filteredInstances.reduce((acc, curr) => acc + (curr.trafficReceived + curr.trafficSent), 0)), icon: Activity, sub: "Traffic Processed", color: "text-green-600" },
+                    { title: t('vps.table.traffic'), value: formatTraffic(filteredInstances.reduce((acc, curr) => acc + ((curr.trafficReceived ?? 0) + (curr.trafficSent ?? 0)), 0)), icon: Activity, sub: "Traffic Processed", color: "text-green-600" },
                     { title: t('vps.billing.title'), value: '$' + Array.from(new Set(filteredInstances.map(i => i.account))).map(acc => filteredInstances.find(i => i.account === acc)?.billingRemaining || 0).reduce((a, b) => a + b, 0).toFixed(2), icon: CreditCard, sub: "Remaining Balance", color: "text-amber-600" }
                 ].map((stat, i) => (
                     <div key={i} className="glass-card-premium p-6 rounded-[2rem] border border-slate-200 relative overflow-hidden group/card shadow-sm">
@@ -303,7 +311,7 @@ export function VPSList() {
                                 </TableRow>
                             ) : (
                                 filteredInstances.map((instance) => {
-                                    const totalTraffic = instance.trafficReceived + instance.trafficSent
+                                    const totalTraffic = (instance.trafficReceived ?? 0) + (instance.trafficSent ?? 0)
                                     return (
                                         <TableRow key={instance.id} className="border-slate-200 hover:bg-slate-50 transition-colors group/row h-24">
                                             <TableCell className="pl-10">
@@ -351,8 +359,8 @@ export function VPSList() {
                                             <TableCell className="text-right">
                                                 <div className="flex flex-col items-end gap-1">
                                                     {/* 原有余额 */}
-                                                    <span className={`tech-mono text-sm font-black tracking-tighter ${instance.billingRemaining < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                                        ${instance.billingRemaining.toFixed(2)}
+                                                    <span className={`tech-mono text-sm font-black tracking-tighter ${(instance.billingRemaining ?? 0) < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                                        ${(instance.billingRemaining ?? 0).toFixed(2)}
                                                     </span>
                                                     <span className="text-[8px] text-muted-foreground/40 font-bold uppercase tracking-widest">Remaining</span>
                                                     {/* 赠金 */}
@@ -386,6 +394,13 @@ export function VPSList() {
                                             </TableCell>
                                             <TableCell className="text-right pr-10">
                                                 <div className="flex items-center justify-end gap-2">
+                                                    {/* B2: 详情页入口 —— 指向 /app/admin/vps/[id](Agent 状态 + 账单流量) */}
+                                                    <Link
+                                                        href={`/app/admin/vps/${instance.id}`}
+                                                        className="inline-flex h-9 items-center rounded-xl bg-slate-50 border border-slate-200 hover:bg-cyan-50 hover:border-cyan-200 text-slate-500 hover:text-cyan-700 transition-all px-3 text-[10px] font-black uppercase tracking-widest"
+                                                    >
+                                                        详情
+                                                    </Link>
                                                     {canManage && (
                                                         <>
                                                             <Button

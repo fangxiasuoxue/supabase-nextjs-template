@@ -29,7 +29,7 @@ export default async function NodesPage() {
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-        redirect('/auth/signin');
+        redirect('/auth/login');
     }
 
     // Fetch nodes
@@ -45,6 +45,14 @@ export default async function NodesPage() {
     if (error) {
         console.error('Error fetching nodes:', error);
     }
+
+    // A3:统计卡只接可从已加载 nodes 真实聚合的指标(总数/在线/离线/协议种类),
+    // 不再展示无数据源的假「活跃连接/延迟/安全态势」。
+    const nodeList: any[] = nodes ?? [];
+    const totalCount = nodeList.length;
+    const onlineCount = nodeList.filter((n: any) => n.status === 'enabled').length;
+    const offlineCount = totalCount - onlineCount;
+    const protocolCount = new Set(nodeList.map((n: any) => n.protocol).filter(Boolean)).size;
 
     // Helper for status colors
     const getStatusStyles = (status: string) => {
@@ -101,10 +109,10 @@ export default async function NodesPage() {
                 {/* Quick Stats Grid - Bento Style */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                     {[
-                        { label: "在线节点", value: nodes?.filter((n: any) => n.status === 'enabled').length || 0, sub: "Nodes Operational", icon: Wifi, color: "text-green-600", bg: "from-green-100 to-transparent" },
-                        { label: "活跃连接", value: "2.4k", sub: "Active Uplinks", icon: Activity, color: "text-cyan-600", bg: "from-cyan-100 to-transparent" },
-                        { label: "平均延迟", value: "48ms", sub: "Cluster Latency", icon: Zap, color: "text-amber-600", bg: "from-amber-100 to-transparent" },
-                        { label: "安全态势", value: "SECURE", sub: "Defense Active", icon: ShieldCheck, color: "text-blue-600", bg: "from-blue-100 to-transparent" },
+                        { label: "在线节点", value: onlineCount, sub: "Nodes Online", icon: Wifi, color: "text-green-600", bg: "from-green-100 to-transparent" },
+                        { label: "节点总数", value: totalCount, sub: "Total Nodes", icon: Activity, color: "text-cyan-600", bg: "from-cyan-100 to-transparent" },
+                        { label: "离线节点", value: offlineCount, sub: "Nodes Offline", icon: Zap, color: "text-amber-600", bg: "from-amber-100 to-transparent" },
+                        { label: "协议种类", value: protocolCount, sub: "Protocol Types", icon: ShieldCheck, color: "text-blue-600", bg: "from-blue-100 to-transparent" },
                     ].map((stat, i) => (
                         <div key={i} className="glass-card-premium p-6 rounded-3xl hover:border-slate-300 group transition-all duration-500 hover:-translate-y-1 overflow-hidden relative">
                             <div className={`absolute -right-4 -bottom-4 w-24 h-24 bg-gradient-to-br ${stat.bg} blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700`} />
@@ -241,7 +249,7 @@ export default async function NodesPage() {
                             <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider leading-relaxed">
                                 所有节点通信均通过端到端加密隧道传输。
                                 <br />
-                                当前系统已检测到 <span className="text-cyan-700 tech-mono font-bold">128-BIT AES</span> 加密活动。建议定期检查 <span className="text-cyan-700 font-bold">终端 UUID</span> 以防止中间人劫持。
+                                建议定期检查各节点的 <span className="text-cyan-700 font-bold">终端 UUID</span> 与访问凭据，以防止中间人劫持。
                             </p>
                         </div>
                     </div>

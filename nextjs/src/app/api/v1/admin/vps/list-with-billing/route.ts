@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     // 查 vm_instances → gcp_accounts + traffic_snapshots
     const { data: vmRows } = await adminClient
       .from('vm_instances' as any)
-      .select('instance_name, account_id')
+      .select('id, instance_name, account_id')
       .in('instance_name', instanceNames)
 
     if (vmRows && (vmRows as any[]).length > 0) {
