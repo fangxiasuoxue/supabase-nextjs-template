@@ -63,10 +63,12 @@ export async function POST() {
     const { error } = await admin.from('ip_assets').upsert(rows as any, { onConflict: 'provider,public_ip' })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    // 清理下线:该 provider 下、provider_id 不在本次 API 响应里的行 → 软删。
-    // 否则供应商已释放/到期的旧 IP 只进不出,僵尸堆积(实测 19 个真实却显示 26)。
-    // 仅在响应非空时清理(防 API 空/错时误删全部)。
+    // 清理下线:Proxy-Cheap /proxies 只返回活跃代理(过期的会掉出列表),
+    // 所以「不在响应里」= 过期或已释放。**只删过期>30天的**(超出续费窗口),
+    // 最近过期的(≤30天)保留 → 显示红色供续费,别误删。到期>30天的本就被前端隐藏,删掉只为 DB 整洁。
+    // 仅在响应非空时清理(防 API 空/错时误删)。
     const activeIds = rows.map((r) => r.provider_id).filter(Boolean)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString()
     let purged = 0
     if (activeIds.length > 0) {
       const inList = `(${activeIds.map((id) => `"${id}"`).join(',')})`
@@ -76,6 +78,8 @@ export async function POST() {
         .eq('provider', providerLabel)
         .is('deleted_at', null)
         .not('provider_id', 'in', inList)
+        .not('expires_at', 'is', null)
+        .lt('expires_at', thirtyDaysAgo)   // 只删过期>30天的,保留最近过期(可续费)的
         .select('id')
       purged = (purgedRows as any[])?.length ?? 0
     }
