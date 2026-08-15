@@ -85,24 +85,24 @@ export function AlertCenterTable() {
     <div className="space-y-5">
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
-        <Select value={severity} onValueChange={setSeverity}>
+        <Select value={severity || 'all'} onValueChange={(v) => setSeverity(v === 'all' ? '' : v)}>
           <SelectTrigger className="w-40 bg-white border-slate-300 rounded-xl h-10 text-xs">
             <SelectValue placeholder="所有级别" />
           </SelectTrigger>
           <SelectContent className="bg-white border-slate-200 rounded-xl">
-            <SelectItem value="">所有级别</SelectItem>
+            <SelectItem value="all">所有级别</SelectItem>
             <SelectItem value="info">Info</SelectItem>
             <SelectItem value="warning">Warning</SelectItem>
             <SelectItem value="critical">Critical</SelectItem>
           </SelectContent>
         </Select>
 
-        <Select value={resourceType} onValueChange={setResourceType}>
+        <Select value={resourceType || 'all'} onValueChange={(v) => setResourceType(v === 'all' ? '' : v)}>
           <SelectTrigger className="w-48 bg-white border-slate-300 rounded-xl h-10 text-xs">
             <SelectValue placeholder="所有资源类型" />
           </SelectTrigger>
           <SelectContent className="bg-white border-slate-200 rounded-xl">
-            <SelectItem value="">所有资源类型</SelectItem>
+            <SelectItem value="all">所有资源类型</SelectItem>
             <SelectItem value="vps_instance">VPS 实例</SelectItem>
             <SelectItem value="node">节点</SelectItem>
             <SelectItem value="ip_asset">IP 资产</SelectItem>
