@@ -41,7 +41,7 @@ export async function POST(req: Request) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: asset, error: assetError } = await ssr
             .from('ip_assets')
-            .select('provider_id, provider')
+            .select('provider_id, provider, status, expires_at')
             .eq('id', id)
             .single();
 
@@ -73,17 +73,37 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Proxy-Cheap credentials not configured' }, { status: 500 });
         }
 
-        // Call Proxy-Cheap API
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const url = `https://api.proxy-cheap.com/proxies/${(asset as any).provider_id}/extend-period`;
+        const pid = (asset as any).provider_id;
+        const pcHeaders = {
+            'Content-Type': 'application/json', 'Accept': 'application/json',
+            'X-Api-Key': key, 'X-Api-Secret': secret,
+        };
+        // 过期的用 reactivate(重新启用),没过期的用 extend-period(延期)。
+        // 判定:status=expired 或 expires_at 已过。
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const st = String((asset as any).status ?? '').toLowerCase();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const exp = (asset as any).expires_at;
+        const isExpired = st === 'expired' || (exp && new Date(exp).getTime() < Date.now());
+
+        let url: string;
+        if (isExpired) {
+            // 先询价(/reactivate/price):超过可重启窗口的会失败 → 明确提示需重购,不乱扣费
+            const priceRes = await fetch(`https://api.proxy-cheap.com/proxies/${pid}/reactivate/price`, {
+                method: 'POST', headers: pcHeaders, body: JSON.stringify({ periodInMonths: String(period) })
+            });
+            if (!priceRes.ok) {
+                return NextResponse.json({ error: '该代理已超过可重新启用窗口,请在 Proxy-Cheap 后台重新购买' }, { status: 409 });
+            }
+            url = `https://api.proxy-cheap.com/proxies/${pid}/reactivate`;
+        } else {
+            url = `https://api.proxy-cheap.com/proxies/${pid}/extend-period`;
+        }
+
         const res = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-Api-Key': key,
-                'X-Api-Secret': secret
-            },
+            headers: pcHeaders,
             body: JSON.stringify({ periodInMonths: String(period) })
         });
 
