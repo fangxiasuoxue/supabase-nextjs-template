@@ -23,12 +23,24 @@ export async function POST() {
   const now = new Date().toISOString()
 
   async function upsertFromList(list: any[], sourceUrl: string, providerLabel: string) {
+    // 过期代理 API 返回 publicIp=null,但过期前是有 IP 的。先捞库里已知 IP,
+    // null 时保留旧值,避免 upsert 用 null 覆盖掉过期前的 IP(否则续费时看不到是哪个)。
+    const { data: existingRows } = await admin
+      .from('ip_assets')
+      .select('provider_id, ip, public_ip, connect_ip')
+      .eq('provider', providerLabel)
+    const existingById = new Map<string, any>()
+    for (const r of (existingRows as any[]) ?? []) existingById.set(String(r.provider_id), r)
+
     // 跳过 CANCELED(永久注销,无续费意义);ACTIVE + EXPIRED 都入库
     const rows = list.filter((p: any) => String(p.status ?? '').toUpperCase() !== 'CANCELED').map((p: any) => {
       const conn = p.connection || {}
       const auth = p.authentication || {}
       const meta = p.metadata || {}
-      const publicIp = conn.publicIp ?? p.publicIp ?? p.ip ?? null
+      const prev = existingById.get(String(p.id ?? ''))
+      // API 有值优先;为 null(过期)时回退到库里已知 IP,再回退 connectIp
+      const publicIp = conn.publicIp ?? p.publicIp ?? p.ip
+        ?? prev?.public_ip ?? prev?.ip ?? conn.connectIp ?? prev?.connect_ip ?? null
       return {
         provider: providerLabel,
         provider_id: String(p.id ?? ''),
