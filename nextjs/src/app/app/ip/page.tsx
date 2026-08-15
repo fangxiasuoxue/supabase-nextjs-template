@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/lib/context/LanguageContext";
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { IpLatencyMatrix } from "@/components/admin/ip/IpLatencyMatrix";
-import { ipExpiryStatus, compareByExpiry, EXPIRY_TONE_CLASS } from "@/lib/ipExpiry";
+import { ipExpiryStatus, EXPIRY_TONE_CLASS } from "@/lib/ipExpiry";
 import { createSPASassClientAuthenticated as createSPASassClient } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -203,6 +203,10 @@ export default function IpManagementPage() {
       // 应用查询条件 - 只查询未删除的记录
       query = query.is('deleted_at', null)
 
+      // 需求 #2:隐藏过期>30天(DB 层,保证计数/分页/列表一致)。show: 无到期日 OR 到期在30天内
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString()
+      query = query.or(`expires_at.is.null,expires_at.gte.${thirtyDaysAgo}`)
+
       if (searchRemark) {
         query = query.ilike('remark', `%${searchRemark}%`)
       }
@@ -213,9 +217,9 @@ export default function IpManagementPage() {
         query = query.eq('provider_id', searchProviderId)
       }
 
-      // 分页和排序
+      // 分页和排序:需求 #2 按到期升序(最紧急在前,无到期日排最后)
       query = query
-        .order('created_at', { ascending: false })
+        .order('expires_at', { ascending: true, nullsFirst: false })
         .range((currentPage - 1) * pageSize, currentPage * pageSize - 1)
 
       const { data, error, count } = await query
@@ -560,10 +564,9 @@ export default function IpManagementPage() {
 
   const totalPages = Math.ceil(totalCount / pageSize)
 
-  // 到期治理:隐藏过期>30天,按到期升序(最紧急在前) — 需求 #2
-  const visibleAssets = [...ipAssets]
-    .filter(a => !ipExpiryStatus(a.expires_at).hidden)
-    .sort((x, y) => compareByExpiry(x.expires_at, y.expires_at))
+  // 需求 #2:隐藏过期>30天 + 按到期升序 已下沉到 DB 查询(fetchIpAssets),
+  // 保证计数/分页/列表一致;这里直接用。行内到期色标仍由 ipExpiryStatus 计算。
+  const visibleAssets = ipAssets
 
   // 统计卡真实聚合(基于当前已加载的资产) — Bug #6
   const testedLatencies = ipAssets

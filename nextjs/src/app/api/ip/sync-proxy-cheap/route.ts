@@ -62,7 +62,24 @@ export async function POST() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await admin.from('ip_assets').upsert(rows as any, { onConflict: 'provider,public_ip' })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ count: rows.length })
+
+    // 清理下线:该 provider 下、provider_id 不在本次 API 响应里的行 → 软删。
+    // 否则供应商已释放/到期的旧 IP 只进不出,僵尸堆积(实测 19 个真实却显示 26)。
+    // 仅在响应非空时清理(防 API 空/错时误删全部)。
+    const activeIds = rows.map((r) => r.provider_id).filter(Boolean)
+    let purged = 0
+    if (activeIds.length > 0) {
+      const inList = `(${activeIds.map((id) => `"${id}"`).join(',')})`
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: purgedRows } = await admin.from('ip_assets' as any)
+        .update({ deleted_at: now })
+        .eq('provider', providerLabel)
+        .is('deleted_at', null)
+        .not('provider_id', 'in', inList)
+        .select('id')
+      purged = (purgedRows as any[])?.length ?? 0
+    }
+    return NextResponse.json({ count: rows.length, purged })
   }
 
   if (key && secret) {
