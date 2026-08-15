@@ -23,7 +23,8 @@ export async function POST() {
   const now = new Date().toISOString()
 
   async function upsertFromList(list: any[], sourceUrl: string, providerLabel: string) {
-    const rows = list.map((p: any) => {
+    // 跳过 CANCELED(永久注销,无续费意义);ACTIVE + EXPIRED 都入库
+    const rows = list.filter((p: any) => String(p.status ?? '').toUpperCase() !== 'CANCELED').map((p: any) => {
       const conn = p.connection || {}
       const auth = p.authentication || {}
       const meta = p.metadata || {}
@@ -60,15 +61,14 @@ export async function POST() {
       }
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await admin.from('ip_assets').upsert(rows as any, { onConflict: 'provider,public_ip' })
+    // 去重键 = provider_id(proxy 稳定 id);过期代理 publicIp=null,用 public_ip 去重会乱。
+    const { error } = await admin.from('ip_assets').upsert(rows as any, { onConflict: 'provider,provider_id' })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    // 清理下线:Proxy-Cheap /proxies 只返回活跃代理(过期的会掉出列表),
-    // 所以「不在响应里」= 过期或已释放。**只删过期>30天的**(超出续费窗口),
-    // 最近过期的(≤30天)保留 → 显示红色供续费,别误删。到期>30天的本就被前端隐藏,删掉只为 DB 整洁。
-    // 仅在响应非空时清理(防 API 空/错时误删)。
+    // 清理下线:/services/proxies 已返回 active+expired 全量,所以「provider_id 不在本次响应里」
+    // = 该代理已从账户彻底移除(或被 CANCELED 过滤掉)→ 软删。过期的仍在响应里(EXPIRED),不会被误删。
+    // 仅在响应非空时清理(防 API 空/错时误删全部)。
     const activeIds = rows.map((r) => r.provider_id).filter(Boolean)
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString()
     let purged = 0
     if (activeIds.length > 0) {
       const inList = `(${activeIds.map((id) => `"${id}"`).join(',')})`
@@ -78,8 +78,6 @@ export async function POST() {
         .eq('provider', providerLabel)
         .is('deleted_at', null)
         .not('provider_id', 'in', inList)
-        .not('expires_at', 'is', null)
-        .lt('expires_at', thirtyDaysAgo)   // 只删过期>30天的,保留最近过期(可续费)的
         .select('id')
       purged = (purgedRows as any[])?.length ?? 0
     }
@@ -87,7 +85,9 @@ export async function POST() {
   }
 
   if (key && secret) {
-    const url = 'https://api.proxy-cheap.com/proxies'
+    // 正确端点:/services/proxies 返回 active+expired(老 /proxies 只返回 active,看不到过期的)。
+    // perPage=100 一页取全(当前账户 ~48;若增长超 100 需分页)。
+    const url = 'https://api.proxy-cheap.com/services/proxies?page=1&perPage=100'
     try {
       const res = await fetch(url, { headers: { Accept: 'application/json', 'X-Api-Key': key, 'X-Api-Secret': secret } })
       if (!res.ok) {
