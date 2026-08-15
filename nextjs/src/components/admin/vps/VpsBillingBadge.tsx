@@ -22,9 +22,9 @@ export function VpsBillingBadge({ billing }: { billing: BillingData | null }) {
   const balance = billing.credit_remaining
   const balanceColor =
     balance === null ? 'text-muted-foreground/40'
-    : balance < 0 ? 'text-red-400'
-    : balance < 5 ? 'text-orange-400'
-    : 'text-emerald-400'
+    : balance < 0 ? 'text-red-600'
+    : balance < 5 ? 'text-orange-600'
+    : 'text-green-600'
 
   const formatBytes = (b: number | null) => {
     if (!b) return '--'

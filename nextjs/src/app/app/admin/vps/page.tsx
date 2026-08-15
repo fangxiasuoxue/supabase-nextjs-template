@@ -28,7 +28,7 @@ export default function AdminVPSPage() {
                     <Button
                         variant="outline"
                         onClick={() => setSyncOpen(true)}
-                        className="border-white/10 hover:bg-white/5 rounded-xl h-10 text-xs font-black uppercase tracking-widest"
+                        className="border-slate-300 hover:bg-slate-50 rounded-xl h-10 text-xs font-black uppercase tracking-widest"
                     >
                         <Download className="mr-2 h-3.5 w-3.5" />
                         从 OpenClaw 同步

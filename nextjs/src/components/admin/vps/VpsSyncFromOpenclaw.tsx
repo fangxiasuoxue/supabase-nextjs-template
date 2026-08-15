@@ -77,7 +77,7 @@ export function VpsSyncFromOpenclaw({ open, onOpenChange, onSuccess }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (v) fetchList() }}>
-      <DialogContent className="max-w-lg bg-card/95 backdrop-blur-2xl border-white/10 rounded-3xl shadow-2xl">
+      <DialogContent className="max-w-lg bg-white border-slate-200 rounded-3xl shadow-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-base font-black uppercase tracking-tight">
             <div className="p-2 bg-primary/10 rounded-xl border border-primary/20">
@@ -99,7 +99,7 @@ export function VpsSyncFromOpenclaw({ open, onOpenChange, onSuccess }: Props) {
             </div>
           ) : (
             rows.map((row) => (
-              <div key={row.gcp_instance_name} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-colors">
+              <div key={row.gcp_instance_name} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition-colors">
                 <Checkbox
                   checked={selected.has(row.gcp_instance_name)}
                   onCheckedChange={() => toggle(row.gcp_instance_name)}
@@ -114,7 +114,7 @@ export function VpsSyncFromOpenclaw({ open, onOpenChange, onSuccess }: Props) {
         </div>
 
         {synced !== null && (
-          <div className="px-4 py-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-black uppercase tracking-widest text-center">
+          <div className="px-4 py-3 rounded-2xl bg-green-50 border border-green-200 text-green-700 text-xs font-black uppercase tracking-widest text-center">
             ✓ 已同步 {synced} 台实例
           </div>
         )}
@@ -123,7 +123,7 @@ export function VpsSyncFromOpenclaw({ open, onOpenChange, onSuccess }: Props) {
           <Button variant="ghost" className="rounded-2xl h-11 font-bold text-xs uppercase" onClick={() => onOpenChange(false)}>
             关闭
           </Button>
-          <Button onClick={fetchList} variant="outline" disabled={loading} className="rounded-2xl h-11 font-bold text-xs uppercase border-white/10">
+          <Button onClick={fetchList} variant="outline" disabled={loading} className="rounded-2xl h-11 font-bold text-xs uppercase border-slate-200">
             <RefreshCw className={`mr-2 h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             刷新列表
           </Button>

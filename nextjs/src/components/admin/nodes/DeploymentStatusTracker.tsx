@@ -17,22 +17,22 @@ interface Deployment {
 
 function StatusCard({ d }: { d: Deployment }) {
   const styles: Record<string, string> = {
-    pending: 'border-zinc-500/30 bg-zinc-500/5',
-    processing: 'border-blue-500/30 bg-blue-500/5',
-    success: 'border-emerald-500/30 bg-emerald-500/5',
-    failed: 'border-red-500/30 bg-red-500/5',
+    pending: 'border-slate-200 bg-slate-50',
+    processing: 'border-blue-200 bg-blue-50',
+    success: 'border-green-200 bg-green-50',
+    failed: 'border-red-200 bg-red-50',
   }
   const icons: Record<string, React.ReactNode> = {
-    pending: <Clock className="h-5 w-5 text-zinc-400 animate-pulse" />,
-    processing: <Loader2 className="h-5 w-5 text-blue-400 animate-spin" />,
-    success: <CheckCircle className="h-5 w-5 text-emerald-400" />,
-    failed: <XCircle className="h-5 w-5 text-red-400" />,
+    pending: <Clock className="h-5 w-5 text-slate-500 animate-pulse" />,
+    processing: <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />,
+    success: <CheckCircle className="h-5 w-5 text-green-600" />,
+    failed: <XCircle className="h-5 w-5 text-red-600" />,
   }
   const labelColor: Record<string, string> = {
-    pending: 'text-zinc-400',
-    processing: 'text-blue-400',
-    success: 'text-emerald-400',
-    failed: 'text-red-400',
+    pending: 'text-slate-500',
+    processing: 'text-blue-600',
+    success: 'text-green-600',
+    failed: 'text-red-600',
   }
 
   return (
@@ -63,7 +63,7 @@ function StatusCard({ d }: { d: Deployment }) {
           const reached = ['pending', 'processing', 'success', 'failed'].indexOf(d.status) >= i
           return (
             <div key={step} className="flex items-center gap-1 flex-1">
-              <div className={`h-1 flex-1 rounded-full transition-all duration-700 ${reached ? (d.status === 'failed' ? 'bg-red-500' : 'bg-primary') : 'bg-white/10'}`} />
+              <div className={`h-1 flex-1 rounded-full transition-all duration-700 ${reached ? (d.status === 'failed' ? 'bg-red-500' : 'bg-primary') : 'bg-slate-200'}`} />
             </div>
           )
         })}

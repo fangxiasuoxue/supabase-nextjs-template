@@ -635,17 +635,17 @@ export default function IpManagementPage() {
         {/* Header / Command Center Info */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 pb-4 relative">
           <div className="relative z-10">
-            <div className="flex items-center gap-3 text-primary-400 mb-4 group cursor-default">
-              <div className="p-2 rounded-lg bg-primary-500/10 border border-primary-500/20 group-hover:bg-primary-500/20 transition-colors">
+            <div className="flex items-center gap-3 text-cyan-600 mb-4 group cursor-default">
+              <div className="p-2 rounded-lg bg-cyan-50 border border-cyan-100 group-hover:bg-cyan-100 transition-colors">
                 <Terminal className="h-4 w-4" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[10px] uppercase tracking-[0.3em] font-black text-primary-400/80">Edge Network Console</span>
+                <span className="text-[10px] uppercase tracking-[0.3em] font-black text-cyan-600">Edge Network Console</span>
                 <span className="text-[8px] text-muted-foreground uppercase tracking-widest -mt-0.5">Proxy Asset Management v4.2</span>
               </div>
             </div>
             <h1 className="text-5xl font-black tracking-tighter text-foreground leading-none">
-              IP 资产管理 <span className="text-primary-500 drop-shadow-[0_0_15px_rgba(6,182,212,0.5)]">.</span>
+              IP 资产管理 <span className="text-cyan-600">.</span>
             </h1>
             <p className="text-muted-foreground/80 mt-4 max-w-2xl text-sm font-medium leading-relaxed">
               管理全球分布式代理 IP 资源，实时监控延迟指标、流量配额与资产状态。
@@ -655,15 +655,15 @@ export default function IpManagementPage() {
           </div>
           
           {canManage && balance !== null && (
-            <div className="glass-card-premium px-8 py-5 rounded-3xl border border-primary-500/20 flex flex-col items-end relative group overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-primary-500/5 blur-3xl -mr-8 -mt-8 group-hover:bg-primary-500/10 transition-colors" />
+            <div className="glass-card-premium px-8 py-5 rounded-3xl flex flex-col items-end relative group overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-100/50 blur-3xl -mr-8 -mt-8 group-hover:bg-cyan-100 transition-colors" />
               <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2 relative z-10">Command Funds</span>
               <div className="flex items-baseline gap-1 relative z-10">
-                <span className="text-sm font-bold text-primary-500/60">$</span>
-                <span className="text-3xl font-black tech-mono text-primary-400 tracking-tighter">{balance.toFixed(2)}</span>
+                <span className="text-sm font-bold text-cyan-600">$</span>
+                <span className="text-3xl font-black tech-mono text-cyan-700 tracking-tighter">{balance.toFixed(2)}</span>
               </div>
-              <div className="mt-2 w-full h-1 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                <div className="h-full bg-gradient-to-r from-primary-600 to-primary-400 w-3/4 shadow-[0_0_8px_rgba(6,182,212,0.4)]" />
+              <div className="mt-2 w-full h-1 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                <div className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400 w-3/4" />
               </div>
             </div>
           )}
@@ -672,17 +672,17 @@ export default function IpManagementPage() {
         {/* Quick Stats Grid - Bento Style */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-            { label: "在线资产", value: ipAssets.filter(a => a.status === 'active').length, sub: "Nodes Active", icon: Globe, color: "text-emerald-400", bg: "from-emerald-500/20 to-transparent" },
-            { label: "平均延迟", value: "124ms", sub: "Global Avg", icon: Zap, color: "text-amber-400", bg: "from-amber-500/20 to-transparent" },
-            { label: "流量吞吐", value: "85GB", sub: "Last 24h", icon: BarChart3, color: "text-primary-400", bg: "from-primary-500/20 to-transparent" },
-            { label: "安全防御", value: "1.2k", sub: "Packets Filtered", icon: Shield, color: "text-blue-400", bg: "from-blue-500/20 to-transparent" },
+            { label: "在线资产", value: ipAssets.filter(a => a.status === 'active').length, sub: "Nodes Active", icon: Globe, color: "text-green-600", bg: "from-green-100 to-transparent" },
+            { label: "平均延迟", value: "124ms", sub: "Global Avg", icon: Zap, color: "text-amber-600", bg: "from-amber-100 to-transparent" },
+            { label: "流量吞吐", value: "85GB", sub: "Last 24h", icon: BarChart3, color: "text-cyan-600", bg: "from-cyan-100 to-transparent" },
+            { label: "安全防御", value: "1.2k", sub: "Packets Filtered", icon: Shield, color: "text-blue-600", bg: "from-blue-100 to-transparent" },
           ].map((stat, i) => (
-            <div key={i} className="glass-card-premium p-6 rounded-3xl border border-white/5 hover:border-white/10 group transition-all duration-500 hover:-translate-y-1 overflow-hidden relative">
+            <div key={i} className="glass-card-premium p-6 rounded-3xl hover:border-slate-300 group transition-all duration-500 hover:-translate-y-1 overflow-hidden relative">
               <div className={`absolute -right-4 -bottom-4 w-24 h-24 bg-gradient-to-br ${stat.bg} blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700`} />
               
               <div className="flex items-center justify-between mb-4 relative z-10">
-                <div className={`p-2.5 rounded-xl bg-white/5 border border-white/5 group-hover:border-white/10 transition-colors ${stat.color}`}>
-                  <stat.icon className="h-5 w-5 drop-shadow-[0_0_8px_currentColor]" />
+                <div className={`p-2.5 rounded-xl bg-slate-50 border border-slate-200 group-hover:border-slate-300 transition-colors ${stat.color}`}>
+                  <stat.icon className="h-5 w-5" />
                 </div>
                 <div className="flex flex-col items-end">
                     <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{stat.label}</span>
@@ -695,7 +695,7 @@ export default function IpManagementPage() {
         </div>
 
         {error && (
-          <Alert variant="destructive" className="bg-red-500/10 border-red-500/20 text-red-400 rounded-2xl">
+          <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-700 rounded-2xl">
             <AlertDescription className="tech-mono text-xs uppercase">{error}</AlertDescription>
           </Alert>
         )}
@@ -707,14 +707,14 @@ export default function IpManagementPage() {
           <div className="xl:col-span-1 space-y-10">
             
             {/* Search & Management Card */}
-            <div className="glass-card-premium p-8 rounded-[2.5rem] border border-white/5 space-y-8 relative overflow-hidden group/search">
+            <div className="glass-card-premium p-8 rounded-[2.5rem] space-y-8 relative overflow-hidden group/search">
               <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover/search:opacity-10 transition-opacity">
                 <Search className="h-24 w-24" />
               </div>
 
               <div className="flex items-center gap-4 mb-2">
-                <div className="p-2.5 bg-primary-500/10 rounded-xl border border-primary-500/20 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
-                  <Search className="h-4 w-4 text-primary-400" />
+                <div className="p-2.5 bg-cyan-50 rounded-xl border border-cyan-100">
+                  <Search className="h-4 w-4 text-cyan-600" />
                 </div>
                 <div className="flex flex-col">
                     <h3 className="text-sm font-black uppercase tracking-[0.1em]">智能检索</h3>
@@ -729,7 +729,7 @@ export default function IpManagementPage() {
                     placeholder="Filter by identifier..."
                     value={searchRemark}
                     onChange={(e) => setSearchRemark(e.target.value)}
-                    className="bg-black/40 border-white/5 rounded-2xl h-12 focus:ring-primary-500/40 focus:border-primary-500/40 transition-all tech-mono text-sm"
+                    className="bg-white border-slate-300 rounded-2xl h-12 focus:ring-cyan-600/20 focus:border-cyan-600 transition-all tech-mono text-sm"
                   />
                 </div>
                 <div className="space-y-2">
@@ -738,7 +738,7 @@ export default function IpManagementPage() {
                     placeholder="Filter by IP range..."
                     value={searchIp}
                     onChange={(e) => setSearchIp(e.target.value)}
-                    className="bg-black/40 border-white/5 rounded-2xl h-12 focus:ring-primary-500/40 focus:border-primary-500/40 transition-all tech-mono text-sm"
+                    className="bg-white border-slate-300 rounded-2xl h-12 focus:ring-cyan-600/20 focus:border-cyan-600 transition-all tech-mono text-sm"
                   />
                 </div>
                 <div className="space-y-2">
@@ -747,23 +747,23 @@ export default function IpManagementPage() {
                     placeholder="Search source ID..."
                     value={searchProviderId}
                     onChange={(e) => setSearchProviderId(e.target.value)}
-                    className="bg-black/40 border-white/5 rounded-2xl h-12 focus:ring-primary-500/40 focus:border-primary-500/40 transition-all tech-mono text-sm"
+                    className="bg-white border-slate-300 rounded-2xl h-12 focus:ring-cyan-600/20 focus:border-cyan-600 transition-all tech-mono text-sm"
                   />
                 </div>
-                <Button onClick={handleClearSearch} variant="secondary" className="w-full text-[10px] font-black uppercase tracking-[0.2em] bg-white/[0.03] hover:bg-white/5 border-white/5 rounded-2xl h-12">
+                <Button onClick={handleClearSearch} variant="secondary" className="w-full text-[10px] font-black uppercase tracking-[0.2em] bg-slate-50 hover:bg-slate-100 border-slate-200 rounded-2xl h-12">
                   RESET FILTERS
                 </Button>
               </div>
 
-              <div className="pt-8 border-t border-white/5 flex gap-4 relative z-10">
+              <div className="pt-8 border-t border-slate-200 flex gap-4 relative z-10">
                 {canManage && (
                   <>
-                    <Button onClick={handleSync} variant="outline" className="flex-1 border-white/10 hover:bg-white/5 rounded-2xl h-12 gap-3 text-[10px] font-black uppercase tracking-widest transition-all hover:border-primary-500/30" disabled={loading}>
-                      <ArrowRightLeft className="h-4 w-4 text-primary-400" />
+                    <Button onClick={handleSync} variant="outline" className="flex-1 border-slate-300 hover:bg-slate-50 rounded-2xl h-12 gap-3 text-[10px] font-black uppercase tracking-widest transition-all hover:border-cyan-300" disabled={loading}>
+                      <ArrowRightLeft className="h-4 w-4 text-cyan-600" />
                       SYNC
                     </Button>
-                    <Button onClick={handleTestAll} variant="outline" className="flex-1 border-white/10 hover:bg-white/5 rounded-2xl h-12 gap-3 text-[10px] font-black uppercase tracking-widest transition-all hover:border-primary-500/30" disabled={loading || isTestingAll}>
-                      <Zap className={`h-4 w-4 ${isTestingAll ? 'animate-pulse text-amber-400' : 'text-primary-400'}`} />
+                    <Button onClick={handleTestAll} variant="outline" className="flex-1 border-slate-300 hover:bg-slate-50 rounded-2xl h-12 gap-3 text-[10px] font-black uppercase tracking-widest transition-all hover:border-cyan-300" disabled={loading || isTestingAll}>
+                      <Zap className={`h-4 w-4 ${isTestingAll ? 'animate-pulse text-amber-600' : 'text-cyan-600'}`} />
                       {isTestingAll ? 'RUNNING' : 'TEST ALL'}
                     </Button>
                   </>
@@ -772,14 +772,14 @@ export default function IpManagementPage() {
             </div>
 
             {/* Asset Entry Card (Create/Edit) */}
-            <div className="glass-card-premium p-8 rounded-[2.5rem] border border-white/5 relative overflow-hidden group/entry shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+            <div className="glass-card-premium p-8 rounded-[2.5rem] relative overflow-hidden group/entry">
               <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover/entry:opacity-10 transition-opacity rotate-12">
                 <Plus className="h-32 w-32" />
               </div>
               
               <div className="flex items-center gap-4 mb-8">
-                <div className="p-2.5 bg-primary-500/10 rounded-xl border border-primary-500/20">
-                  <Plus className="h-4 w-4 text-primary-400" />
+                <div className="p-2.5 bg-cyan-50 rounded-xl border border-cyan-100">
+                  <Plus className="h-4 w-4 text-cyan-600" />
                 </div>
                 <div className="flex flex-col">
                     <h3 className="text-sm font-black uppercase tracking-[0.1em]">
@@ -797,7 +797,7 @@ export default function IpManagementPage() {
                       placeholder="Remark"
                       value={formData.remark}
                       onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
-                      className="bg-black/40 border-white/5 rounded-2xl h-12 focus:ring-primary-400/30"
+                      className="bg-white border-slate-300 rounded-2xl h-12 focus:ring-cyan-600/20 focus:border-cyan-600"
                     />
                   </div>
                   <div className="space-y-2">
@@ -806,7 +806,7 @@ export default function IpManagementPage() {
                       placeholder="e.g. US"
                       value={formData.country_code}
                       onChange={(e) => setFormData({ ...formData, country_code: e.target.value })}
-                      className="bg-black/40 border-white/5 rounded-2xl h-12 focus:ring-primary-400/30 font-bold tech-mono"
+                      className="bg-white border-slate-300 rounded-2xl h-12 focus:ring-cyan-600/20 focus:border-cyan-600 font-bold tech-mono"
                     />
                   </div>
                 </div>
@@ -817,7 +817,7 @@ export default function IpManagementPage() {
                     placeholder="0.0.0.0"
                     value={formData.ip}
                     onChange={(e) => setFormData({ ...formData, ip: e.target.value })}
-                    className="bg-black/40 border-white/5 rounded-2xl h-12 focus:ring-primary/40 text-primary font-bold tech-mono text-lg"
+                    className="bg-white border-slate-300 rounded-2xl h-12 focus:ring-cyan-600/20 focus:border-cyan-600 text-cyan-700 font-bold tech-mono text-lg"
                     required
                   />
                 </div>
@@ -829,10 +829,10 @@ export default function IpManagementPage() {
                       value={formData.proxy_type}
                       onValueChange={(value: "socks5" | "http" | "https") => setFormData({ ...formData, proxy_type: value })}
                     >
-                      <SelectTrigger className="bg-black/40 border-white/5 rounded-2xl h-12 focus:ring-primary-400/30">
+                      <SelectTrigger className="bg-white border-slate-300 rounded-2xl h-12 focus:ring-cyan-600/20">
                         <SelectValue placeholder="Protocol" />
                       </SelectTrigger>
-                      <SelectContent className="bg-secondary/95 backdrop-blur-2xl border-white/10 rounded-2xl">
+                      <SelectContent className="bg-white border-slate-200 rounded-2xl">
                         <SelectItem value="socks5" className="font-bold tech-mono">SOCKS5</SelectItem>
                         <SelectItem value="http" className="font-bold tech-mono">HTTP</SelectItem>
                         <SelectItem value="https" className="font-bold tech-mono">HTTPS</SelectItem>
@@ -851,7 +851,7 @@ export default function IpManagementPage() {
                         else if (formData.proxy_type === "http") setFormData({ ...formData, http_port: val });
                         else if (formData.proxy_type === "https") setFormData({ ...formData, https_port: val });
                       }}
-                      className="bg-black/40 border-white/5 rounded-2xl h-12 tech-mono font-bold"
+                      className="bg-white border-slate-300 rounded-2xl h-12 tech-mono font-bold"
                     />
                   </div>
                 </div>
@@ -863,7 +863,7 @@ export default function IpManagementPage() {
                       placeholder="Username"
                       value={formData.auth_username}
                       onChange={(e) => setFormData({ ...formData, auth_username: e.target.value })}
-                      className="bg-black/40 border-white/5 rounded-2xl h-12"
+                      className="bg-white border-slate-300 rounded-2xl h-12"
                     />
                   </div>
                   <div className="space-y-2">
@@ -873,17 +873,17 @@ export default function IpManagementPage() {
                       placeholder="Password"
                       value={formData.auth_password}
                       onChange={(e) => setFormData({ ...formData, auth_password: e.target.value })}
-                      className="bg-black/40 border-white/5 rounded-2xl h-12"
+                      className="bg-white border-slate-300 rounded-2xl h-12"
                     />
                   </div>
                 </div>
 
                 <div className="pt-6 flex gap-4">
-                  <Button onClick={handleSave} disabled={loading} className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl h-14 font-black uppercase tracking-widest shadow-[0_10px_30px_hsl(var(--primary)/0.3)] transition-all active:scale-[0.98]">
+                  <Button onClick={handleSave} disabled={loading} className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded-2xl h-14 font-black uppercase tracking-widest shadow-sm transition-all active:scale-[0.98]">
                     {loading ? 'EXECUTING...' : 'COMMIT CHANGES'}
                   </Button>
                   {(formMode === "edit" || formData.ip) && (
-                    <Button onClick={handleCancel} variant="secondary" className="px-6 border border-white/5 hover:bg-white/5 rounded-2xl h-14 font-black uppercase tracking-widest text-[10px]">
+                    <Button onClick={handleCancel} variant="secondary" className="px-6 border border-slate-200 hover:bg-slate-100 rounded-2xl h-14 font-black uppercase tracking-widest text-[10px]">
                       ABORT
                     </Button>
                   )}
@@ -893,19 +893,19 @@ export default function IpManagementPage() {
           </div>
           {/* Right Column: Asset List */}
           <div className="xl:col-span-2 space-y-6">
-            <div className="glass-card-premium rounded-[2.5rem] border border-white/5 overflow-hidden flex flex-col min-h-[700px] shadow-[0_20px_50px_rgba(0,0,0,0.2)]">
-              <div className="p-8 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+            <div className="glass-card-premium rounded-[2.5rem] overflow-hidden flex flex-col min-h-[700px]">
+              <div className="p-8 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="p-2.5 bg-primary/10 rounded-xl border border-primary/20 shadow-[0_0_15px_hsl(var(--primary)/0.1)]">
-                    <Database className="h-5 w-5 text-primary-400" />
+                  <div className="p-2.5 bg-cyan-50 rounded-xl border border-cyan-100">
+                    <Database className="h-5 w-5 text-cyan-600" />
                   </div>
                   <div className="flex flex-col">
                     <h3 className="text-sm font-black uppercase tracking-[0.1em]">资产核心清单</h3>
                     <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Global Asset Index</span>
                   </div>
-                  <div className="ml-6 flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/5">
-                    <div className="w-1 h-1 rounded-full bg-primary-500 animate-pulse" />
-                    <span className="text-[10px] font-black tech-mono text-primary-400/80">
+                  <div className="ml-6 flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200">
+                    <div className="w-1 h-1 rounded-full bg-cyan-600 animate-pulse" />
+                    <span className="text-[10px] font-black tech-mono text-cyan-700">
                       {totalCount} RECORDS FOUND
                     </span>
                   </div>
@@ -914,8 +914,8 @@ export default function IpManagementPage() {
 
               <div className="flex-1 overflow-x-auto scrollbar-hide">
                 <Table>
-                  <TableHeader className="bg-white/[0.01]">
-                    <TableRow className="border-white/5 hover:bg-transparent h-14">
+                  <TableHeader className="bg-slate-50">
+                    <TableRow className="border-slate-200 hover:bg-transparent h-14">
                       <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] pl-8">资产识别 / ATTRIBUTES</TableHead>
                       <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em]">遥测数据 / STATUS</TableHead>
                       <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] text-center">地址协议 / INTERFACE</TableHead>
@@ -928,8 +928,8 @@ export default function IpManagementPage() {
                         <TableCell colSpan={4} className="h-[500px] text-center">
                           <div className="flex flex-col items-center justify-center gap-6">
                             <div className="relative">
-                                <div className="absolute inset-0 bg-primary-500/20 blur-2xl animate-pulse rounded-full" />
-                                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-r-2 border-primary-500 relative z-10"></div>
+                                <div className="absolute inset-0 bg-cyan-100 blur-2xl animate-pulse rounded-full" />
+                                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-r-2 border-cyan-600 relative z-10"></div>
                             </div>
                             <span className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em] animate-pulse">正在建立神经元连接...</span>
                           </div>
@@ -939,7 +939,7 @@ export default function IpManagementPage() {
                       <TableRow className="border-none">
                         <TableCell colSpan={4} className="h-[500px] text-center">
                           <div className="flex flex-col items-center justify-center gap-6 py-20 opacity-30 group cursor-default">
-                             <div className="p-6 rounded-full bg-white/5 border border-white/5 group-hover:bg-white/10 transition-colors">
+                             <div className="p-6 rounded-full bg-slate-100 border border-slate-200 group-hover:bg-slate-200 transition-colors">
                                 <Database className="h-12 w-12" />
                              </div>
                              <span className="text-xs font-black uppercase tracking-[0.3em]">尚未检测到任何活跃资产</span>
@@ -948,12 +948,12 @@ export default function IpManagementPage() {
                       </TableRow>
                     ) : (
                       ipAssets.map((asset) => (
-                        <TableRow key={asset.id} className="border-white/5 hover:bg-white/[0.03] transition-all duration-300 group/row h-20">
+                        <TableRow key={asset.id} className="border-slate-200 hover:bg-slate-50 transition-all duration-300 group/row h-20">
                           <TableCell className="pl-8 py-5">
                             <div className="flex flex-col gap-1.5">
-                              <span className="text-sm font-black text-foreground group-hover/row:text-primary-400 transition-colors uppercase tracking-tight">{asset.remark || "Legacy Module"}</span>
+                              <span className="text-sm font-black text-foreground group-hover/row:text-cyan-700 transition-colors uppercase tracking-tight">{asset.remark || "Legacy Module"}</span>
                               <div className="flex items-center gap-3">
-                                <span className="px-2 py-0.5 rounded-md bg-secondary border border-white/5 text-[9px] font-black text-primary/80 uppercase tracking-widest">
+                                <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[9px] font-black text-cyan-700 uppercase tracking-widest">
                                   {asset.country_code || "XZ"}
                                 </span>
                                 <span className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-tight truncate max-w-[140px]">
@@ -965,7 +965,7 @@ export default function IpManagementPage() {
                           <TableCell>
                             <div className="flex flex-col gap-2">
                                 <div className="flex items-baseline gap-2">
-                                    <div className={`w-2 h-2 rounded-full ${asset.status === 'active' ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)]' : 'bg-zinc-700'}`} />
+                                    <div className={`w-2 h-2 rounded-full ${asset.status === 'active' ? 'bg-green-500' : 'bg-slate-300'}`} />
                                     <span className={`text-[10px] font-black uppercase tracking-widest ${getStatusColor(asset.status)}`}>
                                       {asset.status || 'OFFLINE'}
                                     </span>
@@ -977,7 +977,7 @@ export default function IpManagementPage() {
                                         {asset.last_latency_ms ? `${asset.last_latency_ms}ms` : '---'}
                                       </span>
                                    </div>
-                                   <div className="w-[1px] h-3 bg-white/5" />
+                                   <div className="w-[1px] h-3 bg-slate-200" />
                                    <div className="flex items-center gap-1.5">
                                       <Zap className="h-3 w-3 text-muted-foreground/40" />
                                       <span className="tech-mono text-[10px] font-bold text-muted-foreground/80 lowercase">
@@ -988,11 +988,11 @@ export default function IpManagementPage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-center px-4">
-                            <div className="inline-flex flex-col items-center gap-1 p-2 rounded-xl bg-black/20 border border-white/5 group-hover/row:border-primary-500/20 transition-all">
-                              <span className="tech-mono text-[11px] text-primary-400 font-black tracking-tight">{asset.ip}</span>
+                            <div className="inline-flex flex-col items-center gap-1 p-2 rounded-xl bg-slate-100 border border-slate-200 group-hover/row:border-cyan-200 transition-all">
+                              <span className="tech-mono text-[11px] text-cyan-700 font-black tracking-tight">{asset.ip}</span>
                               <div className="flex items-center gap-2">
                                 <span className="text-[8px] font-black uppercase text-muted-foreground/40 tracking-widest">{asset.proxy_type || 'TCP'}</span>
-                                <span className="tech-mono text-[10px] text-primary-500/60 font-black">
+                                <span className="tech-mono text-[10px] text-cyan-600 font-black">
                                   {asset.http_port || asset.https_port || asset.socks5_port || "NULL"}
                                 </span>
                               </div>
@@ -1007,12 +1007,12 @@ export default function IpManagementPage() {
                                     variant="ghost"
                                     onClick={() => handleTest(asset.id)}
                                     disabled={testingIds.has(asset.id)}
-                                    className="h-9 w-9 bg-white/5 hover:bg-primary-500/10 rounded-xl"
+                                    className="h-9 w-9 bg-slate-100 hover:bg-cyan-50 rounded-xl"
                                   >
-                                    <Activity className={`h-4 w-4 ${testingIds.has(asset.id) ? 'animate-spin text-primary-400' : 'text-primary-400'}`} />
+                                    <Activity className={`h-4 w-4 ${testingIds.has(asset.id) ? 'animate-spin text-cyan-600' : 'text-cyan-600'}`} />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent className="bg-secondary-950 border-white/10 text-[10px] font-black uppercase text-primary-400">TELEMETRY_PING</TooltipContent>
+                                <TooltipContent className="bg-white border-slate-200 shadow-sm text-[10px] font-black uppercase text-cyan-700">TELEMETRY_PING</TooltipContent>
                               </Tooltip>
 
                               <Tooltip>
@@ -1021,12 +1021,12 @@ export default function IpManagementPage() {
                                     size="icon"
                                     variant="ghost"
                                     onClick={() => handleEdit(asset)}
-                                    className="h-9 w-9 bg-white/5 hover:bg-white/10 rounded-xl text-foreground"
+                                    className="h-9 w-9 bg-slate-100 hover:bg-slate-200 rounded-xl text-foreground"
                                   >
                                     <Edit className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent className="bg-secondary-950 border-white/10 text-[10px] font-black uppercase">RECONFIGURE_ASSET</TooltipContent>
+                                <TooltipContent className="bg-white border-slate-200 shadow-sm text-[10px] font-black uppercase text-slate-700">RECONFIGURE_ASSET</TooltipContent>
                               </Tooltip>
 
                               {canManage && (
@@ -1039,12 +1039,12 @@ export default function IpManagementPage() {
                                         setRenewingId(asset.id)
                                         setShowRenewDialog(true)
                                       }}
-                                      className="h-9 w-9 bg-white/5 hover:bg-amber-500/10 rounded-xl text-amber-500"
+                                      className="h-9 w-9 bg-slate-100 hover:bg-amber-50 rounded-xl text-amber-600"
                                     >
                                       <Clock className="h-4 w-4" />
                                     </Button>
                                   </TooltipTrigger>
-                                  <TooltipContent className="bg-secondary-950 border-white/10 text-[10px] font-black uppercase text-amber-400">EXTEND_LEASE</TooltipContent>
+                                  <TooltipContent className="bg-white border-slate-200 shadow-sm text-[10px] font-black uppercase text-amber-600">EXTEND_LEASE</TooltipContent>
                                 </Tooltip>
                               )}
 
@@ -1054,12 +1054,12 @@ export default function IpManagementPage() {
                                     size="icon"
                                     variant="ghost"
                                     onClick={() => handleAllocate(asset.id)}
-                                    className="h-9 w-9 bg-white/5 hover:bg-blue-500/10 rounded-xl text-blue-400"
+                                    className="h-9 w-9 bg-slate-100 hover:bg-blue-50 rounded-xl text-blue-600"
                                   >
                                     <UserPlus className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent className="bg-secondary-950 border-white/10 text-[10px] font-black uppercase text-blue-400">DELEGATE_ACCESS</TooltipContent>
+                                <TooltipContent className="bg-white border-slate-200 shadow-sm text-[10px] font-black uppercase text-blue-600">DELEGATE_ACCESS</TooltipContent>
                               </Tooltip>
 
                               <Tooltip>
@@ -1071,12 +1071,12 @@ export default function IpManagementPage() {
                                       setDeletingId(asset.id)
                                       setShowDeleteDialog(true)
                                     }}
-                                    className="h-9 w-9 bg-white/5 hover:bg-red-500/10 rounded-xl text-red-500"
+                                    className="h-9 w-9 bg-slate-100 hover:bg-red-50 rounded-xl text-red-600"
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent className="bg-secondary-950 border-white/10 text-[10px] font-black uppercase text-red-400">PURGE_DATA</TooltipContent>
+                                <TooltipContent className="bg-white border-slate-200 shadow-sm text-[10px] font-black uppercase text-red-600">PURGE_DATA</TooltipContent>
                               </Tooltip>
                             </div>
                           </TableCell>
@@ -1089,7 +1089,7 @@ export default function IpManagementPage() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="p-6 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
+                <div className="p-6 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
                   <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                     PAGE {currentPage} OF {totalPages} <span className="mx-2 opacity-20">/</span> {totalCount} RECORDS
                   </div>
@@ -1099,7 +1099,7 @@ export default function IpManagementPage() {
                       size="sm"
                       onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                       disabled={currentPage === 1 || loading}
-                      className="border-white/10 hover:bg-white/5 rounded-lg px-4 text-[10px] font-bold"
+                      className="border-slate-300 hover:bg-slate-50 rounded-lg px-4 text-[10px] font-bold"
                     >
                       PREV
                     </Button>
@@ -1108,7 +1108,7 @@ export default function IpManagementPage() {
                       size="sm"
                       onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                       disabled={currentPage === totalPages || loading}
-                      className="border-white/10 hover:bg-white/5 rounded-lg px-4 text-[10px] font-bold"
+                      className="border-slate-300 hover:bg-slate-50 rounded-lg px-4 text-[10px] font-bold"
                     >
                       NEXT
                     </Button>
@@ -1122,7 +1122,7 @@ export default function IpManagementPage() {
 
       {/* Dialogs: Allocation */}
       <Dialog open={showAllocate} onOpenChange={setShowAllocate}>
-        <DialogContent className="max-w-md bg-card/95 backdrop-blur-2xl border-white/10 rounded-3xl shadow-2xl">
+        <DialogContent className="max-w-md bg-white border-slate-200 rounded-3xl shadow-xl">
           <DialogHeader className="mb-4">
             <DialogTitle className="text-xl font-black uppercase tracking-tight">分配资产接口</DialogTitle>
           </DialogHeader>
@@ -1136,10 +1136,10 @@ export default function IpManagementPage() {
                   const opts = Array.from(e.target.selectedOptions).map((o) => o.value)
                   setSelectedUserIds(opts)
                 }}
-                className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 h-48 text-sm focus:ring-primary-500/50 scrollbar-hide outline-none tech-mono"
+                className="w-full bg-white border border-slate-300 rounded-2xl p-4 h-48 text-sm text-slate-900 focus:ring-cyan-600/20 scrollbar-hide outline-none tech-mono"
               >
                 {users.map((u) => (
-                  <option key={u.id} value={u.id} className="p-2 mb-1 rounded-lg hover:bg-white/5">
+                  <option key={u.id} value={u.id} className="p-2 mb-1 rounded-lg hover:bg-slate-100">
                     {u.email || u.id}
                   </option>
                 ))}
@@ -1152,7 +1152,7 @@ export default function IpManagementPage() {
                 placeholder="Assign notes..."
                 value={allocateNotes}
                 onChange={(e) => setAllocateNotes(e.target.value)}
-                className="bg-black/20 border-white/5 rounded-2xl h-12"
+                className="bg-white border-slate-300 rounded-2xl h-12"
               />
             </div>
           </div>
@@ -1169,14 +1169,14 @@ export default function IpManagementPage() {
 
       {/* Dialogs: Renewal */}
       <Dialog open={showRenewDialog} onOpenChange={setShowRenewDialog}>
-        <DialogContent className="max-w-sm bg-card/95 backdrop-blur-2xl border-white/10 rounded-3xl shadow-2xl">
+        <DialogContent className="max-w-sm bg-white border-slate-200 rounded-3xl shadow-xl">
           <DialogHeader className="mb-4 text-center">
             <DialogTitle className="text-xl font-black uppercase tracking-tight">资产配额续期</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4">
-            <div className="flex flex-col items-center gap-1 p-4 bg-primary-500/10 rounded-2xl border border-primary-500/20">
+            <div className="flex flex-col items-center gap-1 p-4 bg-cyan-50 rounded-2xl border border-cyan-200">
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">AVAILABLE FUNDS</span>
-              <span className="text-2xl font-black tech-mono text-primary-400">${balance?.toFixed(2) ?? '---'}</span>
+              <span className="text-2xl font-black tech-mono text-cyan-700">${balance?.toFixed(2) ?? '---'}</span>
             </div>
             
             <div className="space-y-4">
@@ -1186,7 +1186,7 @@ export default function IpManagementPage() {
                     <button
                       key={m}
                       onClick={() => setRenewPeriod(m)}
-                      className={`h-12 rounded-2xl border font-black tech-mono text-xs transition-all ${renewPeriod === m ? 'bg-primary-500 border-primary-500 text-primary-950' : 'bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10'}`}
+                      className={`h-12 rounded-2xl border font-black tech-mono text-xs transition-all ${renewPeriod === m ? 'bg-cyan-600 border-cyan-600 text-white' : 'bg-slate-50 border-slate-300 text-muted-foreground hover:bg-slate-100'}`}
                     >
                       {m} MON
                     </button>
@@ -1207,17 +1207,17 @@ export default function IpManagementPage() {
 
       {/* Dialogs: Purge Confirmation */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-card/95 backdrop-blur-2xl border-white/10 rounded-3xl shadow-2xl overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-red-500/50" />
+        <AlertDialogContent className="bg-white border-slate-200 rounded-3xl shadow-xl overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-red-500" />
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-black uppercase tracking-tight text-red-400">确认永久删除</AlertDialogTitle>
+            <AlertDialogTitle className="text-xl font-black uppercase tracking-tight text-red-600">确认永久删除</AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground text-xs font-bold leading-relaxed uppercase tracking-wider py-2">
               此操作将从系统中永久移除该 IP 资产的所有关联数据（软删除标记）。此过程在逻辑上是不可逆的。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-8 gap-3">
-            <AlertDialogCancel className="shadow-none border-none hover:bg-white/5 rounded-2xl h-12 font-bold text-xs uppercase" onClick={() => setDeletingId(null)}>CANCEL</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-600 text-white rounded-2xl h-12 px-8 font-bold text-xs uppercase border-none">
+            <AlertDialogCancel className="shadow-none border-none hover:bg-slate-100 rounded-2xl h-12 font-bold text-xs uppercase" onClick={() => setDeletingId(null)}>CANCEL</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white rounded-2xl h-12 px-8 font-bold text-xs uppercase border-none">
               PURGE ASSET
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1227,8 +1227,8 @@ export default function IpManagementPage() {
       {/* Phase-2: Agent 测试结果面板 */}
       <div className="mt-10 space-y-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/10 rounded-xl border border-primary/20">
-            <Activity className="h-4 w-4 text-primary" />
+          <div className="p-2 bg-cyan-50 rounded-xl border border-cyan-100">
+            <Activity className="h-4 w-4 text-cyan-600" />
           </div>
           <div>
             <h3 className="text-sm font-black uppercase tracking-widest">Agent 测试结果</h3>

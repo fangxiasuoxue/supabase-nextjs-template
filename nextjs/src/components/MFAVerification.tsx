@@ -166,7 +166,7 @@ export function MFAVerification({ onVerified }: MFAVerificationProps) {
                             type="text"
                             value={verifyCode}
                             onChange={(e) => setVerifyCode(e.target.value.trim())}
-                            className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm"
+                            className="block w-full rounded-md bg-white border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-600/20 focus:border-cyan-600 sm:text-sm"
                             placeholder="Enter 6-digit code"
                             maxLength={6}
                         />

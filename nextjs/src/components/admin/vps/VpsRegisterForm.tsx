@@ -52,7 +52,7 @@ export function VpsRegisterForm({ open, onOpenChange, onSuccess }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-card/95 backdrop-blur-2xl border-white/10 rounded-3xl shadow-2xl">
+      <DialogContent className="max-w-md bg-white border-slate-200 rounded-3xl shadow-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-base font-black uppercase tracking-tight">
             <div className="p-2 bg-primary/10 rounded-xl border border-primary/20">
@@ -69,7 +69,7 @@ export function VpsRegisterForm({ open, onOpenChange, onSuccess }: Props) {
               placeholder="e.g. gcp-instance-001"
               value={form.gcp_instance_name}
               onChange={(e) => setForm({ ...form, gcp_instance_name: e.target.value })}
-              className="bg-black/40 border-white/5 rounded-2xl h-11 tech-mono"
+              className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 rounded-2xl h-11 tech-mono focus:border-cyan-600 focus:ring-cyan-600/20"
             />
           </div>
           <div className="space-y-2">
@@ -78,7 +78,7 @@ export function VpsRegisterForm({ open, onOpenChange, onSuccess }: Props) {
               placeholder="0.0.0.0"
               value={form.public_ip}
               onChange={(e) => setForm({ ...form, public_ip: e.target.value })}
-              className="bg-black/40 border-white/5 rounded-2xl h-11 tech-mono"
+              className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 rounded-2xl h-11 tech-mono focus:border-cyan-600 focus:ring-cyan-600/20"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -88,7 +88,7 @@ export function VpsRegisterForm({ open, onOpenChange, onSuccess }: Props) {
                 placeholder="us-central1-a"
                 value={form.zone}
                 onChange={(e) => setForm({ ...form, zone: e.target.value })}
-                className="bg-black/40 border-white/5 rounded-2xl h-11 tech-mono text-xs"
+                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 rounded-2xl h-11 tech-mono text-xs focus:border-cyan-600 focus:ring-cyan-600/20"
               />
             </div>
             <div className="space-y-2">
@@ -97,7 +97,7 @@ export function VpsRegisterForm({ open, onOpenChange, onSuccess }: Props) {
                 placeholder="my-project"
                 value={form.gcp_project_id}
                 onChange={(e) => setForm({ ...form, gcp_project_id: e.target.value })}
-                className="bg-black/40 border-white/5 rounded-2xl h-11 tech-mono text-xs"
+                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 rounded-2xl h-11 tech-mono text-xs focus:border-cyan-600 focus:ring-cyan-600/20"
               />
             </div>
           </div>

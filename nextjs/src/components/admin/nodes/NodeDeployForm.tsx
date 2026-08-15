@@ -72,14 +72,14 @@ export function NodeDeployForm() {
   )
 
   return (
-    <div className="glass-card-premium p-8 rounded-[2rem] border border-white/5 space-y-7 max-w-lg">
+    <div className="glass-card-premium p-8 rounded-[2rem] border border-slate-200 shadow-sm space-y-7 max-w-lg">
       <div className="space-y-2">
         <Label className="text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest">目标 VPS *</Label>
         <Select value={vpsId} onValueChange={setVpsId}>
-          <SelectTrigger className="bg-black/40 border-white/5 rounded-2xl h-12">
+          <SelectTrigger className="bg-white border-slate-300 rounded-2xl h-12">
             <SelectValue placeholder="选择在线 VPS" />
           </SelectTrigger>
-          <SelectContent className="bg-card/95 backdrop-blur-2xl border-white/10 rounded-2xl">
+          <SelectContent className="bg-white border-slate-200 rounded-2xl">
             {vpsList.length === 0 && (
               <SelectItem value="__none__" disabled>无在线 VPS</SelectItem>
             )}
@@ -96,10 +96,10 @@ export function NodeDeployForm() {
       <div className="space-y-2">
         <Label className="text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest">协议模板 *</Label>
         <Select value={profileId} onValueChange={setProfileId}>
-          <SelectTrigger className="bg-black/40 border-white/5 rounded-2xl h-12">
+          <SelectTrigger className="bg-white border-slate-300 rounded-2xl h-12">
             <SelectValue placeholder="选择协议模板" />
           </SelectTrigger>
-          <SelectContent className="bg-card/95 backdrop-blur-2xl border-white/10 rounded-2xl">
+          <SelectContent className="bg-white border-slate-200 rounded-2xl">
             {profiles.length === 0 && (
               <SelectItem value="__none__" disabled>无可用模板</SelectItem>
             )}
@@ -116,10 +116,10 @@ export function NodeDeployForm() {
       <div className="space-y-2">
         <Label className="text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest">部署模式</Label>
         <Select value={deployMode} onValueChange={setDeployMode}>
-          <SelectTrigger className="bg-black/40 border-white/5 rounded-2xl h-12">
+          <SelectTrigger className="bg-white border-slate-300 rounded-2xl h-12">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className="bg-card/95 backdrop-blur-2xl border-white/10 rounded-2xl">
+          <SelectContent className="bg-white border-slate-200 rounded-2xl">
             <SelectItem value="auto">自动 AUTO</SelectItem>
             <SelectItem value="manual">手动 MANUAL</SelectItem>
           </SelectContent>
@@ -129,7 +129,7 @@ export function NodeDeployForm() {
       <Button
         onClick={handleDeploy}
         disabled={loading || !vpsId || !profileId}
-        className="w-full rounded-2xl h-14 font-black uppercase tracking-widest shadow-[0_10px_30px_hsl(var(--primary)/0.3)] transition-all active:scale-[0.98]"
+        className="w-full rounded-2xl h-14 font-black uppercase tracking-widest shadow-sm transition-all active:scale-[0.98]"
       >
         {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Rocket className="mr-2 h-4 w-4" />}
         {loading ? '创建中...' : '创建部署任务'}

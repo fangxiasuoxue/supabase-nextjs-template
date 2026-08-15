@@ -78,19 +78,19 @@ export function AlertCenterTable() {
   }
 
   const statusStyle = (s: string) =>
-    s === 'open' ? 'text-orange-400 border-orange-400/20 bg-orange-500/10'
-    : s === 'acked' ? 'text-zinc-400 border-zinc-500/20 bg-zinc-500/10'
-    : 'text-emerald-400 border-emerald-400/20 bg-emerald-500/10'
+    s === 'open' ? 'text-orange-700 border-orange-200 bg-orange-50'
+    : s === 'acked' ? 'text-slate-600 border-slate-200 bg-slate-100'
+    : 'text-green-700 border-green-200 bg-green-50'
 
   return (
     <div className="space-y-5">
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <Select value={severity} onValueChange={setSeverity}>
-          <SelectTrigger className="w-40 bg-black/40 border-white/5 rounded-xl h-10 text-xs">
+          <SelectTrigger className="w-40 bg-white border-slate-300 rounded-xl h-10 text-xs">
             <SelectValue placeholder="所有级别" />
           </SelectTrigger>
-          <SelectContent className="bg-card/95 backdrop-blur-2xl border-white/10 rounded-xl">
+          <SelectContent className="bg-white border-slate-200 rounded-xl">
             <SelectItem value="">所有级别</SelectItem>
             <SelectItem value="info">Info</SelectItem>
             <SelectItem value="warning">Warning</SelectItem>
@@ -99,10 +99,10 @@ export function AlertCenterTable() {
         </Select>
 
         <Select value={resourceType} onValueChange={setResourceType}>
-          <SelectTrigger className="w-48 bg-black/40 border-white/5 rounded-xl h-10 text-xs">
+          <SelectTrigger className="w-48 bg-white border-slate-300 rounded-xl h-10 text-xs">
             <SelectValue placeholder="所有资源类型" />
           </SelectTrigger>
-          <SelectContent className="bg-card/95 backdrop-blur-2xl border-white/10 rounded-xl">
+          <SelectContent className="bg-white border-slate-200 rounded-xl">
             <SelectItem value="">所有资源类型</SelectItem>
             <SelectItem value="vps_instance">VPS 实例</SelectItem>
             <SelectItem value="node">节点</SelectItem>
@@ -116,10 +116,10 @@ export function AlertCenterTable() {
         </Button>
       </div>
 
-      <div className="glass-card-premium rounded-[2rem] border border-white/5 overflow-hidden shadow-2xl">
+      <div className="glass-card-premium rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
         <Table>
-          <TableHeader className="bg-white/[0.02]">
-            <TableRow className="border-white/5 hover:bg-transparent h-14">
+          <TableHeader className="bg-slate-50">
+            <TableRow className="border-slate-200 hover:bg-transparent h-14">
               <TableHead className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-widest pl-8">级别</TableHead>
               <TableHead className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-widest">告警标题</TableHead>
               <TableHead className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-widest">资源类型</TableHead>
@@ -145,7 +145,7 @@ export function AlertCenterTable() {
                 </TableCell>
               </TableRow>
             ) : alerts.map((alert) => (
-              <TableRow key={alert.id} className="border-white/5 hover:bg-white/[0.02] h-16 group/row">
+              <TableRow key={alert.id} className="border-slate-200 hover:bg-slate-50 h-16 group/row">
                 <TableCell className="pl-8">
                   <AlertSeverityBadge severity={alert.severity} />
                 </TableCell>

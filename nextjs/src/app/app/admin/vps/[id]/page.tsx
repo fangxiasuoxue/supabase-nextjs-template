@@ -27,7 +27,7 @@ export default function VpsDetailPage() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64 gap-3">
-      <Loader2 className="h-6 w-6 animate-spin text-primary/40" />
+      <Loader2 className="h-6 w-6 animate-spin text-cyan-600" />
       <span className="text-[10px] uppercase tracking-widest text-muted-foreground animate-pulse">加载中...</span>
     </div>
   )
@@ -36,20 +36,20 @@ export default function VpsDetailPage() {
     <div className="flex flex-col items-center justify-center h-64 gap-4 text-muted-foreground/40">
       <Server className="h-12 w-12" />
       <span className="text-xs uppercase tracking-widest">VPS 不存在</span>
-      <Link href="/app/admin/vps" className="text-primary text-xs underline">返回列表</Link>
+      <Link href="/app/admin/vps" className="text-cyan-600 text-xs underline">返回列表</Link>
     </div>
   )
 
   const heartbeatColor =
-    vps.heartbeat_status === 'online' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-400/20'
-    : vps.heartbeat_status === 'offline' ? 'text-red-400 bg-red-500/10 border-red-400/20'
-    : 'text-zinc-400 bg-zinc-500/10 border-zinc-500/20'
+    vps.heartbeat_status === 'online' ? 'text-green-700 bg-green-50 border-green-200'
+    : vps.heartbeat_status === 'offline' ? 'text-red-700 bg-red-50 border-red-200'
+    : 'text-slate-500 bg-slate-50 border-slate-200'
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/app/admin/vps" className="p-2 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+        <Link href="/app/admin/vps" className="p-2 rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
@@ -62,7 +62,7 @@ export default function VpsDetailPage() {
       </div>
 
       {/* Basic Info Card */}
-      <div className="glass-card-premium p-6 rounded-[2rem] border border-white/5 grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="glass-card-premium p-6 rounded-[2rem] grid grid-cols-2 md:grid-cols-4 gap-6">
         {[
           { label: 'Provider', value: vps.provider ?? 'gcp' },
           { label: 'Zone', value: vps.zone ?? '--' },
@@ -78,9 +78,9 @@ export default function VpsDetailPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="agent">
-        <TabsList className="bg-white/5 border border-white/5 rounded-xl p-1">
-          <TabsTrigger value="agent" className="rounded-lg text-xs font-black uppercase tracking-widest data-[state=active]:bg-white/10">Agent 状态</TabsTrigger>
-          <TabsTrigger value="billing" className="rounded-lg text-xs font-black uppercase tracking-widest data-[state=active]:bg-white/10">账单 &amp; 流量</TabsTrigger>
+        <TabsList className="bg-slate-100 border border-slate-200 rounded-xl p-1">
+          <TabsTrigger value="agent" className="rounded-lg text-xs font-black uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:text-sky-800">Agent 状态</TabsTrigger>
+          <TabsTrigger value="billing" className="rounded-lg text-xs font-black uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:text-sky-800">账单 &amp; 流量</TabsTrigger>
         </TabsList>
 
         <TabsContent value="agent" className="mt-6">
@@ -92,7 +92,7 @@ export default function VpsDetailPage() {
         </TabsContent>
 
         <TabsContent value="billing" className="mt-6">
-          <div className="glass-card-premium p-6 rounded-2xl border border-white/5">
+          <div className="glass-card-premium p-6 rounded-2xl">
             <VpsTrafficSparkline billing={vps.billing} />
           </div>
         </TabsContent>

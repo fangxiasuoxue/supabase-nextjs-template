@@ -75,51 +75,51 @@ export default function RegisterPage() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">{i18n.title}</h1>
-          <p className="text-sm text-muted-foreground">{i18n.subtitle}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">{i18n.title}</h1>
+          <p className="text-sm text-slate-500">{i18n.subtitle}</p>
         </div>
         <button
           onClick={toggleLang}
-          className="text-xs font-medium px-3 py-1.5 rounded-lg border border-white/10 text-muted-foreground hover:text-foreground hover:border-white/20 transition-colors mt-1"
+          className="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 text-slate-500 hover:text-slate-900 hover:border-slate-400 transition-colors mt-1"
         >
           {lang === 'zh' ? 'EN' : '中文'}
         </button>
       </div>
 
       {error && (
-        <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-3">
-          <div className="w-1.5 h-1.5 rounded-full bg-rose-500 flex-shrink-0" />
-          <span className="text-sm text-rose-400">{error}</span>
+        <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
+          <div className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+          <span className="text-sm text-red-600">{error}</span>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
-          <label htmlFor="email" className="text-sm font-medium text-foreground/80">{i18n.emailLabel}</label>
+          <label htmlFor="email" className="text-sm font-medium text-slate-900">{i18n.emailLabel}</label>
           <input
             id="email" name="email" type="email" autoComplete="email" required
             value={email} onChange={(e) => setEmail(e.target.value)}
-            className="block w-full bg-secondary/40 border border-white/10 rounded-xl h-11 px-4 text-sm focus:ring-1 focus:ring-primary/50 focus:border-primary/40 outline-none transition-all placeholder:text-muted-foreground/40"
+            className="block w-full bg-white border border-slate-300 rounded-lg h-11 px-4 text-sm text-slate-900 focus:ring-2 focus:ring-cyan-600/20 focus:border-cyan-600 outline-none transition-all placeholder:text-slate-400"
             placeholder="you@example.com"
           />
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="password" className="text-sm font-medium text-foreground/80">{i18n.passwordLabel}</label>
+          <label htmlFor="password" className="text-sm font-medium text-slate-900">{i18n.passwordLabel}</label>
           <input
             id="password" name="password" type="password" autoComplete="new-password" required
             value={password} onChange={(e) => setPassword(e.target.value)}
-            className="block w-full bg-secondary/40 border border-white/10 rounded-xl h-11 px-4 text-sm focus:ring-1 focus:ring-primary/50 focus:border-primary/40 outline-none transition-all placeholder:text-muted-foreground/40"
+            className="block w-full bg-white border border-slate-300 rounded-lg h-11 px-4 text-sm text-slate-900 focus:ring-2 focus:ring-cyan-600/20 focus:border-cyan-600 outline-none transition-all placeholder:text-slate-400"
             placeholder="••••••••"
           />
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="confirmPassword" className="text-sm font-medium text-foreground/80">{i18n.confirmLabel}</label>
+          <label htmlFor="confirmPassword" className="text-sm font-medium text-slate-900">{i18n.confirmLabel}</label>
           <input
             id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" required
             value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-            className="block w-full bg-secondary/40 border border-white/10 rounded-xl h-11 px-4 text-sm focus:ring-1 focus:ring-primary/50 focus:border-primary/40 outline-none transition-all placeholder:text-muted-foreground/40"
+            className="block w-full bg-white border border-slate-300 rounded-lg h-11 px-4 text-sm text-slate-900 focus:ring-2 focus:ring-cyan-600/20 focus:border-cyan-600 outline-none transition-all placeholder:text-slate-400"
             placeholder="••••••••"
           />
         </div>
@@ -128,23 +128,23 @@ export default function RegisterPage() {
           <input
             id="terms" name="terms" type="checkbox"
             checked={acceptedTerms} onChange={(e) => setAcceptedTerms(e.target.checked)}
-            className="h-4 w-4 mt-0.5 rounded border-white/10 bg-secondary/40 text-primary focus:ring-primary/20 accent-primary flex-shrink-0"
+            className="h-4 w-4 mt-0.5 rounded border-slate-300 bg-white text-cyan-600 focus:ring-cyan-600/20 accent-cyan-600 flex-shrink-0"
           />
-          <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed">
+          <label htmlFor="terms" className="text-sm text-slate-500 leading-relaxed">
             {i18n.terms}{' '}
-            <Link href="/legal/terms" className="text-primary hover:text-primary/80 transition-colors" target="_blank">{i18n.termsLink}</Link>
+            <Link href="/legal/terms" className="text-cyan-600 hover:text-cyan-700 transition-colors" target="_blank">{i18n.termsLink}</Link>
             {' '}{i18n.and}{' '}
-            <Link href="/legal/privacy" className="text-primary hover:text-primary/80 transition-colors" target="_blank">{i18n.privacyLink}</Link>
+            <Link href="/legal/privacy" className="text-cyan-600 hover:text-cyan-700 transition-colors" target="_blank">{i18n.privacyLink}</Link>
           </label>
         </div>
 
         <button
           type="submit" disabled={loading}
-          className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold text-sm shadow-[0_4px_14px_hsl(var(--primary)/0.3)] transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
+          className="w-full h-11 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold text-sm shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
         >
           {loading ? (
             <>
-              <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               <span>{i18n.submitting}</span>
             </>
           ) : <span>{i18n.submit}</span>}
@@ -153,19 +153,19 @@ export default function RegisterPage() {
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-white/8" />
+          <div className="w-full border-t border-slate-200" />
         </div>
-        <div className="relative flex justify-center text-xs text-muted-foreground/50">
-          <span className="bg-background px-3">{i18n.divider}</span>
+        <div className="relative flex justify-center text-xs text-slate-400">
+          <span className="bg-white px-3">{i18n.divider}</span>
         </div>
       </div>
 
       <SSOButtons onError={setError} />
 
       <div className="text-center">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-slate-500">
           {i18n.hasAccount}{' '}
-          <Link href="/auth/login" className="text-primary hover:text-primary/80 font-medium transition-colors">
+          <Link href="/auth/login" className="text-cyan-600 hover:text-cyan-700 font-medium transition-colors">
             {i18n.login}
           </Link>
         </p>

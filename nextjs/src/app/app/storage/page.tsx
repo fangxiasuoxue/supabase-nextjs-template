@@ -297,7 +297,7 @@ export default function FileManagementPage() {
                                     <Copy className="h-5 w-5"/>
                                     {showCopiedMessage && (
                                         <span
-                                            className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded">
+                                            className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-white border border-slate-200 shadow-sm text-slate-700 text-xs px-2 py-1 rounded">
                                             Copied!
                                         </span>
                                     )}

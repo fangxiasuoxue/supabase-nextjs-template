@@ -131,34 +131,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
 
     return (
-        <div className="min-h-screen bg-background theme-jiedian-pro tech-mono selection:bg-primary-500/30 selection:text-primary-200">
-            {/* Ambient Background Gradient */}
-            <div className="fixed inset-0 pointer-events-none command-center-gradient opacity-50" />
-            
+        <div className="min-h-screen bg-background theme-jiedian-pro">
             {isSidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-black/80 backdrop-blur-md z-40 lg:hidden animate-in fade-in duration-300"
+                    className="fixed inset-0 bg-slate-900/40 z-40 lg:hidden animate-in fade-in duration-300"
                     onClick={toggleSidebar}
                 />
             )}
 
             {/* Sidebar */}
-            <aside className={`fixed inset-y-0 left-0 w-64 bg-[#030712]/40 backdrop-blur-2xl border-r border-white/5 shadow-2xl transform transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] z-50 
+            <aside className={`fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200 transform transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] z-50
                 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 group/sidebar`}>
-                
-                {/* Sidebar Decorative Glow */}
-                <div className="absolute top-0 right-0 w-[1px] h-full bg-gradient-to-b from-transparent via-primary-500/20 to-transparent opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-1000" />
 
-                <div className="h-20 flex items-center justify-between px-6 border-b border-white/5 bg-white/[0.02]">
+                <div className="h-20 flex items-center justify-between px-6 border-b border-slate-200">
                     <div className="flex flex-col">
-                        <span className="text-xl font-black tracking-tighter bg-gradient-to-br from-white via-primary-400 to-primary-600 bg-clip-text text-transparent">
+                        <span className="text-xl font-black tracking-tighter text-slate-900">
                             {productName}
                         </span>
-                        <span className="text-[9px] uppercase tracking-[0.3em] font-bold text-primary-500/60 -mt-1">Operational Command</span>
+                        <span className="text-[9px] uppercase tracking-[0.3em] font-bold text-cyan-600 -mt-1">Operational Command</span>
                     </div>
                     <button
                         onClick={toggleSidebar}
-                        className="lg:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                        className="lg:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-slate-100 transition-colors"
                     >
                         <X className="h-5 w-5" />
                     </button>
@@ -166,7 +160,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
                 {/* Navigation */}
                 <nav className="mt-6 px-4 space-y-2 overflow-y-auto max-h-[calc(100vh-120px)] scrollbar-hide">
-                    <div className="px-2 mb-2 text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/50">Core Modules</div>
+                    <div className="px-2 mb-2 text-[10px] uppercase tracking-[0.2em] font-black text-slate-400">Core Modules</div>
                     {navigation.map((item) => {
                         const isActive = pathname === item.href;
                         return (
@@ -174,15 +168,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                 key={item.name}
                                 href={item.href}
                                 className={`group flex items-center px-4 py-3 text-sm font-bold rounded-xl transition-all duration-300 relative overflow-hidden ${isActive
-                                    ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20 shadow-[0_0_20px_rgba(6,182,212,0.1)]'
-                                    : 'text-muted-foreground hover:bg-white/[0.03] hover:text-foreground border border-transparent hover:border-white/5'
+                                    ? 'bg-sky-100 text-sky-800 border border-sky-200'
+                                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                                     } `}
                             >
                                 {isActive && (
-                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1/2 bg-primary-500 rounded-r-full shadow-[0_0_10px_rgba(6,182,212,0.8)]" />
+                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1/2 bg-cyan-600 rounded-r-full" />
                                 )}
                                 <item.icon
-                                    className={`mr-4 h-5 w-5 transition-all duration-300 ${isActive ? 'text-primary-400 scale-110 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]' : 'text-muted-foreground group-hover:text-foreground group-hover:scale-110'
+                                    className={`mr-4 h-5 w-5 transition-all duration-300 ${isActive ? 'text-sky-700 scale-110' : 'text-slate-400 group-hover:text-slate-700 group-hover:scale-110'
                                         } `}
                                 />
                                 <span className="tracking-tight">{item.name}</span>
@@ -192,49 +186,49 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </nav>
 
                 {/* Sidebar Footer Info */}
-                <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-white/5 bg-white/[0.01]">
+                <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-200 bg-slate-50">
                     <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">System Online</span>
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">System Online</span>
                     </div>
                 </div>
             </aside>
 
             <div className="lg:pl-64 min-h-screen relative flex flex-col">
                 {/* Topbar */}
-                <header className="sticky top-0 z-40 flex items-center justify-between h-20 bg-[#020617]/40 backdrop-blur-xl border-b border-white/5 px-8">
+                <header className="sticky top-0 z-40 flex items-center justify-between h-20 bg-white/90 backdrop-blur border-b border-slate-200 px-8">
                     <button
                         onClick={toggleSidebar}
-                        className="lg:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground mr-4 hover:bg-white/5 transition-colors"
+                        className="lg:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground mr-4 hover:bg-slate-100 transition-colors"
                     >
                         <Menu className="h-6 w-6" />
                     </button>
 
                     <div className="flex items-center gap-2">
-                        <div className="hidden sm:flex items-center px-3 py-1.5 rounded-full bg-white/5 border border-white/5 gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />
-                            <span className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-wider">V4.2.0-PRO</span>
+                        <div className="hidden sm:flex items-center px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-cyan-600" />
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">V4.2.0-PRO</span>
                         </div>
                     </div>
 
                     <div className="relative ml-auto flex items-center gap-6" ref={dropdownRef}>
                         {/* Language Selector */}
-                        <div className="flex items-center p-1 bg-black/40 rounded-xl border border-white/5">
+                        <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200">
                             <button
                                 onClick={() => setLanguage('en')}
-                                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 ${language === 'en' ? 'bg-primary-500 text-primary-950 shadow-[0_0_15px_rgba(6,182,212,0.4)]' : 'text-muted-foreground hover:text-foreground'} `}
+                                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 ${language === 'en' ? 'bg-cyan-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'} `}
                             >
                                 {t('lang.en')}
                             </button>
                             <button
                                 onClick={() => setLanguage('zh')}
-                                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 ${language === 'zh' ? 'bg-primary-500 text-primary-950 shadow-[0_0_15px_rgba(6,182,212,0.4)]' : 'text-muted-foreground hover:text-foreground'} `}
+                                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 ${language === 'zh' ? 'bg-cyan-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'} `}
                             >
                                 {t('lang.zh')}
                             </button>
                         </div>
-                        
-                        <div className="h-8 w-[1px] bg-white/5 mx-1" />
+
+                        <div className="h-8 w-[1px] bg-slate-200 mx-1" />
 
                         {/* User Profile */}
                         <button
@@ -242,31 +236,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                             className="flex items-center space-x-4 group"
                         >
                             <div className="flex flex-col items-end text-right">
-                                <span className="hidden md:block text-xs font-black text-foreground group-hover:text-primary-400 transition-colors uppercase tracking-wider">{user?.email?.split('@')[0] || 'Unknown'}</span>
-                                <span className="hidden md:block text-[9px] text-muted-foreground uppercase tracking-widest leading-none">Command Tier</span>
+                                <span className="hidden md:block text-xs font-black text-slate-900 group-hover:text-cyan-700 transition-colors uppercase tracking-wider">{user?.email?.split('@')[0] || 'Unknown'}</span>
+                                <span className="hidden md:block text-[9px] text-slate-500 uppercase tracking-widest leading-none">Command Tier</span>
                             </div>
                             <div className="relative">
-                                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 p-[1px] shadow-[0_0_15px_rgba(6,182,212,0.2)] group-hover:shadow-[0_0_25px_rgba(6,182,212,0.4)] transition-all duration-500">
-                                    <div className="w-full h-full rounded-[10px] bg-secondary-950 flex items-center justify-center overflow-hidden">
-                                        <span className="text-primary-400 font-black text-sm">
-                                            {user?.email ? getInitials(user.email) : '??'}
-                                        </span>
-                                    </div>
+                                <div className="w-11 h-11 rounded-xl bg-cyan-600 flex items-center justify-center overflow-hidden shadow-sm transition-all duration-500">
+                                    <span className="text-white font-black text-sm">
+                                        {user?.email ? getInitials(user.email) : '??'}
+                                    </span>
                                 </div>
-                                <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-secondary-950 shadow-lg" />
+                                <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-white shadow-sm" />
                             </div>
-                            <ChevronDown className={`h-4 w-4 text-muted-foreground group-hover:text-foreground transition-all duration-300 ${isUserDropdownOpen ? 'rotate-180 text-primary-400' : ''}`} />
+                            <ChevronDown className={`h-4 w-4 text-slate-400 group-hover:text-slate-700 transition-all duration-300 ${isUserDropdownOpen ? 'rotate-180 text-cyan-600' : ''}`} />
                         </button>
 
                         {/* User Dropdown */}
                         {isUserDropdownOpen && (
-                            <div className="absolute right-0 top-full mt-4 w-72 bg-[#030712]/80 backdrop-blur-2xl rounded-2xl shadow-[0_30px_60px_rgba(0,0,0,0.6)] border border-white/5 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-300">
-                                <div className="p-6 border-b border-white/5 bg-white/5 relative overflow-hidden">
+                            <div className="absolute right-0 top-full mt-4 w-72 bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-300">
+                                <div className="p-6 border-b border-slate-200 bg-slate-50 relative overflow-hidden">
                                     <div className="absolute top-0 right-0 p-4 opacity-5">
                                         <User className="h-20 w-20" />
                                     </div>
-                                    <p className="text-[10px] uppercase tracking-[0.2em] text-primary-500 font-black mb-1.5">{t('nav.signedInAs')}</p>
-                                    <p className="text-sm font-bold text-foreground truncate drop-shadow-sm">
+                                    <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-600 font-black mb-1.5">{t('nav.signedInAs')}</p>
+                                    <p className="text-sm font-bold text-slate-900 truncate">
                                         {user?.email}
                                     </p>
                                 </div>
@@ -276,10 +268,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                             setUserDropdownOpen(false);
                                             handleChangePassword()
                                         }}
-                                        className="w-full flex items-center px-4 py-3 text-sm text-foreground hover:bg-white/5 rounded-xl transition-all duration-200 group/item"
+                                        className="w-full flex items-center px-4 py-3 text-sm text-slate-900 hover:bg-slate-100 rounded-xl transition-all duration-200 group/item"
                                     >
-                                        <div className="p-2 rounded-lg bg-primary-500/10 mr-4 group-hover/item:bg-primary-500/20 transition-colors">
-                                            <Key className="h-4 w-4 text-primary-400" />
+                                        <div className="p-2 rounded-lg bg-cyan-50 mr-4 group-hover/item:bg-cyan-100 transition-colors">
+                                            <Key className="h-4 w-4 text-cyan-600" />
                                         </div>
                                         <span className="font-bold uppercase tracking-tight text-xs">{t('nav.changePassword')}</span>
                                     </button>
@@ -288,10 +280,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                             handleLogout();
                                             setUserDropdownOpen(false);
                                         }}
-                                        className="w-full flex items-center px-4 py-3 text-sm text-red-500 hover:bg-red-500/10 rounded-xl transition-all duration-200 group/item"
+                                        className="w-full flex items-center px-4 py-3 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 group/item"
                                     >
-                                        <div className="p-2 rounded-lg bg-red-500/10 mr-4 group-hover/item:bg-red-500/20 transition-colors">
-                                            <LogOut className="h-4 w-4 text-red-500" />
+                                        <div className="p-2 rounded-lg bg-red-50 mr-4 group-hover/item:bg-red-100 transition-colors">
+                                            <LogOut className="h-4 w-4 text-red-600" />
                                         </div>
                                         <span className="font-bold uppercase tracking-tight text-xs">{t('nav.signOut')}</span>
                                     </button>
@@ -306,19 +298,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </main>
                 
                 {/* Global Footer / System Status */}
-                <footer className="px-8 lg:px-12 py-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-muted-foreground/60">
+                <footer className="px-8 lg:px-12 py-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-500">
                     <div className="flex items-center gap-6 text-[10px] uppercase tracking-widest font-bold">
-                        <span className="flex items-center gap-2 hover:text-primary-400/80 cursor-default transition-colors">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span className="flex items-center gap-2 hover:text-cyan-700 cursor-default transition-colors">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                             Core Services: OK
                         </span>
-                        <span className="flex items-center gap-2 hover:text-primary-400/80 cursor-default transition-colors">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span className="flex items-center gap-2 hover:text-cyan-700 cursor-default transition-colors">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                             Network Latency: 42ms
                         </span>
                     </div>
                     <div className="text-[10px] uppercase tracking-[0.2em] font-black">
-                        © 2026 JIEDIAN PRO <span className="text-primary-500/60">•</span> SECURE NODE NETWORK
+                        © 2026 JIEDIAN PRO <span className="text-cyan-600">•</span> SECURE NODE NETWORK
                     </div>
                 </footer>
             </div>

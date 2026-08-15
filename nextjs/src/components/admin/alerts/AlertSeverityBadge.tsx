@@ -4,9 +4,9 @@ interface Props {
 }
 
 const styles = {
-  info: 'text-blue-400 bg-blue-500/10 border-blue-400/20',
-  warning: 'text-orange-400 bg-orange-500/10 border-orange-400/20',
-  critical: 'text-red-400 bg-red-500/10 border-red-400/20',
+  info: 'text-blue-700 bg-blue-50 border-blue-200',
+  warning: 'text-orange-700 bg-orange-50 border-orange-200',
+  critical: 'text-red-700 bg-red-50 border-red-200',
 }
 
 export function AlertSeverityBadge({ severity }: Props) {

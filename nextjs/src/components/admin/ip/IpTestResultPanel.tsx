@@ -61,8 +61,8 @@ export function IpTestResultPanel() {
               onClick={() => setMethod(m)}
               className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-colors ${
                 method === m
-                  ? 'bg-primary/10 border-primary/20 text-primary'
-                  : 'bg-white/[0.02] border-white/5 text-muted-foreground/50 hover:border-white/10'
+                  ? 'bg-sky-100 border-sky-200 text-sky-800'
+                  : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
               }`}
             >
               {m || 'ALL'}
@@ -74,10 +74,10 @@ export function IpTestResultPanel() {
         </div>
       </div>
 
-      <div className="glass-card-premium rounded-2xl border border-white/5 overflow-hidden">
+      <div className="glass-card-premium rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <Table>
-          <TableHeader className="bg-white/[0.02]">
-            <TableRow className="border-white/5 hover:bg-transparent h-12">
+          <TableHeader className="bg-slate-50">
+            <TableRow className="border-slate-200 hover:bg-transparent h-12">
               <TableHead className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-widest pl-6">IP</TableHead>
               <TableHead className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-widest">状态</TableHead>
               <TableHead className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-widest text-right">延迟</TableHead>
@@ -103,7 +103,7 @@ export function IpTestResultPanel() {
             ) : results.map((r) => {
               const isAgent = r.test_method === 'agent'
               return (
-                <TableRow key={r.id} className={`border-white/5 h-14 ${isAgent ? 'hover:bg-white/[0.02]' : 'opacity-60 hover:opacity-80'}`}>
+                <TableRow key={r.id} className={`border-slate-200 h-14 ${isAgent ? 'hover:bg-slate-50' : 'opacity-60 hover:opacity-80'}`}>
                   <TableCell className="pl-6">
                     <div className="flex flex-col">
                       <span className="tech-mono text-xs font-bold">{r.ip}</span>
@@ -115,8 +115,8 @@ export function IpTestResultPanel() {
                   <TableCell>
                     <span className={`inline-flex px-2 py-0.5 rounded-md border text-[8px] font-black uppercase tracking-widest ${
                       r.success
-                        ? 'text-emerald-400 bg-emerald-500/10 border-emerald-400/20'
-                        : 'text-red-400 bg-red-500/10 border-red-400/20'
+                        ? 'text-green-700 bg-green-50 border-green-200'
+                        : 'text-red-700 bg-red-50 border-red-200'
                     }`}>
                       {r.success ? 'OK' : 'FAIL'}
                     </span>
@@ -139,8 +139,8 @@ export function IpTestResultPanel() {
                   <TableCell>
                     <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded border ${
                       isAgent
-                        ? 'text-primary/70 bg-primary/10 border-primary/20'
-                        : 'text-muted-foreground/40 bg-white/[0.02] border-white/5'
+                        ? 'text-cyan-700 bg-cyan-50 border-cyan-200'
+                        : 'text-slate-500 bg-slate-50 border-slate-200'
                     }`}>
                       {r.test_method}
                     </span>

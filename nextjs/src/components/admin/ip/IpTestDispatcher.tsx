@@ -72,14 +72,14 @@ export function IpTestDispatcher({ ipId, ip, port, username, password, onTestCom
   }
 
   return (
-    <div className="space-y-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+    <div className="space-y-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
       <div className="space-y-2">
         <Label className="text-[9px] uppercase font-black text-muted-foreground/50 tracking-widest">测试来源</Label>
         <Select value={method} onValueChange={(v) => setMethod(v as 'vercel' | 'agent')}>
-          <SelectTrigger className="bg-black/40 border-white/5 rounded-xl h-10 text-xs">
+          <SelectTrigger className="bg-white border-slate-300 rounded-xl h-10 text-xs">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className="bg-card/95 backdrop-blur-2xl border-white/10 rounded-xl">
+          <SelectContent className="bg-white border-slate-200 rounded-xl">
             <SelectItem value="vercel">
               <span className="font-bold">Vercel 直测</span>
               <span className="ml-2 text-[9px] text-muted-foreground">快速但不准确</span>
@@ -98,10 +98,10 @@ export function IpTestDispatcher({ ipId, ip, port, username, password, onTestCom
             <Server className="h-3 w-3 inline mr-1" />测试 VPS
           </Label>
           <Select value={vpsId} onValueChange={setVpsId}>
-            <SelectTrigger className="bg-black/40 border-white/5 rounded-xl h-10 text-xs">
+            <SelectTrigger className="bg-white border-slate-300 rounded-xl h-10 text-xs">
               <SelectValue placeholder="选择测试来源 VPS" />
             </SelectTrigger>
-            <SelectContent className="bg-card/95 backdrop-blur-2xl border-white/10 rounded-xl">
+            <SelectContent className="bg-white border-slate-200 rounded-xl">
               {vpsList.length === 0 && <SelectItem value="__none__" disabled>无在线 VPS</SelectItem>}
               {vpsList.map((v) => (
                 <SelectItem key={v.id} value={v.id}>

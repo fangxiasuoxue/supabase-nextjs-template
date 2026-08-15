@@ -261,8 +261,8 @@
 }
 
 .theme-jiedian-pro {
-    --color-background: #0d1117;
-    --color-foreground: #e6edf3;
+    --color-background: #f6f8fa;
+    --color-foreground: #0f172a;
 
     /* Cyber Cyan Primary */
     --color-primary-50: #ecfeff;
@@ -293,58 +293,52 @@
     --color-success-500: #10b981;
     --color-error-500: #ef4444;
 
-    /* Shadcn Overrides — 提升可读性：背景提亮、字体降亮、对比度舒适化 */
-    --background: 216 28% 7%;        /* #0d1117 — 比 #020617 更亮，眼睛不累 */
-    --foreground: 213 27% 90%;       /* #e6edf3 — 降低纯白刺激感 */
-    --card: 216 28% 9%;              /* 卡片稍亮于背景，层次清晰 */
-    --card-foreground: 213 27% 90%;
-    --popover: 216 28% 9%;
-    --popover-foreground: 213 27% 90%;
-    --primary: 189 94% 43%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 20% 16%;        /* 次要背景，明显但不刺眼 */
-    --secondary-foreground: 213 27% 88%;
-    --muted: 217 20% 14%;
-    --muted-foreground: 215 15% 62%; /* 次要文字：不过亮也不过暗 */
-    --accent: 217 20% 18%;
-    --accent-foreground: 213 27% 90%;
-    --destructive: 0 63% 40%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 20% 18%;           /* 边框明显但柔和 */
-    --input: 217 20% 14%;
-    --ring: 189 94% 43%;
+    /* Shadcn Overrides — 亮色主题 */
+    --background: 210 22% 97%;       /* ~#f6f8fa 页面背景 */
+    --foreground: 222 47% 11%;       /* slate-900 */
+    --card: 0 0% 100%;               /* 纯白卡片 */
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 189 94% 37%;          /* cyan-600 #0891b2 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;        /* slate-100 */
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%; /* slate-500 */
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 213 27% 90%;           /* slate-200 */
+    --input: 213 24% 84%;            /* slate-300 */
+    --ring: 189 94% 37%;
 }
 
 
 @layer components {
     .btn-primary {
-        @apply bg-primary-600 text-white hover:bg-primary-700 transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.4)] active:scale-[0.98];
+        @apply bg-cyan-600 text-white hover:bg-cyan-700 transition-all duration-300 shadow-sm active:scale-[0.98];
     }
 
     .btn-secondary {
-        @apply bg-secondary/40 text-secondary-foreground hover:bg-secondary/60 transition-all border border-white/5 hover:border-white/10 active:scale-[0.98];
+        @apply bg-white text-slate-700 hover:bg-slate-50 transition-all border border-slate-300 active:scale-[0.98];
     }
 
     .input-primary {
-        @apply bg-black/40 border-white/5 focus:border-primary/50 focus:ring-primary/10 text-foreground rounded-xl transition-all;
+        @apply bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-cyan-600 focus:ring-cyan-600/20 rounded-xl transition-all;
     }
 
     .glass-card {
-        @apply bg-[#161b22]/80 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3)];
+        @apply bg-white border border-slate-200 shadow-sm;
     }
 
     .glass-card-premium {
-        @apply relative bg-[#161b22]/60 backdrop-blur-2xl border border-white/[0.10] shadow-[0_20px_50px_rgba(0,0,0,0.4)];
-    }
-
-    .glass-card-premium::before {
-        content: "";
-        @apply absolute inset-0 rounded-[inherit] border border-white/[0.05] pointer-events-none;
-        background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 100%);
+        @apply relative bg-white border border-slate-200 shadow-md;
     }
 
     .glass-card-hover {
-        @apply transition-all duration-500 hover:bg-white/[0.08] hover:border-white/[0.15] hover:shadow-[0_0_30px_rgba(6,182,212,0.15)];
+        @apply transition-all duration-300 hover:shadow-md hover:border-slate-300;
     }
 
     .tech-mono {
@@ -352,24 +346,23 @@
     }
 
     .status-glow-success {
-        @apply shadow-[0_0_12px_rgba(16,185,129,0.5)] border-emerald-500/30;
+        @apply bg-green-50 border-green-200 text-green-700;
     }
 
     .status-glow-error {
-        @apply shadow-[0_0_12px_rgba(239,68,68,0.5)] border-red-500/30;
+        @apply bg-red-50 border-red-200 text-red-700;
     }
 
     .command-center-gradient {
-        background: radial-gradient(circle at 50% -20%, rgba(6,182,212,0.15) 0%, transparent 70%);
+        background: radial-gradient(circle at 50% -20%, rgba(8,145,178,0.05) 0%, transparent 70%);
     }
 
     .grid-background {
-        background-image: linear-gradient(rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(6,182,212,0.05) 1px, transparent 1px);
-        background-size: 50px 50px;
+        background: none;
     }
 
     .hero-glow {
-        background: radial-gradient(circle at 50% 50%, rgba(6,182,212,0.1) 0%, transparent 70%);
+        background: radial-gradient(circle at 50% 50%, rgba(8,145,178,0.04) 0%, transparent 70%);
     }
 }
 

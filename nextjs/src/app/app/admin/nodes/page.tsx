@@ -47,24 +47,24 @@ export default function AdminNodesPage() {
   useEffect(() => { fetchNodes() }, [fetchNodes])
 
   const statusColor = (s: string) =>
-    s === 'active' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-400/20'
-    : s === 'deploying' ? 'text-blue-400 bg-blue-500/10 border-blue-400/20'
-    : 'text-zinc-400 bg-zinc-500/10 border-zinc-500/20'
+    s === 'active' ? 'text-green-700 bg-green-50 border-green-200'
+    : s === 'deploying' ? 'text-blue-700 bg-blue-50 border-blue-200'
+    : 'text-slate-500 bg-slate-50 border-slate-200'
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-3 text-primary mb-1">
+          <div className="flex items-center gap-3 text-cyan-600 mb-1">
             <Network className="h-4 w-4" />
-            <span className="text-[10px] uppercase tracking-[0.3em] font-black text-primary/70">Node Management</span>
+            <span className="text-[10px] uppercase tracking-[0.3em] font-black text-cyan-600">Node Management</span>
           </div>
           <h2 className="text-3xl font-black tracking-tight">节点管理</h2>
           <p className="text-muted-foreground text-sm">管理所有已部署节点与订阅信息</p>
         </div>
         <div className="flex gap-3">
           <Link href="/app/admin/nodes/deployments">
-            <Button variant="outline" className="border-white/10 hover:bg-white/5 rounded-xl h-10 text-xs font-black uppercase tracking-widest">
+            <Button variant="outline" className="border-slate-300 hover:bg-slate-50 rounded-xl h-10 text-xs font-black uppercase tracking-widest">
               部署历史
             </Button>
           </Link>
@@ -79,14 +79,14 @@ export default function AdminNodesPage() {
 
       {loading ? (
         <div className="flex items-center justify-center h-48 gap-3">
-          <Loader2 className="h-5 w-5 animate-spin text-primary/40" />
+          <Loader2 className="h-5 w-5 animate-spin text-cyan-600" />
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground animate-pulse">加载中...</span>
         </div>
       ) : (
-        <div className="glass-card-premium rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl">
+        <div className="glass-card-premium rounded-[2.5rem] overflow-hidden">
           <Table>
-            <TableHeader className="bg-white/[0.02]">
-              <TableRow className="border-white/5 hover:bg-transparent h-14">
+            <TableHeader className="bg-slate-50">
+              <TableRow className="border-slate-200 hover:bg-transparent h-14">
                 <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.15em] pl-8">节点 ID</TableHead>
                 <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.15em]">协议</TableHead>
                 <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.15em]">状态</TableHead>
@@ -107,12 +107,12 @@ export default function AdminNodesPage() {
                 </TableRow>
               ) : nodes.map((node) => (
                 <>
-                  <TableRow key={node.id} className="border-white/5 hover:bg-white/[0.02] h-16 group/row">
+                  <TableRow key={node.id} className="border-slate-200 hover:bg-slate-50 h-16 group/row">
                     <TableCell className="pl-8">
                       <span className="tech-mono text-xs text-muted-foreground/70">{node.id.slice(0, 12)}...</span>
                     </TableCell>
                     <TableCell>
-                      <span className="px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-[9px] font-black uppercase text-primary">
+                      <span className="px-2 py-0.5 rounded-md bg-sky-100 border border-sky-200 text-[9px] font-black uppercase text-sky-800">
                         {node.protocol ?? '--'}
                       </span>
                     </TableCell>
@@ -133,7 +133,7 @@ export default function AdminNodesPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setExpandedId(expandedId === node.id ? null : node.id)}
-                          className="h-8 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-primary/10 hover:text-primary"
+                          className="h-8 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-cyan-50 hover:text-cyan-700"
                         >
                           {expandedId === node.id ? '收起' : '订阅链接'}
                         </Button>
@@ -141,7 +141,7 @@ export default function AdminNodesPage() {
                     </TableCell>
                   </TableRow>
                   {expandedId === node.id && (
-                    <TableRow key={`${node.id}-sub`} className="border-white/5 bg-white/[0.01]">
+                    <TableRow key={`${node.id}-sub`} className="border-slate-200 bg-slate-50">
                       <TableCell colSpan={6} className="px-8 pb-4">
                         <NodeSubscriptionCard
                           token={node.subscribe_token}

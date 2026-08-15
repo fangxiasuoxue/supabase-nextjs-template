@@ -16,48 +16,48 @@ export default function Home() {
       icon: Terminal,
       title: language === 'en' ? 'Node Infrastructure' : '节点基础设施',
       description: language === 'en' ? 'Manage global proxy nodes with millisecond-precision telemetry.' : '以毫秒级精度管理全球代理节点。',
-      color: 'text-cyan-400'
+      color: 'text-cyan-600'
     },
     {
       icon: Shield,
       title: language === 'en' ? 'Hardened Security' : '强化安全',
       description: language === 'en' ? 'Multi-layer encryption and identity verification for every session.' : '为每个会话提供多层加密和身份验证。',
-      color: 'text-emerald-400'
+      color: 'text-green-600'
     },
     {
       icon: Zap,
       title: language === 'en' ? 'Quantum Performance' : '量子性能',
       description: language === 'en' ? 'Low-latency routing optimized for high-bandwidth operations.' : '针对高带宽操作优化的低延迟路由。',
-      color: 'text-amber-400'
+      color: 'text-amber-600'
     },
     {
       icon: Database,
       title: language === 'en' ? 'Asset Management' : '资产管理',
       description: language === 'en' ? 'Unified control for VPS, IP ranges, and specialized containers.' : '对 VPS、IP 范围和专用容器的统一控制。',
-      color: 'text-rose-400'
+      color: 'text-rose-600'
     },
     {
       icon: Activity,
       title: language === 'en' ? 'Live Telemetry' : '实时遥测',
       description: language === 'en' ? 'Real-time monitoring of node health and traffic patterns.' : '实时监控节点健康状况和流量模式。',
-      color: 'text-indigo-400'
+      color: 'text-indigo-600'
     },
     {
       icon: Lock,
       title: language === 'en' ? 'Privacy Shield' : '隐私盾',
       description: language === 'en' ? 'Next-gen tunneling protocols focused on anonymity.' : '专注于匿名性的下一代隧道协议。',
-      color: 'text-purple-400'
+      color: 'text-purple-600'
     }
   ];
 
   return (
-    <div className="min-h-screen bg-[#020617] text-foreground font-sans selection:bg-primary/30 overflow-x-hidden">
+    <div className="min-h-screen bg-white text-foreground font-sans selection:bg-primary/20 overflow-x-hidden">
       {/* Background Effects */}
       <div className="fixed inset-0 grid-background opacity-20 pointer-events-none" />
       <div className="fixed inset-0 hero-glow opacity-40 pointer-events-none" />
       
       {/* Navigation */}
-      <nav className="fixed top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-7xl glass-card-premium rounded-3xl z-50 border-white/[0.05] shadow-2xl overflow-hidden px-6 py-4">
+      <nav className="fixed top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-7xl bg-white/90 backdrop-blur rounded-3xl z-50 border border-slate-200 shadow-sm overflow-hidden px-6 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center">
@@ -82,10 +82,10 @@ export default function Home() {
 
       {/* Hero Section */}
       <section className="relative pt-48 pb-32 flex flex-col items-center justify-center overflow-hidden">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
         
         <div className="relative z-10 max-w-5xl mx-auto px-6 text-center space-y-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.02] border border-white/5 backdrop-blur-md animate-in fade-in slide-in-from-top-4 duration-1000">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-50 border border-slate-200 animate-in fade-in slide-in-from-top-4 duration-1000">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
@@ -93,9 +93,9 @@ export default function Home() {
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Protocol v4.2.0 Active</span>
           </div>
 
-          <h1 className="text-6xl md:text-8xl font-black tracking-tighter leading-[0.9] uppercase animate-in fade-in slide-in-from-bottom-8 duration-1000 text-white">
-            Next-Gen <br /> 
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-cyan-300 to-white/90">Node Command</span> <br /> 
+          <h1 className="text-6xl md:text-8xl font-black tracking-tighter leading-[0.9] uppercase animate-in fade-in slide-in-from-bottom-8 duration-1000 text-slate-900">
+            Next-Gen <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-cyan-700">Node Command</span> <br />
             Center
           </h1>
 
@@ -106,7 +106,7 @@ export default function Home() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-in fade-in slide-in-from-bottom-8 delay-400 duration-1000">
             <AuthAwareButtons />
-            <Link href="/legal/docs" className="h-14 px-8 flex items-center gap-3 text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-primary border border-white/5 hover:border-primary/20 rounded-2xl transition-all">
+            <Link href="/legal/docs" className="h-14 px-8 flex items-center gap-3 text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-primary border border-slate-200 hover:border-cyan-600/40 rounded-2xl transition-all">
               <Terminal className="w-4 h-4" />
               Technical Docs
             </Link>
@@ -126,9 +126,9 @@ export default function Home() {
             {features.map((feature, index) => (
               <div
                 key={index}
-                className="glass-card-premium glass-card-hover rounded-[2.5rem] p-8 space-y-6 group border-white/5"
+                className="glass-card-premium glass-card-hover rounded-[2.5rem] p-8 space-y-6 group border-slate-200"
               >
-                <div className={`w-14 h-14 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/20 transition-all duration-500`}>
+                <div className={`w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/20 transition-all duration-500`}>
                   <feature.icon className={`h-7 w-7 ${feature.color}`} />
                 </div>
                 <div className="space-y-2">
@@ -145,7 +145,7 @@ export default function Home() {
       </section>
 
       {/* Stats Display */}
-      <section className="py-24 border-y border-white/5 bg-white/[0.01]">
+      <section className="py-24 border-y border-slate-200 bg-slate-50">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
             {[
@@ -180,7 +180,7 @@ export default function Home() {
           <div className="flex justify-center pt-4">
             <Link
               href="/auth/register"
-              className="px-12 h-16 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl font-black uppercase tracking-[0.3em] text-[12px] shadow-[0_15px_30px_hsl(var(--primary)/0.3)] transition-all active:scale-[0.98] flex items-center gap-4 group"
+              className="px-12 h-16 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl font-black uppercase tracking-[0.3em] text-[12px] shadow-sm transition-all active:scale-[0.98] flex items-center gap-4 group"
             >
               Request Access Key
               <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
@@ -190,7 +190,7 @@ export default function Home() {
       </section>
 
       {/* Technical Footer */}
-      <footer className="py-20 border-t border-white/5 relative">
+      <footer className="py-20 border-t border-slate-200 relative">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
             <div className="col-span-2 space-y-6">
@@ -222,7 +222,7 @@ export default function Home() {
             </div>
           </div>
           
-          <div className="mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="mt-20 pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-[8px] font-black uppercase tracking-[0.5em] text-muted-foreground/30">
               © {new Date().getFullYear()} {productName} SYSTEMS. ALL RIGHTS RESERVED.
             </p>

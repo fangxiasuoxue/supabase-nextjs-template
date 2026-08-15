@@ -200,7 +200,7 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
                                 type="text"
                                 value={friendlyName}
                                 onChange={(e) => setFriendlyName(e.target.value)}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                                className="mt-1 block w-full rounded-md bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 shadow-sm focus:ring-2 focus:ring-cyan-600/20 focus:border-cyan-600 sm:text-sm"
                                 placeholder="e.g., Work Phone, Personal iPhone"
                                 autoFocus
                             />
@@ -249,7 +249,7 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
                                 type="text"
                                 value={verifyCode}
                                 onChange={(e) => setVerifyCode(e.target.value.trim())}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                                className="mt-1 block w-full rounded-md bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 shadow-sm focus:ring-2 focus:ring-cyan-600/20 focus:border-cyan-600 sm:text-sm"
                                 placeholder="Enter code from your authenticator app"
                             />
                         </div>

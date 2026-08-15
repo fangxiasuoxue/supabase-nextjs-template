@@ -30,10 +30,10 @@ export function NodeSubscriptionCard({ token, protocol, inboundTag }: Props) {
   )
 
   return (
-    <div className="glass-card-premium p-5 rounded-2xl border border-white/5 space-y-4">
+    <div className="glass-card-premium p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
       <div className="flex items-center gap-3">
         {protocol && (
-          <span className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 text-[9px] font-black uppercase tracking-widest text-primary">
+          <span className="px-2.5 py-1 rounded-lg bg-cyan-50 border border-cyan-200 text-[9px] font-black uppercase tracking-widest text-cyan-700">
             {protocol}
           </span>
         )}
@@ -42,7 +42,7 @@ export function NodeSubscriptionCard({ token, protocol, inboundTag }: Props) {
         )}
       </div>
 
-      <div className="flex items-center gap-2 p-3 rounded-xl bg-black/40 border border-white/5">
+      <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-100 border border-slate-200">
         <span className="tech-mono text-xs text-muted-foreground/70 flex-1 truncate">{token}</span>
         <Button
           size="icon"
@@ -50,7 +50,7 @@ export function NodeSubscriptionCard({ token, protocol, inboundTag }: Props) {
           onClick={handleCopy}
           className="h-7 w-7 rounded-lg shrink-0 hover:bg-primary/10"
         >
-          {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5 text-primary/60" />}
+          {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5 text-cyan-600" />}
         </Button>
       </div>
     </div>

@@ -45,12 +45,12 @@ export function UserTable() {
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="relative flex-1 max-w-sm group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary-400 transition-colors" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-cyan-600 transition-colors" />
                     <Input
                         placeholder="智能检索用户 (Search ID/Email)..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="pl-10 bg-black/20 border-white/10 rounded-xl h-12 focus:ring-primary-500/50"
+                        className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 rounded-xl h-12 focus:border-cyan-600 focus:ring-cyan-600/20"
                     />
                 </div>
                 <Button 
@@ -58,16 +58,16 @@ export function UserTable() {
                     size="icon" 
                     onClick={fetchUsers} 
                     disabled={loading} 
-                    className="h-12 w-12 border-white/10 hover:bg-white/5 rounded-xl transition-all active:scale-95"
+                    className="h-12 w-12 border-slate-200 hover:bg-slate-100 rounded-xl transition-all active:scale-95"
                 >
-                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin text-primary-400' : ''}`} />
+                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin text-cyan-600' : ''}`} />
                 </Button>
             </div>
 
-            <div className="rounded-2xl border border-white/5 overflow-hidden">
+            <div className="rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 <Table>
-                    <TableHeader className="bg-white/[0.02]">
-                        <TableRow className="border-white/5 hover:bg-transparent">
+                    <TableHeader className="bg-slate-50">
+                        <TableRow className="border-slate-200 hover:bg-transparent">
                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground h-12 pl-6">用户身份 / 邮箱</TableHead>
                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground h-12">权限角色</TableHead>
                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground h-12">创建日期</TableHead>
@@ -95,7 +95,7 @@ export function UserTable() {
                             </TableRow>
                         ) : (
                             users.map((user) => (
-                                <TableRow key={user.id} className="border-white/5 hover:bg-white/[0.02] transition-colors group">
+                                <TableRow key={user.id} className="border-slate-200 hover:bg-slate-50 transition-colors group">
                                     <TableCell className="pl-6 py-4">
                                         <div className="flex flex-col">
                                             <span className="text-sm font-bold text-foreground">{user.email}</span>

@@ -130,14 +130,14 @@ export function VPSList() {
     const getStatusStyles = (status: string) => {
         switch (status.toUpperCase()) {
             case 'RUNNING':
-                return 'text-emerald-400 bg-emerald-500/10 border-emerald-400/20 status-glow-success'
+                return 'text-green-700 bg-green-50 border-green-200'
             case 'TERMINATED':
-                return 'text-rose-400 bg-rose-500/10 border-rose-400/20'
+                return 'text-red-700 bg-red-50 border-red-200'
             case 'STOPPING':
             case 'SUSPENDED':
-                return 'text-amber-400 bg-amber-500/10 border-amber-400/20'
+                return 'text-amber-700 bg-amber-50 border-amber-200'
             default:
-                return 'text-zinc-400 bg-zinc-500/10 border-zinc-500/20'
+                return 'text-slate-600 bg-slate-100 border-slate-200'
         }
     }
 
@@ -159,18 +159,18 @@ export function VPSList() {
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Filtering Engine */}
-            <div className="glass-card-premium p-6 rounded-[2rem] border border-white/5 shadow-xl relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-50" />
+            <div className="glass-card-premium p-6 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-600/5 via-transparent to-transparent opacity-50" />
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 relative z-10">
                     <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest ml-1">IP 寻址 / ADDRESS</label>
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary/40" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-cyan-600/60" />
                             <Input
                                 placeholder="0.0.0.0"
                                 value={filterIp}
                                 onChange={(e) => setFilterIp(e.target.value)}
-                                className="pl-9 bg-black/40 border-white/5 rounded-xl h-11 tech-mono font-bold focus:ring-primary/20"
+                                className="pl-9 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 rounded-xl h-11 tech-mono font-bold focus:border-cyan-600 focus:ring-cyan-600/20"
                             />
                         </div>
                     </div>
@@ -180,7 +180,7 @@ export function VPSList() {
                             placeholder="INSTANCE NAME"
                             value={filterName}
                             onChange={(e) => setFilterName(e.target.value)}
-                            className="bg-black/40 border-white/5 rounded-xl h-11 uppercase font-black text-[11px] tracking-tight focus:ring-primary/20"
+                            className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 rounded-xl h-11 uppercase font-black text-[11px] tracking-tight focus:border-cyan-600 focus:ring-cyan-600/20"
                         />
                     </div>
                     <div className="space-y-2">
@@ -189,7 +189,7 @@ export function VPSList() {
                             placeholder="ANY_STATE"
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
-                            className="bg-black/40 border-white/5 rounded-xl h-11 uppercase font-black text-[11px] tracking-tight focus:ring-primary/20"
+                            className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 rounded-xl h-11 uppercase font-black text-[11px] tracking-tight focus:border-cyan-600 focus:ring-cyan-600/20"
                         />
                     </div>
                     <div className="space-y-2">
@@ -198,7 +198,7 @@ export function VPSList() {
                             placeholder="CORE_IDENTITY"
                             value={filterAccount}
                             onChange={(e) => setFilterAccount(e.target.value)}
-                            className="bg-black/40 border-white/5 rounded-xl h-11 uppercase font-black text-[11px] tracking-tight focus:ring-primary/20"
+                            className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 rounded-xl h-11 uppercase font-black text-[11px] tracking-tight focus:border-cyan-600 focus:ring-cyan-600/20"
                         />
                     </div>
                 </div>
@@ -222,7 +222,7 @@ export function VPSList() {
                     <Button 
                         onClick={handleSyncAll} 
                         disabled={syncing} 
-                        className="bg-white/5 hover:bg-white/10 text-foreground border border-white/5 rounded-xl h-11 px-6 font-black text-[10px] uppercase tracking-[0.2em] transition-all hover:border-primary/30"
+                        className="bg-slate-50 hover:bg-slate-100 text-slate-900 border border-slate-200 rounded-xl h-11 px-6 font-black text-[10px] uppercase tracking-[0.2em] transition-all hover:border-cyan-600/30"
                     >
                         <RefreshCw className={`mr-3 h-3.5 w-3.5 text-primary ${syncing ? 'animate-spin' : ''}`} />
                         {t('vps.sync')}
@@ -231,10 +231,10 @@ export function VPSList() {
             </div>
 
             {data?.errors && data.errors.length > 0 && (
-                <Alert className="bg-rose-500/10 border-rose-500/20 rounded-[1.5rem] p-6">
-                    <AlertCircle className="h-5 w-5 text-rose-400" />
-                    <AlertTitle className="text-sm font-black uppercase tracking-widest text-rose-400 ml-2">同步异常检测 / CRITICAL</AlertTitle>
-                    <AlertDescription className="mt-2 text-[11px] font-bold text-rose-400/80 uppercase tracking-wider ml-2">
+                <Alert className="bg-red-50 border-red-200 rounded-[1.5rem] p-6">
+                    <AlertCircle className="h-5 w-5 text-red-600" />
+                    <AlertTitle className="text-sm font-black uppercase tracking-widest text-red-600 ml-2">同步异常检测 / CRITICAL</AlertTitle>
+                    <AlertDescription className="mt-2 text-[11px] font-bold text-red-700/80 uppercase tracking-wider ml-2">
                         <ul className="list-disc pl-4 space-y-1">
                             {data.errors.map((err, i) => (
                                 <li key={i}>{err}</li>
@@ -247,13 +247,13 @@ export function VPSList() {
             {/* Metrics Dashboard */}
             <div className="grid gap-6 md:grid-cols-3">
                 {[
-                    { title: t('vps.table.instance'), value: `${filteredInstances.length} / ${data?.instances.length || 0}`, icon: Server, sub: "Instances Online", color: "text-primary-400" },
-                    { title: t('vps.table.traffic'), value: formatTraffic(filteredInstances.reduce((acc, curr) => acc + (curr.trafficReceived + curr.trafficSent), 0)), icon: Activity, sub: "Traffic Processed", color: "text-emerald-400" },
-                    { title: t('vps.billing.title'), value: '$' + Array.from(new Set(filteredInstances.map(i => i.account))).map(acc => filteredInstances.find(i => i.account === acc)?.billingRemaining || 0).reduce((a, b) => a + b, 0).toFixed(2), icon: CreditCard, sub: "Remaining Balance", color: "text-amber-400" }
+                    { title: t('vps.table.instance'), value: `${filteredInstances.length} / ${data?.instances.length || 0}`, icon: Server, sub: "Instances Online", color: "text-cyan-600" },
+                    { title: t('vps.table.traffic'), value: formatTraffic(filteredInstances.reduce((acc, curr) => acc + (curr.trafficReceived + curr.trafficSent), 0)), icon: Activity, sub: "Traffic Processed", color: "text-green-600" },
+                    { title: t('vps.billing.title'), value: '$' + Array.from(new Set(filteredInstances.map(i => i.account))).map(acc => filteredInstances.find(i => i.account === acc)?.billingRemaining || 0).reduce((a, b) => a + b, 0).toFixed(2), icon: CreditCard, sub: "Remaining Balance", color: "text-amber-600" }
                 ].map((stat, i) => (
-                    <div key={i} className="glass-card-premium p-6 rounded-[2rem] border border-white/5 relative overflow-hidden group/card shadow-lg">
+                    <div key={i} className="glass-card-premium p-6 rounded-[2rem] border border-slate-200 relative overflow-hidden group/card shadow-sm">
                         <div className="flex items-center justify-between mb-4 relative z-10">
-                            <div className={`p-2.5 rounded-xl bg-white/5 border border-white/5 group-hover/card:border-white/10 transition-colors ${stat.color}`}>
+                            <div className={`p-2.5 rounded-xl bg-slate-50 border border-slate-200 group-hover/card:border-slate-300 transition-colors ${stat.color}`}>
                                 <stat.icon className="h-5 w-5" />
                             </div>
                             <div className="flex flex-col items-end">
@@ -267,11 +267,11 @@ export function VPSList() {
             </div>
 
             {/* Main Infrastructure Table */}
-            <div className="glass-card-premium rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl bg-white/[0.01]">
+            <div className="glass-card-premium rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-sm bg-white">
                 <div className="overflow-x-auto">
                     <Table>
-                        <TableHeader className="bg-white/[0.02]">
-                            <TableRow className="border-white/5 hover:bg-transparent h-16">
+                        <TableHeader className="bg-slate-50">
+                            <TableRow className="border-slate-200 hover:bg-transparent h-16">
                                 <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.15em] pl-10">权属 / ACCOUNT</TableHead>
                                 <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.15em]">标识 / IDENTIFIER</TableHead>
                                 <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.15em]">区域配置 / ENV</TableHead>
@@ -305,7 +305,7 @@ export function VPSList() {
                                 filteredInstances.map((instance) => {
                                     const totalTraffic = instance.trafficReceived + instance.trafficSent
                                     return (
-                                        <TableRow key={instance.id} className="border-white/5 hover:bg-white/[0.02] transition-colors group/row h-24">
+                                        <TableRow key={instance.id} className="border-slate-200 hover:bg-slate-50 transition-colors group/row h-24">
                                             <TableCell className="pl-10">
                                                 <div className="flex flex-col">
                                                     <span className="text-[11px] font-black text-foreground uppercase tracking-tight group-hover/row:text-primary/80 transition-colors">{instance.account}</span>
@@ -351,13 +351,13 @@ export function VPSList() {
                                             <TableCell className="text-right">
                                                 <div className="flex flex-col items-end gap-1">
                                                     {/* 原有余额 */}
-                                                    <span className={`tech-mono text-sm font-black tracking-tighter ${instance.billingRemaining < 0 ? 'text-rose-500' : 'text-emerald-400'}`}>
+                                                    <span className={`tech-mono text-sm font-black tracking-tighter ${instance.billingRemaining < 0 ? 'text-red-600' : 'text-green-600'}`}>
                                                         ${instance.billingRemaining.toFixed(2)}
                                                     </span>
                                                     <span className="text-[8px] text-muted-foreground/40 font-bold uppercase tracking-widest">Remaining</span>
                                                     {/* 赠金 */}
                                                     {instance.creditRemaining != null && (
-                                                        <span className={`tech-mono text-xs font-bold tracking-tighter ${instance.creditRemaining < 0 ? 'text-rose-400' : instance.creditRemaining < 5 ? 'text-amber-400' : 'text-sky-400'}`}>
+                                                        <span className={`tech-mono text-xs font-bold tracking-tighter ${instance.creditRemaining < 0 ? 'text-red-600' : instance.creditRemaining < 5 ? 'text-amber-600' : 'text-sky-600'}`}>
                                                             赠金 ${instance.creditRemaining.toFixed(2)}
                                                         </span>
                                                     )}
@@ -396,7 +396,7 @@ export function VPSList() {
                                                                     setSelectedVpsName(instance.name)
                                                                     setAuthDialogOpen(true)
                                                                 }}
-                                                                className="h-9 w-9 rounded-xl bg-white/5 border border-white/5 hover:bg-primary/10 hover:border-primary/20 text-muted-foreground hover:text-primary transition-all"
+                                                                className="h-9 w-9 rounded-xl bg-slate-50 border border-slate-200 hover:bg-cyan-50 hover:border-cyan-200 text-slate-500 hover:text-cyan-700 transition-all"
                                                             >
                                                                 <UserPlus className="h-4 w-4" />
                                                             </Button>
@@ -405,7 +405,7 @@ export function VPSList() {
                                                                 size="icon"
                                                                 onClick={() => handleSyncAccount(instance.account)}
                                                                 disabled={syncingAccount === instance.account}
-                                                                className="h-9 w-9 rounded-xl bg-white/5 border border-white/5 hover:bg-primary/10 hover:border-primary/20 text-muted-foreground hover:text-primary transition-all"
+                                                                className="h-9 w-9 rounded-xl bg-slate-50 border border-slate-200 hover:bg-cyan-50 hover:border-cyan-200 text-slate-500 hover:text-cyan-700 transition-all"
                                                             >
                                                                 <RefreshCw className={`h-4 w-4 ${syncingAccount === instance.account ? 'animate-spin' : ''}`} />
                                                             </Button>

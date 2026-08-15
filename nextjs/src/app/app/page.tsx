@@ -31,25 +31,25 @@ export default function DashboardContent() {
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Hero Welcome Section */}
-            <div className="relative overflow-hidden glass-card rounded-[2rem] p-8 border border-primary-500/20 shadow-2xl shadow-primary-500/5">
+            <div className="relative overflow-hidden glass-card rounded-[2rem] p-8">
                 <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
                     <CalendarDays className="h-64 w-64" />
                 </div>
                 
                 <div className="relative z-10 space-y-4">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-500/10 border border-primary-500/20 text-[10px] font-black uppercase tracking-widest text-primary-400">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-100 border border-sky-200 text-[10px] font-black uppercase tracking-widest text-sky-800">
                         System Online / Welcome Back
                     </div>
                     <h1 className="text-5xl font-black tracking-tighter text-foreground">
-                        {t('dashboard.welcome', { name: user?.email?.split('@')[0] || 'Operator' })} <span className="text-primary-500">.</span>
+                        {t('dashboard.welcome', { name: user?.email?.split('@')[0] || 'Operator' })} <span className="text-cyan-600">.</span>
                     </h1>
                     <div className="flex items-center gap-4 text-muted-foreground">
-                        <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-xl border border-white/5 shadow-inner">
-                            <CalendarDays className="h-4 w-4 text-primary-400" />
+                        <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-xl border border-slate-200">
+                            <CalendarDays className="h-4 w-4 text-cyan-600" />
                             <span className="text-sm font-bold tech-mono">{t('dashboard.memberDays', { days: daysSinceRegistration })}</span>
                             <span className="text-[10px] uppercase opacity-50 font-bold ml-1">Days Active</span>
                         </div>
-                        <div className="h-1 w-1 rounded-full bg-white/20" />
+                        <div className="h-1 w-1 rounded-full bg-slate-300" />
                         <span className="text-xs uppercase tracking-widest font-bold opacity-70">Uptime: 99.99%</span>
                     </div>
                 </div>
@@ -65,14 +65,14 @@ export default function DashboardContent() {
                     <div className="grid gap-4 md:grid-cols-2">
                         <Link
                             href="/app/user-settings"
-                            className="group glass-card p-6 rounded-3xl border border-white/5 hover:border-primary-500/30 transition-all duration-300 relative overflow-hidden"
+                            className="group glass-card p-6 rounded-3xl hover:border-cyan-300 transition-all duration-300 relative overflow-hidden"
                         >
                             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                                 <Settings className="h-16 w-16" />
                             </div>
                             <div className="flex items-start gap-4 mb-4">
-                                <div className="p-3 bg-primary-500/10 rounded-2xl border border-primary-500/10 group-hover:border-primary-500/30 transition-colors">
-                                    <Settings className="h-6 w-6 text-primary-400" />
+                                <div className="p-3 bg-cyan-50 rounded-2xl border border-cyan-100 group-hover:border-cyan-300 transition-colors">
+                                    <Settings className="h-6 w-6 text-cyan-600" />
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-black tracking-tight">{t('dashboard.quickActions.userSettings.title')}</h3>
@@ -81,22 +81,22 @@ export default function DashboardContent() {
                                     </p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary-400 mt-4">
+                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-cyan-600 mt-4">
                                 <span>Execution Layer</span>
-                                <div className="h-px flex-1 bg-primary-500/10" />
+                                <div className="h-px flex-1 bg-cyan-200" />
                             </div>
                         </Link>
 
                         <Link
                             href="/app/table"
-                            className="group glass-card p-6 rounded-3xl border border-white/5 hover:border-primary-500/30 transition-all duration-300 relative overflow-hidden"
+                            className="group glass-card p-6 rounded-3xl hover:border-cyan-300 transition-all duration-300 relative overflow-hidden"
                         >
                             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                                 <ExternalLink className="h-16 w-16" />
                             </div>
                             <div className="flex items-start gap-4 mb-4">
-                                <div className="p-3 bg-primary-500/10 rounded-2xl border border-primary-500/10 group-hover:border-primary-500/30 transition-colors">
-                                    <ExternalLink className="h-6 w-6 text-primary-400" />
+                                <div className="p-3 bg-cyan-50 rounded-2xl border border-cyan-100 group-hover:border-cyan-300 transition-colors">
+                                    <ExternalLink className="h-6 w-6 text-cyan-600" />
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-black tracking-tight">{t('dashboard.quickActions.examplePage.title')}</h3>
@@ -105,35 +105,35 @@ export default function DashboardContent() {
                                     </p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary-400 mt-4">
+                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-cyan-600 mt-4">
                                 <span>Network Layer</span>
-                                <div className="h-px flex-1 bg-primary-500/10" />
+                                <div className="h-px flex-1 bg-cyan-200" />
                             </div>
                         </Link>
                     </div>
                 </div>
 
                 {/* Info / Status Sidebar */}
-                <div className="glass-card p-6 rounded-3xl border border-amber-500/10 bg-amber-500/[0.02]">
+                <div className="glass-card p-6 rounded-3xl border-amber-200 bg-amber-50">
                     <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2 bg-amber-500/10 rounded-xl">
-                            <Settings className="h-4 w-4 text-amber-500" />
+                        <div className="p-2 bg-amber-100 rounded-xl">
+                            <Settings className="h-4 w-4 text-amber-600" />
                         </div>
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500">System Notification</h3>
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600">System Notification</h3>
                     </div>
                     
                     <div className="space-y-4">
-                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+                        <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
                             <div className="flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Core Service</span>
                             </div>
                             <p className="text-xs font-bold uppercase text-foreground">Next-Gen Node Infrastructure Active</p>
                         </div>
                         
-                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-2 opacity-50 grayscale">
+                        <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2 opacity-50 grayscale">
                             <div className="flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
+                                <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Maintenance</span>
                             </div>
                             <p className="text-xs font-bold uppercase text-foreground">Scheduled API Optimization (Pending)</p>
