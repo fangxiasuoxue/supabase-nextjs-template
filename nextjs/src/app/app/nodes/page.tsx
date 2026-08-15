@@ -33,9 +33,11 @@ export default async function NodesPage() {
     }
 
     // Fetch nodes
+    // M2:基座 VPS 名/IP 从 vps_configs(经 vps_id)切到 vps_instances(经 vps_instance_id);
+    // bare 节点仅有 gcp_instance_name,故一并取用于显示 fallback。
     const { data: nodes, error } = await supabase
         .from('nodes')
-        .select('*, vps_configs(name, ip)')
+        .select('*, vps_instances(name, gcp_instance_name, public_ip)')
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(20);
@@ -179,7 +181,7 @@ export default async function NodesPage() {
                                                     <span className="text-[10px] font-black uppercase tracking-widest">Base VPS</span>
                                                 </div>
                                                 <span className="text-[11px] font-black text-foreground/80 uppercase tracking-tight truncate max-w-[140px]">
-                                                    {node.vps_configs?.name || 'MASTER_CORE'}
+                                                    {node.vps_instances?.name || node.vps_instances?.gcp_instance_name || 'MASTER_CORE'}
                                                 </span>
                                             </div>
                                         </div>

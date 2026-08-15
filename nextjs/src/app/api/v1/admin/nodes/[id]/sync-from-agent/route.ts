@@ -27,10 +27,11 @@ export async function POST(
   const { id } = await params
   const adminClient = await createServerAdminClient()
 
-  // 查 node 对应的 vps_id
+  // 查 node 对应的 vps_instance_id(callAgent 按 vps_instances.id 解析出口 IP)
+  // M2:旧代码读 nodes.vps_id(→vps_configs),新模型该列为 NULL,callAgent 必失败;改读 vps_instance_id。
   const { data: node, error: nodeErr } = await adminClient
     .from('nodes' as any)
-    .select('id, vps_id, inbound_tag')
+    .select('id, vps_instance_id, inbound_tag')
     .eq('id', id)
     .single()
 
@@ -39,7 +40,7 @@ export async function POST(
   }
 
   try {
-    const agentResp = await callAgent((node as any).vps_id, '/panel/inbounds', { method: 'GET' })
+    const agentResp = await callAgent((node as any).vps_instance_id, '/panel/inbounds', { method: 'GET' })
     if (!agentResp.ok) {
       return NextResponse.json({ error: `Agent returned ${agentResp.status}` }, { status: 502 })
     }

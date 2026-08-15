@@ -23,22 +23,25 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const page = parseInt(searchParams.get('page') || '1');
         const size = parseInt(searchParams.get('size') || '20');
-        const vpsId = searchParams.get('vps_id');
+        // M2:业务键从 vps_id(旧 vps_configs)切到 vps_instance_id(新 vps_instances);兼容旧参数名
+        const vpsInstanceId = searchParams.get('vps_instance_id') || searchParams.get('vps_id');
         const protocol = searchParams.get('protocol');
         const status = searchParams.get('status');
         const search = searchParams.get('search');
 
         // Build query
+        // M2:VPS 名/IP embed 从 vps_configs(经 vps_id)切到 vps_instances(经 vps_instance_id)。
+        // 取 name + gcp_instance_name(bare 节点仅有后者)+ public_ip 供展示。
         let query = supabase
             .from('nodes')
-            .select('*, vps_configs(name)', { count: 'exact' })
+            .select('*, vps_instances(name, gcp_instance_name, public_ip)', { count: 'exact' })
             .is('deleted_at', null)
             .range((page - 1) * size, page * size - 1)
             .order('created_at', { ascending: false });
 
         // Apply filters
-        if (vpsId) {
-            query = query.eq('vps_id', vpsId);
+        if (vpsInstanceId) {
+            query = query.eq('vps_instance_id', vpsInstanceId);
         }
         if (protocol) {
             query = query.eq('protocol', protocol);

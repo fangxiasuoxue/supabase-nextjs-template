@@ -24,9 +24,8 @@ import {
   UserPlus, 
   Trash2, 
   Search, 
-  Globe, 
-  Shield, 
-  Zap, 
+  Globe,
+  Zap,
   BarChart3, 
   Layers,
   Terminal,
@@ -158,7 +157,8 @@ export default function IpManagementPage() {
 
   // 格式化流量
   const formatBandwidth = (bytes: number | null) => {
-    if (!bytes) return "-"
+    // 区分 0(实测为 0)与 null/undefined(从未测试)
+    if (bytes == null) return "—"
     if (bytes < 1024) return `${bytes} B`
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`
     if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
@@ -476,6 +476,9 @@ export default function IpManagementPage() {
 
   async function handleAllocate(id: number) {
     setAllocatingId(id)
+    // 打开分配对话框时清空上次选择,避免误分配残留
+    setSelectedUserIds([])
+    setAllocateNotes('')
     setShowAllocate(true)
     try {
       const res = await fetch('/api/users/list', { credentials: 'same-origin' })
@@ -557,6 +560,19 @@ export default function IpManagementPage() {
   }
 
   const totalPages = Math.ceil(totalCount / pageSize)
+
+  // 统计卡真实聚合(基于当前已加载的资产) — Bug #6
+  const testedLatencies = ipAssets
+    .map(a => a.last_latency_ms)
+    .filter((v): v is number => v != null)
+  const avgLatency = testedLatencies.length > 0
+    ? Math.round(testedLatencies.reduce((s, v) => s + v, 0) / testedLatencies.length)
+    : null
+  const bandwidthUsedSum = ipAssets.reduce((s, a) => s + (a.bandwidth_used ?? 0), 0)
+  const bandwidthTotalSum = ipAssets.reduce((s, a) => s + (a.bandwidth_total ?? 0), 0)
+  const bandwidthUsedRatio = bandwidthTotalSum > 0
+    ? Math.min(1, Math.max(0, bandwidthUsedSum / bandwidthTotalSum))
+    : 0
 
   async function handleSync() {
     try {
@@ -663,19 +679,21 @@ export default function IpManagementPage() {
                 <span className="text-3xl font-black tech-mono text-cyan-700 tracking-tighter">{balance.toFixed(2)}</span>
               </div>
               <div className="mt-2 w-full h-1 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                <div className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400 w-3/4" />
+                <div
+                  className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400"
+                  style={{ width: `${(bandwidthUsedRatio * 100).toFixed(1)}%` }}
+                />
               </div>
             </div>
           )}
         </div>
 
         {/* Quick Stats Grid - Bento Style */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
           {[
             { label: "在线资产", value: ipAssets.filter(a => a.status === 'active').length, sub: "Nodes Active", icon: Globe, color: "text-green-600", bg: "from-green-100 to-transparent" },
-            { label: "平均延迟", value: "124ms", sub: "Global Avg", icon: Zap, color: "text-amber-600", bg: "from-amber-100 to-transparent" },
-            { label: "流量吞吐", value: "85GB", sub: "Last 24h", icon: BarChart3, color: "text-cyan-600", bg: "from-cyan-100 to-transparent" },
-            { label: "安全防御", value: "1.2k", sub: "Packets Filtered", icon: Shield, color: "text-blue-600", bg: "from-blue-100 to-transparent" },
+            { label: "平均延迟", value: avgLatency != null ? `${avgLatency}ms` : "—", sub: "Tested Avg", icon: Zap, color: "text-amber-600", bg: "from-amber-100 to-transparent" },
+            { label: "流量吞吐", value: formatBandwidth(bandwidthUsedSum), sub: "Total Used", icon: BarChart3, color: "text-cyan-600", bg: "from-cyan-100 to-transparent" },
           ].map((stat, i) => (
             <div key={i} className="glass-card-premium p-6 rounded-3xl hover:border-slate-300 group transition-all duration-500 hover:-translate-y-1 overflow-hidden relative">
               <div className={`absolute -right-4 -bottom-4 w-24 h-24 bg-gradient-to-br ${stat.bg} blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700`} />
@@ -974,14 +992,14 @@ export default function IpManagementPage() {
                                    <div className="flex items-center gap-1.5">
                                       <Activity className="h-3 w-3 text-muted-foreground/40" />
                                       <span className="tech-mono text-[10px] font-bold text-muted-foreground/80">
-                                        {asset.last_latency_ms ? `${asset.last_latency_ms}ms` : '---'}
+                                        {asset.last_latency_ms != null ? `${asset.last_latency_ms}ms` : '—'}
                                       </span>
                                    </div>
                                    <div className="w-[1px] h-3 bg-slate-200" />
                                    <div className="flex items-center gap-1.5">
                                       <Zap className="h-3 w-3 text-muted-foreground/40" />
                                       <span className="tech-mono text-[10px] font-bold text-muted-foreground/80 lowercase">
-                                        {asset.last_speed_kbps ? `${(asset.last_speed_kbps / 1024).toFixed(1)}mb/s` : '---'}
+                                        {asset.last_speed_kbps != null ? `${(asset.last_speed_kbps / 1024).toFixed(1)}mb/s` : '—'}
                                       </span>
                                    </div>
                                 </div>

@@ -1,10 +1,23 @@
 // @ts-nocheck
 import { NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
+import { createSSRClient } from '@/lib/supabase/server'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
 export async function POST() {
+  // W1 鉴权门:此前无鉴权,任何人可触发 service-role 同步/覆写 IP 资产(含明文密码)。
+  const authClient = await createSSRClient()
+  const { data: { user }, error: authError } = await authClient.auth.getUser()
+  if (!user || authError) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  const { data: roleData } = await authClient
+    .from('user_roles').select('role').eq('user_id', user.id).single()
+  if (!roleData || !['admin', 'ops'].includes((roleData as any).role)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const key = process.env.PROXY_CHEAP_API_KEY
   const secret = process.env.PROXY_CHEAP_API_SECRET
   const admin = await createServerAdminClient()
@@ -42,6 +55,9 @@ export async function POST() {
         last_sync_at: now,
         source_url: sourceUrl,
         source_raw: p,
+        // Bug #4 修复:供应商 API 里仍存在的 IP = 活的。upsert 命中软删行时显式复活,
+        // 否则记录复活却仍带旧 deleted_at,列表 is('deleted_at', null) 会将其过滤成「僵尸行」。
+        deleted_at: null,
       }
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

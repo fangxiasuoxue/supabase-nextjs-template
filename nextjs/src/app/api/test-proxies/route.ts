@@ -4,6 +4,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { SocksClient } from 'socks';
 import https from 'https';
 import { Database } from '@/lib/types';
+import { createSSRClient } from '@/lib/supabase/server';
+
+// W1 鉴权门:此前本路由完全无鉴权(P0),任何人可用 service-role 读明文 IP 密码/改状态。
+// 登录 + admin/ops 角色校验;未过则拦截,过了才走下方 service-role 逻辑。
+async function requireAdminOps(): Promise<NextResponse | null> {
+    const authClient = await createSSRClient();
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
+    if (!user || authError) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const { data: roleData } = await authClient
+        .from('user_roles').select('role').eq('user_id', user.id).single();
+    if (!roleData || !['admin', 'ops'].includes((roleData as any).role)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    return null;
+}
 
 // Create a Supabase client with the service role key for admin access
 // We need admin access to update any proxy status
@@ -32,6 +49,58 @@ interface TestResult {
     error_message: string | null;
     tested_at: string;
 }
+
+// ==== TESTABLE-BEGIN ====
+// Pure, dependency-free units extracted for TDD.
+// Mirror-tested by ops/testing/ip/test_proxies.test.js, which reads THIS block
+// verbatim from source and evals it (route.ts itself can't be imported under
+// `node --test` because it pulls in Next.js / Supabase / `@/` aliases).
+// Written in plain JS (no TS annotations) so the extracted block is directly
+// evaluable; the file is `// @ts-nocheck`.
+
+// Bug #3: throughput must be measured over the DOWNLOAD window only
+// (first byte received -> stream end), NOT from connection start. Including the
+// SOCKS handshake + TLS build-connection time in the window massively
+// under-reports the speed. latency (build-connection time) is reported separately.
+function computeSpeedFromTimeline(timeline) {
+    // timeline: { connectStartMs, firstByteMs, endMs, downloadedBytes }
+    const windowMs = timeline.endMs - timeline.firstByteMs;
+    if (!(windowMs > 0)) return 0;
+    const speedKbps = (timeline.downloadedBytes * 8) / ((windowMs / 1000) * 1024);
+    return Math.round(speedKbps);
+}
+
+// Bug #5: proxies that are only reachable over HTTP/HTTPS cannot be tested via
+// SOCKS5. They must NOT be silently dropped — emit an explicit "unsupported"
+// result so the caller/UI gets clear feedback instead of assuming success.
+function isSocks5Testable(proxy) {
+    return !!(proxy.socks5_port || proxy.proxy_type === 'socks5');
+}
+
+function buildUnsupportedResult(proxy) {
+    return {
+        proxy_id: proxy.id,
+        host: proxy.ip,
+        port: proxy.http_port || proxy.https_port || 0,
+        is_reachable: false,
+        latency_ms: null,
+        download_speed_kbps: null,
+        ip_address: null,
+        error_message: 'Unsupported proxy type: only SOCKS5 testing is supported (HTTP/HTTPS proxy skipped)',
+        tested_at: new Date().toISOString()
+    };
+}
+
+function partitionProxies(proxies) {
+    const testable = [];
+    const skipped = [];
+    for (const p of proxies) {
+        if (isSocks5Testable(p)) testable.push(p);
+        else skipped.push(buildUnsupportedResult(p));
+    }
+    return { testable, skipped };
+}
+// ==== TESTABLE-END ====
 
 async function testSocks5Proxy(proxy: ProxyConfig): Promise<TestResult> {
     const startTime = Date.now();
@@ -146,7 +215,11 @@ async function testDownloadSpeed(proxy: ProxyConfig): Promise<number> {
         const testHost = 'proof.ovh.net';
         const testPath = '/files/100Kb.dat';
 
-        const startTime = Date.now();
+        // Bug #3: capture the moment the connection is initiated (latency window)
+        // separately from the download window. Throughput is computed ONLY over
+        // firstByte -> end, so SOCKS handshake + TLS setup no longer drag it down.
+        const connectStartMs = Date.now();
+        let firstByteMs: number | null = null;
         let downloadedBytes = 0;
 
         const options: any = {
@@ -181,17 +254,20 @@ async function testDownloadSpeed(proxy: ProxyConfig): Promise<number> {
 
                 const req = https.request(reqOptions, (res) => {
                     res.on('data', (chunk) => {
+                        if (firstByteMs === null) firstByteMs = Date.now();
                         downloadedBytes += chunk.length;
                     });
 
                     res.on('end', () => {
-                        const duration = (Date.now() - startTime) / 1000; // seconds
-                        if (duration <= 0) {
-                            resolve(0);
-                            return;
-                        }
-                        const speedKbps = (downloadedBytes * 8) / (duration * 1024); // Kbps
-                        resolve(Math.round(speedKbps));
+                        const endMs = Date.now();
+                        // Throughput over the download window only (Bug #3 fix).
+                        const speedKbps = computeSpeedFromTimeline({
+                            connectStartMs,
+                            firstByteMs: firstByteMs === null ? endMs : firstByteMs,
+                            endMs,
+                            downloadedBytes
+                        });
+                        resolve(speedKbps);
                     });
                 });
 
@@ -215,6 +291,9 @@ async function testDownloadSpeed(proxy: ProxyConfig): Promise<number> {
 
 export async function POST(request: NextRequest) {
     try {
+        const denied = await requireAdminOps();
+        if (denied) return denied;
+
         const body = await request.json();
         const { proxy_ids, batch_size = 5 } = body;
 
@@ -243,13 +322,12 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Filter for SOCKS5 proxies or those with SOCKS5 ports
-        // Currently only implementing SOCKS5 testing as per requirement example
-        // But we can extend to HTTP/HTTPS if needed. The example code used SocksClient which is for SOCKS.
-        // We will assume if it has socks5_port it is testable via SOCKS5.
-        const testableProxies = proxies.filter(p => p.socks5_port || p.proxy_type === 'socks5');
+        // Partition into SOCKS5-testable proxies and everything else.
+        // Bug #5: HTTP/HTTPS-only proxies are NOT silently dropped — they get an
+        // explicit "unsupported" result entry so the caller gets clear feedback.
+        const { testable: testableProxies, skipped: skippedResults } = partitionProxies(proxies);
 
-        if (testableProxies.length === 0) {
+        if (testableProxies.length === 0 && skippedResults.length === 0) {
             return NextResponse.json(
                 { error: 'No testable SOCKS5 proxies found in selection' },
                 { status: 400 }
@@ -257,7 +335,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Batch testing
-        const results: TestResult[] = [];
+        const results: TestResult[] = [...skippedResults];
         for (let i = 0; i < testableProxies.length; i += batch_size) {
             const batch = testableProxies.slice(i, i + batch_size);
             const batchResults = await Promise.all(
@@ -311,6 +389,8 @@ export async function POST(request: NextRequest) {
         // Update proxy status with test results (latency and speed)
         for (const result of results) {
             if (result.error_message === 'No SOCKS5 port configured') continue;
+            // Bug #5: don't overwrite status for HTTP/HTTPS proxies we couldn't test.
+            if (result.error_message && result.error_message.startsWith('Unsupported proxy type')) continue;
 
             const updateData: Database['public']['Tables']['ip_assets']['Update'] = {
                 status: result.is_reachable ? 'active' : 'unreachable',
@@ -352,6 +432,9 @@ export async function POST(request: NextRequest) {
 // GET method to test all active proxies
 export async function GET(request: NextRequest) {
     try {
+        const denied = await requireAdminOps();
+        if (denied) return denied;
+
         const { searchParams } = new URL(request.url);
         const limit = parseInt(searchParams.get('limit') || '50');
 
@@ -379,8 +462,9 @@ export async function GET(request: NextRequest) {
         // OR we just execute it here.
         // Let's execute here.
 
-        const testableProxies = proxies.filter(p => p.socks5_port || p.proxy_type === 'socks5');
-        const results: TestResult[] = [];
+        // Bug #5: partition instead of silently dropping HTTP/HTTPS-only proxies.
+        const { testable: testableProxies, skipped: skippedResults } = partitionProxies(proxies);
+        const results: TestResult[] = [...skippedResults];
 
         // Process in chunks of 5
         const batch_size = 5;
@@ -421,6 +505,8 @@ export async function GET(request: NextRequest) {
 
             for (const result of results) {
                 if (result.error_message === 'No SOCKS5 port') continue;
+                // Bug #5: don't overwrite status for untestable HTTP/HTTPS proxies.
+                if (result.error_message && result.error_message.startsWith('Unsupported proxy type')) continue;
 
                 const updateData: Database['public']['Tables']['ip_assets']['Update'] = {
                     status: result.is_reachable ? 'active' : 'unreachable',

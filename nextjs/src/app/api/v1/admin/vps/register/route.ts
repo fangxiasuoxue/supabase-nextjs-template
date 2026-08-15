@@ -25,16 +25,24 @@ export async function POST(request: NextRequest) {
   const adminClient = await createServerAdminClient()
   const body = await request.json()
 
+  // gcp_instance_name 是新模型业务键(vps_instances 唯一索引,migration 20260814000001),必填
+  if (!body.gcp_instance_name) {
+    return NextResponse.json({ error: 'Missing gcp_instance_name' }, { status: 400 })
+  }
+
+  // 幂等 upsert:按 gcp_instance_name 命中则更新、否则插入(与 sync-from-openclaw 一致,支持重复注册)。
+  // 不写旧 GCP 采集列(instance_id/account/name),那些由 actions/vps.ts 的 GCP 同步路径回填;
+  // migration 20260814000001 已放宽这些列 NOT NULL,故此 upsert 不再违反约束。
   const { data, error } = await adminClient
     .from('vps_instances' as any)
-    .insert({
+    .upsert({
       gcp_instance_name: body.gcp_instance_name,
-      public_ip: body.public_ip,
-      zone: body.zone,
+      public_ip: body.public_ip ?? null,
+      zone: body.zone ?? null,
       provider: body.provider ?? 'gcp',
       gcp_project_id: body.gcp_project_id ?? null,
       heartbeat_status: 'unknown',
-    })
+    }, { onConflict: 'gcp_instance_name' })
     .select()
     .single()
 

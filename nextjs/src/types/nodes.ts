@@ -73,8 +73,19 @@ export interface Node {
     updated_at: string;
     synced_at?: string;
     deleted_at?: string;
+    // M2 新模型关联
+    vps_instance_id?: string;
     // Joined data
+    // M2:VPS 名/IP 来源切到 vps_instances(经 vps_instance_id);vps_configs 冻结退场前保留(D9)
+    vps_instances?: VpsInstanceEmbed;
     vps_configs?: VpsConfig;
+}
+
+// M2:nodes 关联 vps_instances 时的最小展示字段(embed)
+export interface VpsInstanceEmbed {
+    name?: string;
+    gcp_instance_name?: string;
+    public_ip?: string;
 }
 
 // Node Permission

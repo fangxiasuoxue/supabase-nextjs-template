@@ -151,6 +151,9 @@ export async function syncAccountVPSAction(accountAlias: string): Promise<{ succ
                 instance_id: inst.id,
                 account: accountAlias,
                 name: inst.name,
+                // 回填新模型业务键:agent 心跳/注册与 sync-from-openclaw 均按 gcp_instance_name 定位,
+                // GCP 同步用实例 name 回填,使两条创建路径收敛到同一行(避免同机两行,配合 M2 唯一索引)。
+                gcp_instance_name: inst.name,
                 zone: inst.zone,
                 status: inst.status,
                 machine_type: inst.machineType,

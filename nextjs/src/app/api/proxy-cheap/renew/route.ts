@@ -3,6 +3,15 @@ import { NextResponse } from 'next/server';
 import { createSSRClient } from '@/lib/supabase/server';
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient';
 
+// ==== TESTABLE-BEGIN ====（由 ops/testing/security/renew_authz.test.js 逐字读取并 eval）
+// W1 二层:续费 = 调 Proxy-Cheap extend-period(真实花钱)。此前门为
+// admin OR module_permissions('ip').can_manage → 持 ip 模块权的非运维用户可续费「任意」IP。
+// 收紧为 admin/ops(与其它写路由一致);admin/ops 本就管理全部 IP,故无需再查单资源授权。
+function isRenewAllowed(role) {
+    return role === 'admin' || role === 'ops';
+}
+// ==== TESTABLE-END ====
+
 export async function POST(req: Request) {
     try {
         const body = await req.json();
@@ -20,16 +29,10 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Not logged in' }, { status: 401 });
         }
 
-        // Check permissions
+        // Check permissions — 收紧为 admin/ops(续费花钱,与其它写路由一致)
         const { data: role } = await ssr.from('user_roles' as any).select('role').eq('user_id', uid).limit(1).maybeSingle();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const isAdmin = (role as any)?.role === 'admin';
-
-        const { data: perm } = await ssr.from('module_permissions' as any).select('can_manage').eq('user_id', uid).eq('module', 'ip').limit(1).maybeSingle();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const canManage = isAdmin || !!(perm as any)?.can_manage;
-
-        if (!canManage) {
+        if (!isRenewAllowed((role as any)?.role)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 

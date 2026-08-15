@@ -35,15 +35,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ synced: 0 })
   }
 
-  // 字段映射并 upsert（ON CONFLICT gcp_instance_name）
-  const rows = (vmInstances as any[]).map((vm) => ({
-    gcp_instance_name: vm.instance_name,
-    public_ip: vm.external_ip,
-    zone: vm.zone,
-    gcp_project_id: vm.account_id ?? null,
-    provider: 'gcp',
-    heartbeat_status: 'unknown',
-  }))
+  // 字段映射并 upsert（ON CONFLICT gcp_instance_name，唯一索引见 migration 20260814000001）
+  // 过滤掉 instance_name 为空的行:gcp_instance_name 是 upsert 冲突键,为空既无意义、
+  // 又会因 NULLS DISTINCT 每次都插新行(无法幂等)。
+  const rows = (vmInstances as any[])
+    .filter((vm) => vm.instance_name)
+    .map((vm) => ({
+      gcp_instance_name: vm.instance_name,
+      public_ip: vm.external_ip,
+      zone: vm.zone,
+      gcp_project_id: vm.account_id ?? null,
+      provider: 'gcp',
+      heartbeat_status: 'unknown',
+    }))
+
+  if (rows.length === 0) {
+    return NextResponse.json({ synced: 0 })
+  }
 
   const { data, error: upsertErr } = await adminClient
     .from('vps_instances' as any)

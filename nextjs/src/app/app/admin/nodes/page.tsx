@@ -14,7 +14,7 @@ import {
 
 interface Node {
   id: string
-  vps_id: string | null
+  vps_instance_id: string | null
   protocol: string | null
   status: string
   subscribe_token: string | null
@@ -33,7 +33,7 @@ export default function AdminNodesPage() {
       const client = supabase.getSupabaseClient() as any
       const { data, error } = await client
         .from('nodes')
-        .select('id, vps_id, protocol, status, subscribe_token, inbound_tag, created_at')
+        .select('id, vps_instance_id, protocol, status, subscribe_token, inbound_tag, created_at')
         .order('created_at', { ascending: false })
       if (error) throw error
       setNodes(data || [])
