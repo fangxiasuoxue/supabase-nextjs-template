@@ -7,19 +7,30 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { RoleSelect } from './RoleSelect'
 import { PermissionModal } from './PermissionModal'
-import { Loader2, Search, RefreshCw, Users } from 'lucide-react'
+import { Loader2, Search, RefreshCw, Users, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
+
+const PAGE_SIZE = 50
 
 export function UserTable() {
     const [users, setUsers] = useState<UserWithDetails[]>([])
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
-    const [page] = useState(1)
+    const [page, setPage] = useState(1)
+
+    // listUsers/getUsersAction 不返回可靠总数(count 恒为 0),
+    // 因此以「本页返回条数 < 每页上限」判定末页。
+    const isLastPage = users.length < PAGE_SIZE
+
+    const handleSearchChange = (value: string) => {
+        setSearch(value)
+        setPage(1) // 搜索变化时重置到第 1 页,避免停在不存在的页
+    }
 
     const fetchUsers = useCallback(async () => {
         setLoading(true)
         try {
-            const { data, error } = await getUsersAction(page, 50, search)
+            const { data, error } = await getUsersAction(page, PAGE_SIZE, search)
             if (error) {
                 toast.error(error)
             } else {
@@ -48,7 +59,7 @@ export function UserTable() {
                     <Input
                         placeholder="智能检索用户 (Search ID/Email)..."
                         value={search}
-                        onChange={(e) => setSearch(e.target.value)}
+                        onChange={(e) => handleSearchChange(e.target.value)}
                         className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 rounded-xl h-12 focus:border-cyan-600 focus:ring-cyan-600/20"
                     />
                 </div>
@@ -121,6 +132,32 @@ export function UserTable() {
                         )}
                     </TableBody>
                 </Table>
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[.2em]">
+                    第 {page} 页 · 本页 {users.length} 条
+                </span>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={loading || page <= 1}
+                        className="h-10 border-slate-200 hover:bg-slate-100 rounded-xl transition-all active:scale-95"
+                    >
+                        <ChevronLeft className="h-4 w-4 mr-1" />
+                        上一页
+                    </Button>
+                    <Button
+                        variant="outline"
+                        onClick={() => setPage((p) => p + 1)}
+                        disabled={loading || isLastPage}
+                        className="h-10 border-slate-200 hover:bg-slate-100 rounded-xl transition-all active:scale-95"
+                    >
+                        下一页
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                </div>
             </div>
         </div>
     )

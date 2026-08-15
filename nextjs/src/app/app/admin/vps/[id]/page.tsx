@@ -7,6 +7,7 @@ import { ArrowLeft, Loader2, Server } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { VpsAgentStatusPanel } from '@/components/admin/vps/VpsAgentStatusPanel'
 import { VpsTrafficSparkline } from '@/components/admin/vps/VpsTrafficSparkline'
+import { VpsMetricsTrend } from '@/components/admin/vps/VpsMetricsTrend'
 
 export default function VpsDetailPage() {
   const params = useParams()
@@ -80,6 +81,7 @@ export default function VpsDetailPage() {
       <Tabs defaultValue="agent">
         <TabsList className="bg-slate-100 border border-slate-200 rounded-xl p-1">
           <TabsTrigger value="agent" className="rounded-lg text-xs font-black uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:text-sky-800">Agent 状态</TabsTrigger>
+          <TabsTrigger value="metrics" className="rounded-lg text-xs font-black uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:text-sky-800">指标趋势</TabsTrigger>
           <TabsTrigger value="billing" className="rounded-lg text-xs font-black uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:text-sky-800">账单 &amp; 流量</TabsTrigger>
         </TabsList>
 
@@ -89,6 +91,12 @@ export default function VpsDetailPage() {
             lastSyncAt={vps.last_sync_at ?? null}
             lastSyncBatchId={vps.last_sync_batch_id ?? null}
           />
+        </TabsContent>
+
+        <TabsContent value="metrics" className="mt-6">
+          <div className="glass-card-premium p-6 rounded-2xl">
+            <VpsMetricsTrend instanceId={id} />
+          </div>
         </TabsContent>
 
         <TabsContent value="billing" className="mt-6">

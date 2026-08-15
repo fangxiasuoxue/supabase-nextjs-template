@@ -10,7 +10,7 @@ import {
     X,
     ChevronDown,
     LogOut,
-    Key, Files, LucideListTodo, Settings, Server, MessageSquare,
+    Key, Files, LucideListTodo, Settings, Server, MessageSquare, Bell,
 } from 'lucide-react';
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
@@ -113,6 +113,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         if (hasVpsPermission) {
             baseNav.push({ name: t('nav.vps'), href: '/app/admin/vps', icon: Server });
+            // W5:告警中心此前只能靠直连 URL 进入,挂进导航(与 VPS 监控同权限)
+            baseNav.push({ name: '告警中心', href: '/app/admin/alerts', icon: Bell });
         }
 
         if (hasMessagesPermission) {

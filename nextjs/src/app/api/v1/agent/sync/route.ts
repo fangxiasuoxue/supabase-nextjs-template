@@ -55,7 +55,7 @@ interface ConfigSnapshot {
 // POST /api/v1/agent/sync — 接收 Agent 3小时批量同步
 export async function POST(request: NextRequest) {
   const body = await parseBody(request) as any
-  const { agent, summary, batch_id, events, commands, config_snapshots } = body
+  const { agent, summary, batch_id, events, commands, config_snapshots, metrics } = body
 
   if (!agent?.instance_id || !body.timestamp || !body.hmac || !batch_id) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -113,6 +113,26 @@ export async function POST(request: NextRequest) {
 
   if (updateErr) {
     return NextResponse.json({ error: updateErr.message }, { status: 500 })
+  }
+
+  // 4b. W5:落分钟级历史指标到 vps_metrics(时序,供趋势/告警)。
+  //     agent 若在 sync 批次带 metrics: [{ recorded_at, cpu_percent, mem_percent, disk_percent }]
+  //     则历史落库;不带则 no-op(向后兼容)。vps_metrics 按月分区,需存在当月/DEFAULT 分区
+  //     (见 migration 20260814000003)。落库失败不阻断 sync 主流程(与 events 同策略)。
+  if (Array.isArray(metrics) && metrics.length > 0) {
+    const metricRows = (metrics as any[]).map((m) => ({
+      instance_id: vpsId,
+      recorded_at: m.recorded_at ?? m.ts ?? new Date().toISOString(),
+      cpu_percent: m.cpu_percent ?? m.cpu ?? null,
+      mem_percent: m.mem_percent ?? m.mem ?? null,
+      disk_percent: m.disk_percent ?? m.disk ?? null,
+    }))
+    const { error: metricsErr } = await adminClient
+      .from('vps_metrics' as any)
+      .insert(metricRows as any)
+    if (metricsErr) {
+      console.error('vps_metrics insert error:', metricsErr.message)
+    }
   }
 
   // 5. 批量写入 agent_events（按 agent 本地 id + instance_id 去重）

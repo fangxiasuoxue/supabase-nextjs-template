@@ -57,16 +57,25 @@ function StatusCard({ d }: { d: Deployment }) {
       </div>
 
       {/* Status flow bar */}
-      <div className="mt-4 flex items-center gap-1">
-        {(['pending', 'processing', 'success'] as const).map((step, i) => {
-          const reached = ['pending', 'processing', 'success', 'failed'].indexOf(d.status) >= i
-          return (
-            <div key={step} className="flex items-center gap-1 flex-1">
-              <div className={`h-1 flex-1 rounded-full transition-all duration-700 ${reached ? (d.status === 'failed' ? 'bg-red-500' : 'bg-primary') : 'bg-slate-200'}`} />
-            </div>
-          )
-        })}
-      </div>
+      {d.status === 'failed' ? (
+        <div className="mt-4 flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5">
+          <XCircle className="h-3.5 w-3.5 text-red-600 shrink-0" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-red-600">
+            部署中断
+          </span>
+        </div>
+      ) : (
+        <div className="mt-4 flex items-center gap-1">
+          {(['pending', 'processing', 'success'] as const).map((step, i) => {
+            const reached = ['pending', 'processing', 'success'].indexOf(d.status) >= i
+            return (
+              <div key={step} className="flex items-center gap-1 flex-1">
+                <div className={`h-1 flex-1 rounded-full transition-all duration-700 ${reached ? 'bg-primary' : 'bg-slate-200'}`} />
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

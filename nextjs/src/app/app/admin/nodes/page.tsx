@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Fragment } from 'react'
 import { createSPASassClientAuthenticated } from '@/lib/supabase/client'
 import { NodeSubscriptionCard } from '@/components/admin/nodes/NodeSubscriptionCard'
 import { toast } from 'sonner'
@@ -105,8 +105,8 @@ export default function AdminNodesPage() {
                   </TableCell>
                 </TableRow>
               ) : nodes.map((node) => (
-                <>
-                  <TableRow key={node.id} className="border-slate-200 hover:bg-slate-50 h-16 group/row">
+                <Fragment key={node.id}>
+                  <TableRow className="border-slate-200 hover:bg-slate-50 h-16 group/row">
                     <TableCell className="pl-8">
                       <span className="tech-mono text-xs text-muted-foreground/70">{node.id.slice(0, 12)}...</span>
                     </TableCell>
@@ -150,7 +150,7 @@ export default function AdminNodesPage() {
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </Fragment>
               ))}
             </TableBody>
           </Table>
