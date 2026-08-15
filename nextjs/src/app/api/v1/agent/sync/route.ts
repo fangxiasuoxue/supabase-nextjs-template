@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import crypto from 'crypto'
@@ -55,7 +54,7 @@ interface ConfigSnapshot {
 // POST /api/v1/agent/sync — 接收 Agent 3小时批量同步
 export async function POST(request: NextRequest) {
   const body = await parseBody(request) as any
-  const { agent, summary, batch_id, events, commands, config_snapshots, metrics } = body
+  const { agent, summary, batch_id, events, commands, config_snapshots, metrics, ip_latency } = body
 
   if (!agent?.instance_id || !body.timestamp || !body.hmac || !batch_id) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -75,7 +74,7 @@ export async function POST(request: NextRequest) {
 
   // 2. 查找 VPS（用 gcp_instance_name 作查询键）
   const { data: vps, error: vpsErr } = await adminClient
-    .from('vps_instances' as any)
+    .from('vps_instances')
     .select('id, last_sync_batch_id')
     .eq('gcp_instance_name', agent.instance_id)
     .single()
@@ -98,7 +97,7 @@ export async function POST(request: NextRequest) {
 
   // 4. 覆盖更新 vps_instances 摘要（只取最新快照，不存分钟明细）
   const { error: updateErr } = await adminClient
-    .from('vps_instances' as any)
+    .from('vps_instances')
     .update({
       last_sync_at: new Date().toISOString(),
       last_sync_batch_id: batch_id,
@@ -128,10 +127,31 @@ export async function POST(request: NextRequest) {
       disk_percent: m.disk_percent ?? m.disk ?? null,
     }))
     const { error: metricsErr } = await adminClient
-      .from('vps_metrics' as any)
+      .from('vps_metrics')
       .insert(metricRows as any)
     if (metricsErr) {
       console.error('vps_metrics insert error:', metricsErr.message)
+    }
+  }
+
+  // 4c. 需求 #3(B 路径):US/HK 上的 agent 直接探测各 proxy-cheap IP 的时延,经 sync 上报。
+  //     body.ip_latency: [{ ip, source_node, latency_ms }](source_node 如 'us1'/'hk1');
+  //     按 (ip, source_node) upsert 到 ip_latency_matrix(存最新一格)。不带则 no-op。
+  //     openwrt/gorelay 侧由 bench 脚本(A 路径)直接 upsert,不走此接口。
+  if (Array.isArray(ip_latency) && ip_latency.length > 0) {
+    const rows = (ip_latency as any[])
+      .filter((r) => r?.ip && r?.source_node)
+      .map((r) => ({
+        ip: String(r.ip),
+        source_node: String(r.source_node),
+        latency_ms: r.latency_ms ?? null,
+        tested_at: r.tested_at ?? new Date().toISOString(),
+      }))
+    if (rows.length > 0) {
+      const { error: latErr } = await adminClient
+        .from('ip_latency_matrix' as any)
+        .upsert(rows as any, { onConflict: 'ip,source_node' })
+      if (latErr) console.error('ip_latency_matrix upsert error:', latErr.message)
     }
   }
 
@@ -148,7 +168,7 @@ export async function POST(request: NextRequest) {
     }))
 
     const { error: eventsErr } = await adminClient
-      .from('agent_events' as any)
+      .from('agent_events')
       .insert(eventRows as any)
 
     if (eventsErr) {
