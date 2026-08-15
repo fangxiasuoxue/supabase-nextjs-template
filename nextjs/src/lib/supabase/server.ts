@@ -6,7 +6,7 @@ import {Database} from "@/lib/types";
 export async function createSSRClient() {
     const cookieStore = await cookies()
 
-    return createServerClient<Database, "public", Database["public"]>(
+    return createServerClient<Database, "public">(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {

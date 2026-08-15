@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import crypto from 'crypto'
@@ -39,7 +38,7 @@ export async function POST(request: NextRequest) {
 
   // 查 vps_instances.id（用 gcp_instance_name 作查询键）
   const { data: vps, error: vpsErr } = await adminClient
-    .from('vps_instances' as any)
+    .from('vps_instances')
     .select('id')
     .eq('gcp_instance_name', instance_id)
     .single()
@@ -52,7 +51,7 @@ export async function POST(request: NextRequest) {
 
   // 更新 vps_instances 心跳状态
   const { error: updateErr } = await adminClient
-    .from('vps_instances' as any)
+    .from('vps_instances')
     .update({
       heartbeat_status: 'online',
       last_heartbeat_at: new Date().toISOString(),

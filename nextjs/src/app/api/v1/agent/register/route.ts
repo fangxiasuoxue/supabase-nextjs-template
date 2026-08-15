@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import crypto from 'crypto'
@@ -43,7 +42,7 @@ export async function POST(request: NextRequest) {
 
   // 按 gcp_instance_name 找到对应记录并更新
   const { data: updated, error } = await adminClient
-    .from('vps_instances' as any)
+    .from('vps_instances')
     .update({
       public_ip,
       zone,

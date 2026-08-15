@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { createSSRClient } from '@/lib/supabase/server'
@@ -30,7 +29,7 @@ export async function POST(
   // 查 node 对应的 vps_instance_id(callAgent 按 vps_instances.id 解析出口 IP)
   // M2:旧代码读 nodes.vps_id(→vps_configs),新模型该列为 NULL,callAgent 必失败;改读 vps_instance_id。
   const { data: node, error: nodeErr } = await adminClient
-    .from('nodes' as any)
+    .from('nodes')
     .select('id, vps_instance_id, inbound_tag')
     .eq('id', id)
     .single()
@@ -57,8 +56,8 @@ export async function POST(
 
     // 更新 nodes 状态
     const { error: updateErr } = await adminClient
-      .from('nodes' as any)
-      .update({ status: 'active', last_synced_at: new Date().toISOString() })
+      .from('nodes')
+      .update({ status: 'active', last_deployed_at: new Date().toISOString() })
       .eq('id', id)
 
     if (updateErr) {

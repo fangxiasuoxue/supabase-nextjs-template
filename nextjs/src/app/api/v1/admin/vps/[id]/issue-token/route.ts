@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { createSSRClient } from '@/lib/supabase/server'
@@ -29,7 +28,7 @@ export async function POST(
 
   // 先作废旧 token
   await adminClient
-    .from('agent_tokens' as any)
+    .from('agent_tokens')
     .update({ status: 'revoked' })
     .eq('instance_id', id)
     .eq('status', 'active')
@@ -39,12 +38,11 @@ export async function POST(
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex')
 
   const { data, error } = await adminClient
-    .from('agent_tokens' as any)
+    .from('agent_tokens')
     .insert({
       instance_id: id,
       token_hash: tokenHash,
       status: 'active',
-      issued_by: user.id,
     })
     .select()
     .single()

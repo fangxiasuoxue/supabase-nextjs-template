@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { createSSRClient } from '@/lib/supabase/server'
@@ -50,7 +49,7 @@ export async function POST(request: NextRequest) {
   // 的占位默认值(后续由部署消费方按真实分配回填)。
   const nodeName = `node-${String(vps_id).slice(0, 8)}-${Date.now()}`
   const { data: nodeRow, error: nodeError } = await adminClient
-    .from('nodes' as any)
+    .from('nodes')
     .insert({
       name: nodeName,
       port: 443, // 占位:provisioning 阶段默认端口,消费方部署时以真实端口回填
@@ -70,7 +69,7 @@ export async function POST(request: NextRequest) {
   // 第 2 步:建 node_deployment,引用刚建的 node_id。
   // 真实必填:node_id、task_type;不要写 vps_id / created_by(列不存在)。
   const { data, error } = await adminClient
-    .from('node_deployments' as any)
+    .from('node_deployments')
     .insert({
       node_id: (nodeRow as any).id,
       task_type: 'create',

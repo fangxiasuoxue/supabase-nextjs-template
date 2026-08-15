@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
   if (instanceNames.length > 0) {
     // 查 vm_instances → gcp_accounts + traffic_snapshots
     const { data: vmRows } = await adminClient
-      .from('vm_instances')
+      .from('vm_instances' as any)
       .select('id, instance_name, account_id')
       .in('instance_name', instanceNames)
 
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       // 最新流量快照（每个 vm_instance 取最近一条）
       const vmInstanceIds = (vmRows as any[]).map((r: any) => r.id).filter(Boolean)
       const { data: trafficRows } = await adminClient
-        .from('traffic_snapshots')
+        .from('traffic_snapshots' as any)
         .select('vm_instance_id, egress_bytes, ingress_bytes, snapshot_date')
         .in('vm_instance_id', vmInstanceIds)
         .order('snapshot_date', { ascending: false })

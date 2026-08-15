@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { createSSRClient } from '@/lib/supabase/server'
@@ -24,7 +23,7 @@ export async function POST(request: NextRequest) {
 
   // 读取 openclaw vm_instances（无 RLS，service_role 可直接读）
   const { data: vmInstances, error: fetchErr } = await adminClient
-    .from('vm_instances' as any)
+    .from('vm_instances')
     .select('instance_name, external_ip, zone, account_id, status')
 
   if (fetchErr) {
@@ -55,7 +54,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { data, error: upsertErr } = await adminClient
-    .from('vps_instances' as any)
+    .from('vps_instances')
     .upsert(rows, { onConflict: 'gcp_instance_name' })
     .select()
 

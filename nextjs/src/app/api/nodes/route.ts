@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         }
 
         const response: PaginatedResponse<Node> = {
-            data: data || [],
+            data: (data as any) || [],
             total: count || 0,
             page,
             size,

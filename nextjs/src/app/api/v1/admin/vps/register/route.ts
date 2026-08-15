@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { createSSRClient } from '@/lib/supabase/server'
@@ -34,7 +33,7 @@ export async function POST(request: NextRequest) {
   // 不写旧 GCP 采集列(instance_id/account/name),那些由 actions/vps.ts 的 GCP 同步路径回填;
   // migration 20260814000001 已放宽这些列 NOT NULL,故此 upsert 不再违反约束。
   const { data, error } = await adminClient
-    .from('vps_instances' as any)
+    .from('vps_instances')
     .upsert({
       gcp_instance_name: body.gcp_instance_name,
       public_ip: body.public_ip ?? null,

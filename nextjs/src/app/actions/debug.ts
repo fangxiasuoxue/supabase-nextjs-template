@@ -38,7 +38,7 @@ export async function debugVPSAuthAction(userId: string) {
         // 4. Check RLS policies
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: policies, error: policiesError } = await adminClient
-            .from('pg_policies')
+            .from('pg_policies' as any)
             .select('*')
             .eq('tablename', 'vps_instances')
 

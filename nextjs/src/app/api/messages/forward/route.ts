@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
         // 4. Get target users emails
         const { data: users, error: usersError } = await adminClient
-            .from('auth_users_view')
+            .from('auth_users_view' as any)
             .select('id, email')
 
         // Get Resend configuration
