@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
   const adminClient = await createServerAdminClient()
   const body = await request.json()
-  const { vps_id, profile_id, deploy_mode } = body
+  const { vps_id, profile_id, deploy_mode, node_name, port, inbound_tag, public_ip } = body
 
   // 校验:vps_id(→ nodes.vps_instance_id)+ profile_id 必填
   if (!vps_id || !profile_id) {
@@ -47,18 +47,23 @@ export async function POST(request: NextRequest) {
   // 可选 vps_instance_id / profile_id / status / created_by / user_id 等。
   // 表单只给了 vps_id + profile_id + deploy_mode,故 name/port 用 provisioning 阶段
   // 的占位默认值(后续由部署消费方按真实分配回填)。
-  const nodeName = `node-${String(vps_id).slice(0, 8)}-${Date.now()}`
+  // 表单参数优先;缺省回退占位(poller 会用这些参数渲染真实 inbound)。
+  const nodeName = (node_name && String(node_name).trim()) || `node-${String(vps_id).slice(0, 8)}-${Date.now()}`
+  const insertPayload: Record<string, any> = {
+    name: nodeName,
+    port: Number(port) || 443,
+    protocol: 'vless',
+    vps_instance_id: vps_id, // 表单的 vps_id 实为 vps_instances.id
+    profile_id,
+    status: 'provisioning',
+    created_by: user.id,
+  }
+  if (inbound_tag && String(inbound_tag).trim()) insertPayload.inbound_tag = String(inbound_tag).trim()
+  // public_ip 现为 text(见 migration 20260816000005),可存落地域名或 IP;poller 用它作分享链接 host。
+  if (public_ip && String(public_ip).trim()) insertPayload.public_ip = String(public_ip).trim()
   const { data: nodeRow, error: nodeError } = await adminClient
     .from('nodes')
-    .insert({
-      name: nodeName,
-      port: 443, // 占位:provisioning 阶段默认端口,消费方部署时以真实端口回填
-      protocol: 'vless', // nodes.protocol 在 gen types 里为必填,给默认 'vless'
-      vps_instance_id: vps_id, // 表单的 vps_id 实为 vps_instances.id
-      profile_id,
-      status: 'provisioning',
-      created_by: user.id, // nodes 有 created_by 列(node_deployments 没有)
-    })
+    .insert(insertPayload)
     .select('id')
     .single()
 

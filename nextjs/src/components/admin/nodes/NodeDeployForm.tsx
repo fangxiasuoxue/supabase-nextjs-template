@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { Loader2, Rocket } from 'lucide-react'
@@ -16,6 +17,10 @@ export function NodeDeployForm() {
   const [vpsId, setVpsId] = useState('')
   const [profileId, setProfileId] = useState('')
   const [deployMode, setDeployMode] = useState('auto')
+  const [nodeName, setNodeName] = useState('')
+  const [port, setPort] = useState('443')
+  const [inboundTag, setInboundTag] = useState('')
+  const [host, setHost] = useState('')
   const [loading, setLoading] = useState(false)
   const [fetchingData, setFetchingData] = useState(true)
 
@@ -50,7 +55,15 @@ export function NodeDeployForm() {
       const res = await fetch('/api/v1/admin/nodes/deploy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vps_id: vpsId, profile_id: profileId, deploy_mode: deployMode }),
+        body: JSON.stringify({
+          vps_id: vpsId,
+          profile_id: profileId,
+          deploy_mode: deployMode,
+          node_name: nodeName.trim() || undefined,
+          port: Number(port) || 443,
+          inbound_tag: inboundTag.trim() || undefined,
+          public_ip: host.trim() || undefined,
+        }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || '创建失败')
@@ -74,7 +87,17 @@ export function NodeDeployForm() {
     <div className="glass-card-premium p-8 rounded-[2rem] border border-slate-200 shadow-sm space-y-7 max-w-lg">
       <div className="space-y-2">
         <Label className="text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest">目标 VPS *</Label>
-        <Select value={vpsId} onValueChange={setVpsId}>
+        <Select value={vpsId} onValueChange={(v) => {
+          setVpsId(v)
+          const sel = vpsList.find((x) => x.id === v)
+          // 从 gcp_instance_name(如 us8-2026...)推 sitecode,自动建议落地域名/inbound_tag
+          const site = String(sel?.gcp_instance_name ?? '').split('-')[0]
+          if (site) {
+            if (!host) setHost(`${site}.ibfvps.dpdns.org`)
+            if (!inboundTag) setInboundTag(`jd-land-${site}`)
+            if (!nodeName) setNodeName(`${site.toUpperCase()}-reality`)
+          }
+        }}>
           <SelectTrigger className="bg-white border-slate-300 rounded-2xl h-12">
             <SelectValue placeholder="选择在线 VPS" />
           </SelectTrigger>
@@ -110,6 +133,28 @@ export function NodeDeployForm() {
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label className="text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest">节点名</Label>
+          <Input value={nodeName} onChange={(e) => setNodeName(e.target.value)} placeholder="US8-reality" className="bg-white border-slate-300 rounded-2xl h-12" />
+        </div>
+        <div className="space-y-2">
+          <Label className="text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest">端口</Label>
+          <Input value={port} onChange={(e) => setPort(e.target.value)} placeholder="443" className="bg-white border-slate-300 rounded-2xl h-12" />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest">落地地址(域名或IP)</Label>
+        <Input value={host} onChange={(e) => setHost(e.target.value)} placeholder="us8.ibfvps.dpdns.org" className="bg-white border-slate-300 rounded-2xl h-12" />
+        <p className="text-[9px] text-muted-foreground">用稳定域名(cf-ddns 维护),分享链接以此为 host</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest">inbound tag</Label>
+        <Input value={inboundTag} onChange={(e) => setInboundTag(e.target.value)} placeholder="jd-land-us8" className="bg-white border-slate-300 rounded-2xl h-12" />
       </div>
 
       <div className="space-y-2">
