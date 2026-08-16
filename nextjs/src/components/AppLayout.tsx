@@ -100,6 +100,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         // Check permissions for modules
         const hasIpPermission = isAdmin || permissions.some(p => p.module === 'ip' && p.can_menu);
         const hasVpsPermission = isAdmin || permissions.some(p => p.module === 'vps' && p.can_menu);
+        const hasNodesPermission = isAdmin || permissions.some(p => p.module === 'nodes' && p.can_menu);
         const hasMessagesPermission = isAdmin || permissions.some(p => p.module === 'messages' && p.can_menu);
 
         baseNav.push({ name: t('nav.storage'), href: '/app/storage', icon: Files });
@@ -115,6 +116,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             baseNav.push({ name: t('nav.vps'), href: '/app/admin/vps', icon: Server });
             // W5:告警中心此前只能靠直连 URL 进入,挂进导航(与 VPS 监控同权限)
             baseNav.push({ name: '告警中心', href: '/app/admin/alerts', icon: Bell });
+        }
+
+        if (hasNodesPermission) {
+            baseNav.push({ name: '节点', href: '/app/admin/nodes', icon: Server });
         }
 
         if (hasMessagesPermission) {

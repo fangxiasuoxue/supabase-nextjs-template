@@ -27,7 +27,7 @@ export function NodeDeployForm() {
 
         const [{ data: vps }, { data: prof }] = await Promise.all([
           client.from('vps_instances').select('id, gcp_instance_name, public_ip, heartbeat_status').eq('heartbeat_status', 'online'),
-          client.from('node_profiles').select('id, name, protocol, engine').eq('enabled', true),
+          client.from('node_profiles').select('id, name, transport_protocol, engine').eq('enabled', true),
         ])
         setVpsList(vps || [])
         setProfiles(prof || [])
@@ -105,7 +105,7 @@ export function NodeDeployForm() {
             {profiles.map((p) => (
               <SelectItem key={p.id} value={p.id}>
                 <span className="font-bold">{p.name}</span>
-                <span className="ml-2 text-[9px] text-muted-foreground uppercase">{p.protocol} · {p.engine}</span>
+                <span className="ml-2 text-[9px] text-muted-foreground uppercase">{p.transport_protocol} · {p.engine}</span>
               </SelectItem>
             ))}
           </SelectContent>
