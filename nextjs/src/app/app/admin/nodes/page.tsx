@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Fragment } from 'react'
 import { createSPASassClientAuthenticated } from '@/lib/supabase/client'
 import { NodeSubscriptionCard } from '@/components/admin/nodes/NodeSubscriptionCard'
+import { RegisterExistingNodeDialog } from '@/components/admin/nodes/RegisterExistingNodeDialog'
 import { toast } from 'sonner'
 import { Loader2, Network, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -25,17 +26,27 @@ export default function AdminNodesPage() {
   const [nodes, setNodes] = useState<Node[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [bundleToken, setBundleToken] = useState<string | null>(null)
 
   const fetchNodes = useCallback(async () => {
     try {
       const supabase = await createSPASassClientAuthenticated()
       const client = supabase.getSupabaseClient() as any
-      const { data, error } = await client
-        .from('nodes')
-        .select('id, vps_instance_id, protocol, status, subscribe_token, inbound_tag, created_at')
-        .order('created_at', { ascending: false })
+      const [{ data, error }, { data: bundle }] = await Promise.all([
+        client
+          .from('nodes')
+          .select('id, vps_instance_id, protocol, status, subscribe_token, inbound_tag, created_at')
+          .order('created_at', { ascending: false }),
+        client
+          .from('subscription_bundles')
+          .select('token')
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle(),
+      ])
       if (error) throw error
       setNodes(data || [])
+      setBundleToken((bundle as any)?.token ?? null)
     } catch (e: any) {
       toast.error('加载节点列表失败: ' + e.message)
     } finally {
@@ -62,6 +73,7 @@ export default function AdminNodesPage() {
           <p className="text-muted-foreground text-sm">管理所有已部署节点与订阅信息</p>
         </div>
         <div className="flex gap-3">
+          <RegisterExistingNodeDialog onRegistered={fetchNodes} />
           <Link href="/app/admin/nodes/deployments">
             <Button variant="outline" className="border-slate-300 hover:bg-slate-50 rounded-xl h-10 text-xs font-black uppercase tracking-widest">
               部署历史
@@ -75,6 +87,15 @@ export default function AdminNodesPage() {
           </Link>
         </div>
       </div>
+
+      {/* 聚合订阅:一个地址含所有 active 节点 */}
+      {bundleToken && (
+        <NodeSubscriptionCard
+          token={bundleToken}
+          pathPrefix="/sub/bundle"
+          heading="聚合订阅 · 全部活跃节点"
+        />
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center h-48 gap-3">

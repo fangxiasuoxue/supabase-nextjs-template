@@ -10,6 +10,10 @@ interface Props {
   token: string | null
   protocol?: string
   inboundTag?: string
+  /** 订阅 URL 路径前缀,默认 /sub;聚合订阅用 /sub/bundle */
+  pathPrefix?: string
+  /** 可选标题(如「聚合订阅」),给卡片顶部加一行醒目标签 */
+  heading?: string
 }
 
 // 线上订阅域名 fallback(优先用环境变量 NEXT_PUBLIC_SITE_URL)
@@ -17,12 +21,13 @@ const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL || 'https://vip.ibf.qzz.io'
 ).replace(/\/$/, '')
 
-export function NodeSubscriptionCard({ token, protocol, inboundTag }: Props) {
+export function NodeSubscriptionCard({ token, protocol, inboundTag, pathPrefix = '/sub', heading }: Props) {
   const [copied, setCopied] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
 
   // 完整订阅 URL —— 客户端可直接导入
-  const fullUrl = token ? `${SITE_URL}/sub/${token}` : ''
+  const prefix = pathPrefix.replace(/\/$/, '')
+  const fullUrl = token ? `${SITE_URL}${prefix}/${token}` : ''
 
   // 异步生成二维码 dataURL
   useEffect(() => {
@@ -59,6 +64,13 @@ export function NodeSubscriptionCard({ token, protocol, inboundTag }: Props) {
 
   return (
     <div className="glass-card-premium p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+      {heading && (
+        <div className="flex items-center gap-2">
+          <span className="px-2.5 py-1 rounded-lg bg-cyan-600 text-[9px] font-black uppercase tracking-widest text-white">
+            {heading}
+          </span>
+        </div>
+      )}
       <div className="flex items-center gap-3">
         {protocol && (
           <span className="px-2.5 py-1 rounded-lg bg-cyan-50 border border-cyan-200 text-[9px] font-black uppercase tracking-widest text-cyan-700">
