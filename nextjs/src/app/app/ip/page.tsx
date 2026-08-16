@@ -38,6 +38,7 @@ type IpAsset = {
   provider: string
   ip: string
   remark: string | null
+  label: string | null
   country_code: string | null
   isp_name: string | null
   provider_id: string | null
@@ -995,7 +996,8 @@ export default function IpManagementPage() {
                         <TableRow key={asset.id} className="border-slate-200 hover:bg-slate-50 transition-all duration-300 group/row h-16">
                           <TableCell className="pl-8 py-3">
                             <div className="flex flex-col gap-1.5">
-                              <span className="text-sm font-black text-foreground group-hover/row:text-cyan-700 transition-colors uppercase tracking-tight">{asset.remark || "Legacy Module"}</span>
+                              {/* 名称 = proxy-cheap 规范标识(label=US01–US18/VN01,与网页/openwrt 一致);无则回退 provider_id */}
+                              <span className="text-sm font-black text-foreground group-hover/row:text-cyan-700 transition-colors uppercase tracking-tight">{asset.label || (asset.provider_id ? `#${asset.provider_id}` : "Legacy Module")}</span>
                               <div className="flex items-center gap-3">
                                 <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[9px] font-black text-cyan-700 uppercase tracking-widest">
                                   {asset.country_code || "XZ"}

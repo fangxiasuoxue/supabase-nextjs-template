@@ -27,7 +27,7 @@ export async function POST() {
     // null 时保留旧值,避免 upsert 用 null 覆盖掉过期前的 IP(否则续费时看不到是哪个)。
     const { data: existingRows } = await admin
       .from('ip_assets')
-      .select('provider_id, ip, public_ip, connect_ip')
+      .select('provider_id, ip, public_ip, connect_ip, label')
       .eq('provider', providerLabel)
     const existingById = new Map<string, any>()
     for (const r of (existingRows as any[]) ?? []) existingById.set(String(r.provider_id), r)
@@ -41,9 +41,15 @@ export async function POST() {
       // API 有值优先;为 null(过期)时回退到库里已知 IP,再回退 connectIp
       const publicIp = conn.publicIp ?? p.publicIp ?? p.ip
         ?? prev?.public_ip ?? prev?.ip ?? conn.connectIp ?? prev?.connect_ip ?? null
+      // 规范资产标识 = proxy-cheap 网页"名称"列 = API note(US01–US18/VN01)。
+      // 过期代理 note 可能为空,回退到库里已知 label,避免被 null 覆盖(与 IP 同策略)。
+      const label = (p.note != null && String(p.note).trim() !== '')
+        ? String(p.note).trim()
+        : (prev?.label ?? null)
       return {
         provider: providerLabel,
         provider_id: String(p.id ?? ''),
+        label,
         status: p.status ?? null,
         network_type: p.networkType ?? null,
         country_code: p.countryCode ?? null,
