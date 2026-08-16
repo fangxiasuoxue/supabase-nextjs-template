@@ -19,14 +19,18 @@ export async function GET() {
   // 取有赠金的快照(按日期倒序),JS 里每账号取最新一条
   const { data: snaps, error } = await admin
     .from('billing_snapshots')
-    .select('account_id, snapshot_date, credit_balance, credit_total, has_credit, success, source')
-    .not('credit_balance', 'is', null)
+    .select('account_id, snapshot_date, credit_balance, credit_total, cost_30d, raw_cost_text, source')
     .order('snapshot_date', { ascending: false })
   if (error) return NextResponse.json({ data: [], note: error.message }, { status: 200 })
 
-  const latest: Record<string, any> = {}
+  // 每账号:独立取最新的赠金(credit_balance 非空)与最新的消费(cost_30d 非空),两者可能来自不同快照
+  const credit: Record<string, any> = {}
+  const cost: Record<string, any> = {}
+  const seenAcct = new Set<string>()
   for (const s of (snaps as any[]) ?? []) {
-    if (!latest[s.account_id]) latest[s.account_id] = s
+    seenAcct.add(s.account_id)
+    if (credit[s.account_id] == null && s.credit_balance != null) credit[s.account_id] = s
+    if (cost[s.account_id] == null && s.cost_30d != null) cost[s.account_id] = s
   }
 
   // 关联 gcp_accounts 拿 gmail/label
@@ -35,19 +39,23 @@ export async function GET() {
   const acctMap: Record<string, any> = {}
   for (const a of (accts as any[]) ?? []) acctMap[a.id] = a
 
-  const rows = Object.values(latest).map((s: any) => {
-    const bal = Number(s.credit_balance)
-    const tot = s.credit_total != null ? Number(s.credit_total) : null
+  const rows = [...seenAcct].map((aid: string) => {
+    const c = credit[aid]
+    const k = cost[aid]
+    const bal = c ? Number(c.credit_balance) : null
+    const tot = c && c.credit_total != null ? Number(c.credit_total) : null
     return {
-      account_id: s.account_id,
-      gmail: acctMap[s.account_id]?.gmail_email ?? null,
-      label: acctMap[s.account_id]?.label ?? null,
-      project_id: acctMap[s.account_id]?.project_id ?? null,
+      account_id: aid,
+      gmail: acctMap[aid]?.gmail_email ?? null,
+      label: acctMap[aid]?.label ?? null,
+      project_id: acctMap[aid]?.project_id ?? null,
       credit_balance: bal,
       credit_total: tot,
-      pct: tot ? Math.round((bal / tot) * 100) : null,
-      snapshot_date: s.snapshot_date,
-      source: s.source,
+      pct: bal != null && tot ? Math.round((bal / tot) * 100) : null,
+      cost_30d: k ? Number(k.cost_30d) : null,
+      cost_source: k?.source ?? null,
+      snapshot_date: (c || k)?.snapshot_date ?? null,
+      source: c?.source ?? k?.source ?? null,
     }
   })
   // flextra(google-01)排最前

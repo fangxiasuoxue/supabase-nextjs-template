@@ -8,9 +8,11 @@ interface CreditRow {
   account_id: string
   gmail: string | null
   label: string | null
-  credit_balance: number
+  credit_balance: number | null
   credit_total: number | null
   pct: number | null
+  cost_30d: number | null
+  cost_source: string | null
   snapshot_date: string | null
   source: string | null
 }
@@ -65,9 +67,9 @@ export function VpsCreditCard() {
             <Wallet className="h-4 w-4 text-emerald-600" />
           </div>
           <div className="flex flex-col">
-            <h3 className="text-sm font-black uppercase tracking-[0.1em]">GCP 赠金余额</h3>
+            <h3 className="text-sm font-black uppercase tracking-[0.1em]">GCP 赠金 / 消费</h3>
             <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">
-              每日抓账单页 · flextra 为主账号(香港项目钱包)
+              flextra 主账号看赠金 · 其余账号看近30天消费
             </span>
           </div>
         </div>
@@ -98,7 +100,7 @@ export function VpsCreditCard() {
                 <span className="text-[9px] font-bold text-muted-foreground">{main.snapshot_date}</span>
               </div>
               <div className="flex items-end gap-2">
-                <span className={`text-3xl font-black tech-mono ${toneOf(main.pct)}`}>${main.credit_balance.toFixed(2)}</span>
+                <span className={`text-3xl font-black tech-mono ${toneOf(main.pct)}`}>${(main.credit_balance ?? 0).toFixed(2)}</span>
                 {main.credit_total != null && <span className="text-xs font-bold text-muted-foreground mb-1">/ ${main.credit_total.toFixed(0)}</span>}
               </div>
               {main.pct != null && (
@@ -110,16 +112,25 @@ export function VpsCreditCard() {
             </div>
           )}
 
-          {/* 其余账号:紧凑网格 */}
+          {/* 其余账号:紧凑网格,显示近30天消费 */}
           <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
             {others.map((r) => (
               <div key={r.account_id} className="rounded-lg border border-slate-200 p-2.5 flex flex-col gap-1">
                 <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground truncate">{r.account_id}</span>
-                <span className={`text-lg font-black tech-mono ${toneOf(r.pct)}`}>${r.credit_balance.toFixed(2)}</span>
-                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div className={`h-full ${barOf(r.pct)}`} style={{ width: `${r.pct != null ? Math.min(100, Math.max(2, r.pct)) : 0}%` }} />
-                </div>
-                <span className="text-[8px] text-muted-foreground font-bold truncate">{r.gmail || r.snapshot_date}</span>
+                {r.cost_30d != null ? (
+                  <>
+                    <span className="text-lg font-black tech-mono text-slate-700">${r.cost_30d.toFixed(2)}</span>
+                    <span className="text-[8px] text-muted-foreground/70 font-bold uppercase tracking-widest">近30天消费</span>
+                  </>
+                ) : r.credit_balance != null ? (
+                  <>
+                    <span className={`text-lg font-black tech-mono ${toneOf(r.pct)}`}>${r.credit_balance.toFixed(2)}</span>
+                    <span className="text-[8px] text-muted-foreground/70 font-bold uppercase tracking-widest">赠金余额</span>
+                  </>
+                ) : (
+                  <span className="text-sm font-bold tech-mono text-slate-300">— 待采集</span>
+                )}
+                <span className="text-[8px] text-muted-foreground font-bold truncate">{r.gmail || r.snapshot_date || ''}</span>
               </div>
             ))}
           </div>
