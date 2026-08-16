@@ -73,9 +73,37 @@ export async function getVPSInstancesAction(): Promise<{ data: VPSData | null, e
 
         if (error) throw error
 
+        // #6 账单:走真实链路 name → vm_instances.vm_name → account_id → billing_snapshots(赠金)。
+        //   traffic_snapshots 现无新数据(停采,列 egress_gb/ingress_gb 全空),流量仍用 vps_instances 自带列。
+        const enrichAdmin = await createServerAdminClient()
+        const names = (instances || []).map((i: any) => i.name).filter(Boolean)
+        const creditByAccount: Record<string, number> = {}
+        const acctByName: Record<string, string> = {}
+        if (names.length > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: vms } = await enrichAdmin
+                .from('vm_instances' as any).select('vm_name, account_id').in('vm_name', names)
+            const accountIds = new Set<string>()
+            for (const vm of ((vms as any[]) ?? [])) {
+                if (vm.account_id) { acctByName[vm.vm_name] = vm.account_id; accountIds.add(vm.account_id) }
+            }
+            if (accountIds.size > 0) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const { data: snaps } = await enrichAdmin
+                    .from('billing_snapshots').select('account_id, snapshot_date, credit_balance')
+                    .not('credit_balance', 'is', null).in('account_id', [...accountIds])
+                    .order('snapshot_date', { ascending: false })
+                for (const s of ((snaps as any[]) ?? [])) {
+                    if (creditByAccount[s.account_id] == null) creditByAccount[s.account_id] = Number(s.credit_balance)
+                }
+            }
+        }
+
         // Map DB fields to camelCase if needed, but we updated types to match DB roughly.
         // Actually, DB columns are snake_case, types are camelCase. We need mapping.
-        const mappedInstances: VPSInstance[] = (instances || []).map((i: any) => ({
+        const mappedInstances: VPSInstance[] = (instances || []).map((i: any) => {
+        const _credit = creditByAccount[acctByName[i.name]]
+        return ({
             id: i.id,
             instanceId: i.instance_id,
             name: i.name,
@@ -90,13 +118,13 @@ export async function getVPSInstancesAction(): Promise<{ data: VPSData | null, e
             billingUsed: i.billing_used,
             billingRemaining: i.billing_remaining,
             lastUpdated: i.last_updated,
-            // Phase-2: openclaw 账单字段（如存在）
-            creditRemaining: i.credit_remaining ?? null,
+            // #6: 赠金优先用 billing_snapshots(经账号),回退 vps_instances 列
+            creditRemaining: _credit ?? i.credit_remaining ?? null,
             cost30d: i.cost_30d ?? null,
             uploadBytes: i.upload_bytes ?? null,
             downloadBytes: i.download_bytes ?? null,
             billingUpdatedAt: i.billing_updated_at ?? null,
-        }))
+        })})
 
         return {
             data: {

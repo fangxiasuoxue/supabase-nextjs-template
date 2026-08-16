@@ -34,6 +34,16 @@ export function formatTraffic(gb?: number | null): string {
     return (Number.isFinite(n) ? n : 0).toFixed(2) + ' GB'
 }
 
+// #5: 标准标识(doc33)—— 从 GCP 实例名推 sitecode,展示 vps-gcp-<sitecode>。
+// 'us1-20250713-112428'→us1;'hk1'→hk1;'id01'→id1。测试见 ops/testing/vps。
+export function standardName(name?: string | null): { std: string; site: string } {
+    const raw = (name ?? '').trim()
+    let site = (raw.split('-')[0] || raw).toLowerCase()
+    site = site.replace(/^id0*(\d+)$/, 'id$1')
+    if (!site) return { std: raw || '—', site: raw }
+    return { std: `vps-gcp-${site}`, site }
+}
+
 export function VPSList() {
     const [data, setData] = useState<VPSData | null>(null)
     const [loading, setLoading] = useState(true)
@@ -321,8 +331,9 @@ export function VPSList() {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-black text-foreground uppercase tracking-tighter">{instance.name}</span>
-                                                    <span className="text-[9px] text-muted-foreground/60 font-medium lowercase tracking-tighter">{instance.machineType}</span>
+                                                    {/* #5: 标准名 vps-gcp-<sitecode>(doc33);GCP 实例名+机型作副标 */}
+                                                    <span className="text-sm font-black text-foreground lowercase tracking-tighter">{standardName(instance.name).std}</span>
+                                                    <span className="text-[9px] text-muted-foreground/60 font-medium lowercase tracking-tighter">{instance.name} · {instance.machineType}</span>
                                                 </div>
                                             </TableCell>
                                             <TableCell>
