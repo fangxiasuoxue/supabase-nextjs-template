@@ -119,7 +119,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
 
         if (hasNodesPermission) {
-            baseNav.push({ name: '节点', href: '/app/admin/nodes', icon: Server });
+            baseNav.push({ name: '节点管理', href: '/app/admin/nodes', icon: Server });
         }
 
         if (hasMessagesPermission) {
