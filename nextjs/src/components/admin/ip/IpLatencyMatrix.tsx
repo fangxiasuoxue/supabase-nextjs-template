@@ -21,7 +21,7 @@ const CATEGORIES: { key: string; title: string; nodes: string[] }[] = [
   { key: 'hk', title: '香港', nodes: ['hk1', 'hk2', 'hk4'] },
   { key: 'uswest', title: '美西', nodes: ['us1', 'us3', 'us4', 'us6', 'us7'] },
   { key: 'uscentral', title: '美中', nodes: ['us2'] },
-  { key: 'useast', title: '美东', nodes: ['us5'] },
+  { key: 'useast', title: '美东', nodes: ['us5', 'us8'] },
   { key: 'openwrt', title: 'OpenWrt', nodes: ['openwrt'] },
   { key: 'gorelay', title: 'GoRelay', nodes: ['gorelay'] },
 ]
