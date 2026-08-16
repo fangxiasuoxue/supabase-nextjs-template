@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { VPSList } from '@/components/admin/vps/VPSList'
+import { VpsCreditCard } from '@/components/admin/vps/VpsCreditCard'
 import { VpsRegisterForm } from '@/components/admin/vps/VpsRegisterForm'
 import { VpsSyncFromOpenclaw } from '@/components/admin/vps/VpsSyncFromOpenclaw'
 import { useLanguage } from '@/lib/context/LanguageContext'
@@ -41,6 +42,8 @@ export default function AdminVPSPage() {
                     </Button>
                 </div>
             </div>
+
+            <VpsCreditCard />
 
             <VPSList key={refreshKey} />
 
