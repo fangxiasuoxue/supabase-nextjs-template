@@ -3,6 +3,7 @@ import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { createSSRClient } from '@/lib/supabase/server'
 import { createNodeWithDeployment, type NodeStore } from '@/lib/nodes/create-node-with-deployment'
 import { deriveNodeDefaults } from '@/lib/parsers/node-deploy-defaults'
+import { normalizeDeployMode } from '@/lib/nodes/node-lifecycle'
 
 // POST /api/v1/admin/nodes/deploy — 创建节点部署任务(node + node_deployment)
 //
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
     deploymentInsert: {
       task_type: 'create',
       profile_id,
-      deploy_mode: deploy_mode ?? 'agent_api',
+      deploy_mode: normalizeDeployMode(deploy_mode), // 防表单发 'auto'/'manual' 违反 DB check(23514)
       status: 'pending',
     },
   })

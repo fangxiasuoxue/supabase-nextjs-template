@@ -33,9 +33,19 @@ export function sanitizeNodeUpdate(
   return { ok: true, patch: out }
 }
 
+// node_deployments.deploy_mode 的 DB CHECK 约束允许值(实测 node_deployments_deploy_mode_check)。
+// 目前只实现 agent_api(B poller)。表单曾误发 'auto'/'manual' → 违反约束报 23514。
+export const DEPLOY_MODES = ['agent_api'] as const
+export const DEPLOY_MODE_DEFAULT: (typeof DEPLOY_MODES)[number] = 'agent_api'
+
+// 规范化 deploy_mode:非法/缺省一律回落 agent_api,杜绝 DB check 违规。
+export function normalizeDeployMode(v?: string | null): string {
+  return v && (DEPLOY_MODES as readonly string[]).includes(v) ? v : DEPLOY_MODE_DEFAULT
+}
+
 // 删除 = 建一条 task_type=delete 的部署任务,交 agent poller 去机器上拆 inbound。
 export function buildDeleteDeployment(nodeId: string): Record<string, unknown> {
-  return { node_id: nodeId, task_type: 'delete', deploy_mode: 'agent_api', status: 'pending' }
+  return { node_id: nodeId, task_type: 'delete', deploy_mode: DEPLOY_MODE_DEFAULT, status: 'pending' }
 }
 
 // 部署回报后,节点应置什么终态(供 result 路由用)。

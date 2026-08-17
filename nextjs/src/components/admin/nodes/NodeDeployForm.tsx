@@ -17,7 +17,6 @@ export function NodeDeployForm() {
   const [profiles, setProfiles] = useState<any[]>([])
   const [vpsId, setVpsId] = useState('')
   const [profileId, setProfileId] = useState('')
-  const [deployMode, setDeployMode] = useState('auto')
   const [nodeName, setNodeName] = useState('')
   const [port, setPort] = useState('443')
   const [inboundTag, setInboundTag] = useState('')
@@ -59,7 +58,6 @@ export function NodeDeployForm() {
         body: JSON.stringify({
           vps_id: vpsId,
           profile_id: profileId,
-          deploy_mode: deployMode,
           node_name: nodeName.trim() || undefined,
           port: Number(port) || 443,
           inbound_tag: inboundTag.trim() || undefined,
@@ -157,19 +155,6 @@ export function NodeDeployForm() {
       <div className="space-y-2">
         <Label className="text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest">inbound tag</Label>
         <Input value={inboundTag} onChange={(e) => setInboundTag(e.target.value)} placeholder="jd-land-us8" className="bg-white border-slate-300 rounded-2xl h-12" />
-      </div>
-
-      <div className="space-y-2">
-        <Label className="text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest">部署模式</Label>
-        <Select value={deployMode} onValueChange={setDeployMode}>
-          <SelectTrigger className="bg-white border-slate-300 rounded-2xl h-12">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-white border-slate-200 rounded-2xl">
-            <SelectItem value="auto">自动 AUTO</SelectItem>
-            <SelectItem value="manual">手动 MANUAL</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       <Button

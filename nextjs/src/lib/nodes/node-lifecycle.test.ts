@@ -5,7 +5,23 @@ import {
   buildDeleteDeployment,
   resolveNodeStatusAfterDeploy,
   PENDING_DISPATCH_TASK_TYPES,
+  normalizeDeployMode,
+  DEPLOY_MODES,
 } from './node-lifecycle.ts'
+
+// DB CHECK node_deployments_deploy_mode_check 只认 agent_api(实测);表单曾发 'auto'/'manual' 违规(23514)。
+test('normalizeDeployMode: 非法值(auto/manual)回落 agent_api,杜绝 DB check 违规', () => {
+  assert.equal(normalizeDeployMode('auto'), 'agent_api')
+  assert.equal(normalizeDeployMode('manual'), 'agent_api')
+  assert.equal(normalizeDeployMode(undefined), 'agent_api')
+  assert.equal(normalizeDeployMode(null), 'agent_api')
+  assert.equal(normalizeDeployMode('agent_api'), 'agent_api')
+})
+
+test('DEPLOY_MODES 与 buildDeleteDeployment 的 deploy_mode 都是 DB 允许值', () => {
+  assert.ok(DEPLOY_MODES.includes('agent_api'))
+  assert.ok((DEPLOY_MODES as readonly string[]).includes(buildDeleteDeployment('n').deploy_mode as string))
+})
 
 test('PENDING_DISPATCH_TASK_TYPES 必须含 create 和 delete(否则 delete 永不被消费)', () => {
   assert.ok(PENDING_DISPATCH_TASK_TYPES.includes('create'))
