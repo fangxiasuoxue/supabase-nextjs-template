@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { Loader2, Rocket } from 'lucide-react'
 import { createSPASassClientAuthenticated } from '@/lib/supabase/client'
+import { deriveNodeDefaults } from '@/lib/parsers/node-deploy-defaults'
 
 export function NodeDeployForm() {
   const router = useRouter()
@@ -31,7 +32,7 @@ export function NodeDeployForm() {
         const client = supabase.getSupabaseClient() as any
 
         const [{ data: vps }, { data: prof }] = await Promise.all([
-          client.from('vps_instances').select('id, gcp_instance_name, public_ip, heartbeat_status').eq('heartbeat_status', 'online'),
+          client.from('vps_instances').select('id, name, gcp_instance_name, public_ip, heartbeat_status').eq('heartbeat_status', 'online'),
           client.from('node_profiles').select('id, name, transport_protocol, engine').eq('enabled', true),
         ])
         setVpsList(vps || [])
@@ -90,12 +91,13 @@ export function NodeDeployForm() {
         <Select value={vpsId} onValueChange={(v) => {
           setVpsId(v)
           const sel = vpsList.find((x) => x.id === v)
-          // 从 gcp_instance_name(如 us8-2026...)推 sitecode,自动建议落地域名/inbound_tag
-          const site = String(sel?.gcp_instance_name ?? '').split('-')[0]
-          if (site) {
-            if (!host) setHost(`${site}.ibfvps.dpdns.org`)
-            if (!inboundTag) setInboundTag(`jd-land-${site}`)
-            if (!nodeName) setNodeName(`${site.toUpperCase()}-reality`)
+          // 由 vps.name(长名 us8-…)派生 sitecode → 落地域名/tag/节点名(见 node-deploy-defaults + 单测)。
+          // 曾用 gcp_instance_name(短名 gcp8)致 jd-land-gcp8/域名不解析,已修。
+          const d = deriveNodeDefaults(sel ?? {})
+          if (d.site) {
+            if (!host) setHost(d.host)
+            if (!inboundTag) setInboundTag(d.inboundTag)
+            if (!nodeName) setNodeName(d.nodeName)
           }
         }}>
           <SelectTrigger className="bg-white border-slate-300 rounded-2xl h-12">

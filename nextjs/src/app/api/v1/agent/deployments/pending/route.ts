@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
+import { PENDING_DISPATCH_TASK_TYPES } from '@/lib/nodes/node-lifecycle'
 import crypto from 'crypto'
 
 // POST /api/v1/agent/deployments/pending
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
     .select('id, node_id, task_type, status, request_payload')
     .in('node_id', nodeIds)
     .eq('status', 'pending')
-    .eq('task_type', 'create')
+    .in('task_type', PENDING_DISPATCH_TASK_TYPES as unknown as string[])
     .order('created_at', { ascending: true })
   if (!deps || deps.length === 0) return NextResponse.json({ deployments: [] })
 

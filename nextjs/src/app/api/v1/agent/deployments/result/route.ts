@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
+import { resolveNodeStatusAfterDeploy } from '@/lib/nodes/node-lifecycle'
 import crypto from 'crypto'
 
 // POST /api/v1/agent/deployments/result
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
   // 取部署任务(拿 node_id)
   const { data: dep } = await admin
     .from('node_deployments')
-    .select('id, node_id, status')
+    .select('id, node_id, status, task_type')
     .eq('id', deployment_id)
     .maybeSingle()
   if (!dep) return NextResponse.json({ error: 'Unknown deployment' }, { status: 404 })
@@ -51,16 +52,17 @@ export async function POST(request: NextRequest) {
   const { error: depErr } = await admin.from('node_deployments').update(depUpdate).eq('id', deployment_id)
   if (depErr) return NextResponse.json({ error: depErr.message }, { status: 500 })
 
-  // 成功 → 激活节点 + 回填订阅 token
-  if (status === 'success') {
-    const nodeUpdate: any = { status: 'active', last_deployed_at: new Date().toISOString() }
+  // 节点终态按 task_type 判定:create 成功→active、delete 成功→deleted、任何失败→error
+  const taskType = (dep as any).task_type ?? 'create'
+  const nodeStatus = resolveNodeStatusAfterDeploy(taskType, status as 'success' | 'fail')
+  const nodeUpdate: any = { status: nodeStatus }
+  if (status === 'success' && taskType !== 'delete') {
+    nodeUpdate.last_deployed_at = new Date().toISOString()
     if (subscribe_token) nodeUpdate.subscribe_token = subscribe_token
     if (config_hash) nodeUpdate.config_hash = config_hash
-    const { error: nodeErr } = await admin.from('nodes').update(nodeUpdate).eq('id', dep.node_id)
-    if (nodeErr) return NextResponse.json({ error: nodeErr.message }, { status: 500 })
-  } else {
-    await admin.from('nodes').update({ status: 'error' }).eq('id', dep.node_id)
   }
+  const { error: nodeErr } = await admin.from('nodes').update(nodeUpdate).eq('id', dep.node_id)
+  if (nodeErr) return NextResponse.json({ error: nodeErr.message }, { status: 500 })
 
   return NextResponse.json({ status: 'ok' })
 }

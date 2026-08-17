@@ -14,6 +14,7 @@ import {
 
 interface Node {
   id: string
+  name: string | null
   vps_instance_id: string | null
   protocol: string | null
   status: string
@@ -35,7 +36,7 @@ export default function AdminNodesPage() {
       const [{ data, error }, { data: bundle }] = await Promise.all([
         client
           .from('nodes')
-          .select('id, vps_instance_id, protocol, status, subscribe_token, inbound_tag, created_at')
+          .select('id, name, vps_instance_id, protocol, status, subscribe_token, inbound_tag, created_at')
           .order('created_at', { ascending: false }),
         client
           .from('subscription_bundles')
@@ -59,7 +60,40 @@ export default function AdminNodesPage() {
   const statusColor = (s: string) =>
     s === 'active' ? 'text-green-700 bg-green-50 border-green-200'
     : s === 'deploying' ? 'text-blue-700 bg-blue-50 border-blue-200'
+    : s === 'suspended' ? 'text-amber-700 bg-amber-50 border-amber-200'
+    : s === 'error' ? 'text-red-700 bg-red-50 border-red-200'
     : 'text-slate-500 bg-slate-50 border-slate-200'
+
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const handleRename = async (node: Node) => {
+    const next = window.prompt('新节点名', node.name ?? '')?.trim()
+    if (!next || next === node.name) return
+    setBusyId(node.id)
+    try {
+      const res = await fetch(`/api/v1/admin/nodes/${node.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: next }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || '改名失败')
+      toast.success('已改名')
+      fetchNodes()
+    } catch (e: any) { toast.error(e.message) } finally { setBusyId(null) }
+  }
+
+  const handleDelete = async (node: Node) => {
+    if (node.status === 'deleted') return
+    if (!window.confirm(`确认删除节点「${node.name ?? node.id.slice(0, 8)}」?\n将下发拆除机器上的落地 inbound(${node.inbound_tag ?? '—'}),不可撤销。`)) return
+    setBusyId(node.id)
+    try {
+      const res = await fetch(`/api/v1/admin/nodes/${node.id}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || '删除失败')
+      toast.success('删除任务已下发(suspended → 拆除后转 deleted)')
+      fetchNodes()
+    } catch (e: any) { toast.error(e.message) } finally { setBusyId(null) }
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -112,13 +146,14 @@ export default function AdminNodesPage() {
                 <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.15em]">状态</TableHead>
                 <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.15em]">Inbound Tag</TableHead>
                 <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.15em]">创建时间</TableHead>
-                <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.15em] pr-8 text-right">订阅</TableHead>
+                <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.15em] text-right">订阅</TableHead>
+                <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.15em] pr-8 text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {nodes.length === 0 ? (
                 <TableRow className="border-none">
-                  <TableCell colSpan={6} className="h-48 text-center">
+                  <TableCell colSpan={7} className="h-48 text-center">
                     <div className="flex flex-col items-center justify-center gap-4 opacity-30">
                       <Network className="h-10 w-10" />
                       <span className="text-xs font-black uppercase tracking-widest">暂无节点</span>
@@ -147,7 +182,7 @@ export default function AdminNodesPage() {
                     <TableCell>
                       <span className="text-[10px] text-muted-foreground/50">{new Date(node.created_at).toLocaleDateString()}</span>
                     </TableCell>
-                    <TableCell className="text-right pr-8">
+                    <TableCell className="text-right">
                       {node.subscribe_token && (
                         <Button
                           variant="ghost"
@@ -159,10 +194,24 @@ export default function AdminNodesPage() {
                         </Button>
                       )}
                     </TableCell>
+                    <TableCell className="text-right pr-8">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost" size="sm" disabled={busyId === node.id || node.status === 'deleted'}
+                          onClick={() => handleRename(node)}
+                          className="h-8 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-100"
+                        >改名</Button>
+                        <Button
+                          variant="ghost" size="sm" disabled={busyId === node.id || node.status === 'deleted'}
+                          onClick={() => handleDelete(node)}
+                          className="h-8 rounded-lg text-[10px] font-black uppercase tracking-widest text-red-600 hover:bg-red-50 hover:text-red-700"
+                        >{busyId === node.id ? '…' : '删除'}</Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                   {expandedId === node.id && (
                     <TableRow key={`${node.id}-sub`} className="border-slate-200 bg-slate-50">
-                      <TableCell colSpan={6} className="px-8 pb-4">
+                      <TableCell colSpan={7} className="px-8 pb-4">
                         <NodeSubscriptionCard
                           token={node.subscribe_token}
                           protocol={node.protocol ?? undefined}
