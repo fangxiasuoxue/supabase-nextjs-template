@@ -7,7 +7,35 @@ import {
   PENDING_DISPATCH_TASK_TYPES,
   normalizeDeployMode,
   DEPLOY_MODES,
+  findNodeConflict,
 } from './node-lifecycle.ts'
+
+test('findNodeConflict: 同 tag → 冲突(会顶掉第一个)', () => {
+  const ex = [{ name: 'US8-reality', inbound_tag: 'jd-land-us8', port: 443, status: 'active' }]
+  const c = findNodeConflict(ex, { inbound_tag: 'jd-land-us8', port: 4001 })
+  assert.equal(c?.reason, 'tag')
+  assert.equal(c?.conflictWith, 'US8-reality')
+})
+
+test('findNodeConflict: 同端口 → 冲突(xray 端口占用)', () => {
+  const ex = [{ name: 'US8-reality', inbound_tag: 'jd-land-us8', port: 443, status: 'active' }]
+  const c = findNodeConflict(ex, { inbound_tag: 'jd-other', port: 443 })
+  assert.equal(c?.reason, 'port')
+})
+
+test('findNodeConflict: deleted 节点已拆除,不算冲突', () => {
+  const ex = [{ name: 'old', inbound_tag: 'jd-land-us8', port: 443, status: 'deleted' }]
+  assert.equal(findNodeConflict(ex, { inbound_tag: 'jd-land-us8', port: 443 }), null)
+})
+
+test('findNodeConflict: tag 与端口都不同 → 无冲突(合法的第二落地)', () => {
+  const ex = [{ name: 'US8-reality', inbound_tag: 'jd-land-us8', port: 443, status: 'active' }]
+  assert.equal(findNodeConflict(ex, { inbound_tag: 'jd-extra-us8', port: 4001 }), null)
+})
+
+test('findNodeConflict: 空现有 → null', () => {
+  assert.equal(findNodeConflict([], { inbound_tag: 'x', port: 443 }), null)
+})
 
 // DB CHECK node_deployments_deploy_mode_check 只认 agent_api(实测);表单曾发 'auto'/'manual' 违规(23514)。
 test('normalizeDeployMode: 非法值(auto/manual)回落 agent_api,杜绝 DB check 违规', () => {

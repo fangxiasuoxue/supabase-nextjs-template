@@ -3,7 +3,7 @@ import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { createSSRClient } from '@/lib/supabase/server'
 import { createNodeWithDeployment, type NodeStore } from '@/lib/nodes/create-node-with-deployment'
 import { deriveNodeDefaults } from '@/lib/parsers/node-deploy-defaults'
-import { normalizeDeployMode } from '@/lib/nodes/node-lifecycle'
+import { normalizeDeployMode, findNodeConflict } from '@/lib/nodes/node-lifecycle'
 
 // POST /api/v1/admin/nodes/deploy — 创建节点部署任务(node + node_deployment)
 //
@@ -53,10 +53,26 @@ export async function POST(request: NextRequest) {
     `node-${String(vps_id).slice(0, 8)}-${Date.now()}`
   const finalTag = (inbound_tag && String(inbound_tag).trim()) || defaults.inboundTag
   const finalHost = (public_ip && String(public_ip).trim()) || defaults.host
+  const finalPort = Number(port) || defaults.port || 443
+
+  // 冲突检测:同 VPS 若已有 active 节点用相同 tag/端口,直接建会顶掉/冲突第一个。
+  // 拒绝并提示改 tag/端口(多落地需各自唯一)。
+  const { data: existingNodes } = await adminClient
+    .from('nodes')
+    .select('name, inbound_tag, port, status')
+    .eq('vps_instance_id', vps_id)
+  const conflict = findNodeConflict((existingNodes as any) || [], { inbound_tag: finalTag, port: finalPort })
+  if (conflict) {
+    const what = conflict.reason === 'tag' ? `inbound_tag=${finalTag}` : `端口 ${finalPort}`
+    return NextResponse.json(
+      { error: `该 VPS 已有节点「${conflict.conflictWith}」占用${what};多个落地需用不同的 inbound_tag 和端口,请修改后再建。` },
+      { status: 409 },
+    )
+  }
 
   const nodeInsert: Record<string, unknown> = {
     name: nodeName,
-    port: Number(port) || defaults.port || 443,
+    port: finalPort,
     protocol: 'vless',
     vps_instance_id: vps_id, // 表单的 vps_id 实为 vps_instances.id
     profile_id,

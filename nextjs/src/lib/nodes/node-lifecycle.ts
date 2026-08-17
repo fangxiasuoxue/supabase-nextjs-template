@@ -43,6 +43,32 @@ export function normalizeDeployMode(v?: string | null): string {
   return v && (DEPLOY_MODES as readonly string[]).includes(v) ? v : DEPLOY_MODE_DEFAULT
 }
 
+export interface ExistingNodeLite {
+  name?: string | null
+  inbound_tag?: string | null
+  port?: number | null
+  status?: string | null
+}
+
+// 检测候选落地与同 VPS 现有节点的冲突:相同 inbound_tag(部署会 RemoveInbound 顶掉旧的)
+// 或相同端口(xray 同端口冲突)→ 会让第一个失效。deleted 节点已拆除,不算冲突。
+// 返回冲突原因 + 冲突对象名,或 null。
+export function findNodeConflict(
+  existing: ExistingNodeLite[],
+  candidate: { inbound_tag?: string | null; port?: number | null },
+): { reason: 'tag' | 'port'; conflictWith: string } | null {
+  for (const n of existing || []) {
+    if (!n || n.status === 'deleted') continue
+    if (candidate.inbound_tag && n.inbound_tag && n.inbound_tag === candidate.inbound_tag) {
+      return { reason: 'tag', conflictWith: n.name || n.inbound_tag }
+    }
+    if (candidate.port && n.port && Number(n.port) === Number(candidate.port)) {
+      return { reason: 'port', conflictWith: n.name || String(n.port) }
+    }
+  }
+  return null
+}
+
 // 删除 = 建一条 task_type=delete 的部署任务,交 agent poller 去机器上拆 inbound。
 export function buildDeleteDeployment(nodeId: string): Record<string, unknown> {
   return { node_id: nodeId, task_type: 'delete', deploy_mode: DEPLOY_MODE_DEFAULT, status: 'pending' }
