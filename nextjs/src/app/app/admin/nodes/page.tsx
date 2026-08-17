@@ -37,6 +37,7 @@ export default function AdminNodesPage() {
         client
           .from('nodes')
           .select('id, name, vps_instance_id, protocol, status, subscribe_token, inbound_tag, created_at')
+          .neq('status', 'deleted') // 软删节点默认隐藏(行仍在库供审计)
           .order('created_at', { ascending: false }),
         client
           .from('subscription_bundles')
