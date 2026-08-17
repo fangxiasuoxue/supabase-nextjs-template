@@ -85,7 +85,12 @@ export default function AdminNodesPage() {
 
   const handleDelete = async (node: Node) => {
     if (node.status === 'deleted') return
-    if (!window.confirm(`确认删除节点「${node.name ?? node.id.slice(0, 8)}」?\n将下发拆除机器上的落地 inbound(${node.inbound_tag ?? '—'}),不可撤销。`)) return
+    if (!window.confirm(
+      `确认删除节点「${node.name ?? node.id.slice(0, 8)}」?\n\n` +
+      `• 将下发拆除机器上的落地 inbound（${node.inbound_tag ?? '—'}），不可撤销。\n` +
+      `• ⚠️ 若该落地已被网关（gw-01/02/03 的 usNbare/pcs_40XX）引用，删除会导致对应出口失效。\n` +
+      `  生产在用的落地（如 us7/4007）删除前务必确认无依赖。`,
+    )) return
     setBusyId(node.id)
     try {
       const res = await fetch(`/api/v1/admin/nodes/${node.id}`, { method: 'DELETE' })

@@ -23,6 +23,21 @@ export function NodeDeployForm() {
   const [host, setHost] = useState('')
   const [loading, setLoading] = useState(false)
   const [fetchingData, setFetchingData] = useState(true)
+  const [existingOnVps, setExistingOnVps] = useState<{ name: string; inbound_tag: string | null; port: number | null }[]>([])
+
+  // 选中 VPS 后拉该机现有 active 节点(展示已占用的 tag/端口,避免冲突顶掉旧的)
+  const loadExistingOnVps = async (vid: string) => {
+    try {
+      const supabase = await createSPASassClientAuthenticated()
+      const client = supabase.getSupabaseClient() as any
+      const { data } = await client
+        .from('nodes')
+        .select('name, inbound_tag, port, status')
+        .eq('vps_instance_id', vid)
+        .neq('status', 'deleted')
+      setExistingOnVps(data || [])
+    } catch { setExistingOnVps([]) }
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -88,6 +103,7 @@ export function NodeDeployForm() {
         <Label className="text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest">目标 VPS *</Label>
         <Select value={vpsId} onValueChange={(v) => {
           setVpsId(v)
+          loadExistingOnVps(v)
           const sel = vpsList.find((x) => x.id === v)
           // 由 vps.name(长名 us8-…)派生 sitecode → 落地域名/tag/节点名(见 node-deploy-defaults + 单测)。
           // 曾用 gcp_instance_name(短名 gcp8)致 jd-land-gcp8/域名不解析,已修。
@@ -114,6 +130,23 @@ export function NodeDeployForm() {
           </SelectContent>
         </Select>
       </div>
+
+      {vpsId && existingOnVps.length > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 space-y-1.5">
+          <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">该 VPS 已占用(新建须避开)</p>
+          <div className="flex flex-wrap gap-1.5">
+            {existingOnVps.map((n, i) => (
+              <span key={i} className="tech-mono text-[10px] px-2 py-0.5 rounded-md bg-white border border-amber-200 text-amber-800">
+                {n.inbound_tag || '?'}:{n.port ?? '?'}
+              </span>
+            ))}
+          </div>
+          <p className="text-[9px] text-amber-600">同一 VPS 的 <b>inbound_tag 和端口必须唯一</b>,否则新建会顶掉旧节点(旧的失效)。</p>
+        </div>
+      )}
+      {vpsId && existingOnVps.length === 0 && (
+        <p className="text-[9px] text-muted-foreground">该 VPS 暂无落地节点。inbound_tag + 端口在同机需唯一。</p>
+      )}
 
       <div className="space-y-2">
         <Label className="text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest">协议模板 *</Label>
