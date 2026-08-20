@@ -5,10 +5,11 @@
 
 import { useState, useEffect, useCallback, use as usePromise } from 'react'
 import { toast } from 'sonner'
-import { Loader2, Plus, Trash2, Copy, ArrowLeft } from 'lucide-react'
+import { Loader2, Plus, Trash2, Copy, ArrowLeft, RotateCcw, Gauge } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import Link from 'next/link'
+import { formatBytes, quotaLevel, quotaPercent, type QuotaLevel } from '@/lib/traffic/quota-format'
 
 interface Seat {
   id: string
@@ -22,8 +23,46 @@ interface Seat {
   last_reconciled_at: string | null
   last_reconcile_error: string | null
   quota_bytes: number | null
+  quota_period: string | null
+  over_action: string | null
+  period_started_at: string | null
   used_bytes: number | null
   created_at: string
+}
+
+interface TrafficResp {
+  node_total_bytes: number
+  node_uplink_bytes: number
+  node_downlink_bytes: number
+  terminals: { email: string; total_bytes: number }[]
+}
+
+const LEVEL_BAR: Record<QuotaLevel, string> = {
+  none: 'bg-muted-foreground/40',
+  ok: 'bg-green-500',
+  warn: 'bg-amber-500',
+  over: 'bg-red-500',
+}
+
+function QuotaCell({ used, quota }: { used: number | null; quota: number | null }) {
+  if (quota == null || quota <= 0) {
+    return <span className="text-xs text-muted-foreground">不限 · {formatBytes(used)}</span>
+  }
+  const pct = quotaPercent(used, quota) ?? 0
+  const level = quotaLevel(used, quota)
+  return (
+    <div className="min-w-[120px]">
+      <div className="flex justify-between text-[11px] mb-0.5">
+        <span className={level === 'over' ? 'text-red-500 font-medium' : level === 'warn' ? 'text-amber-600' : ''}>
+          {formatBytes(used)}
+        </span>
+        <span className="text-muted-foreground">/ {formatBytes(quota)}</span>
+      </div>
+      <div className="h-1.5 rounded bg-muted overflow-hidden">
+        <div className={`h-full ${LEVEL_BAR[level]}`} style={{ width: `${Math.min(100, pct)}%` }} />
+      </div>
+    </div>
+  )
 }
 
 export default function NodeClientsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -33,6 +72,8 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
   const [count, setCount] = useState(1)
   const [label, setLabel] = useState('')
   const [creating, setCreating] = useState(false)
+  const [traffic, setTraffic] = useState<TrafficResp | null>(null)
+  const trafficByEmail = new Map((traffic?.terminals ?? []).map((t) => [t.email, t.total_bytes]))
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -48,7 +89,17 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
     }
   }, [id])
 
-  useEffect(() => { load() }, [load])
+  const loadTraffic = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/v1/admin/nodes/${id}/traffic?window=7d`)
+      const j = await r.json()
+      if (r.ok) setTraffic(j)
+    } catch {
+      /* 流量榜是次要信息,失败静默不打断名额管理 */
+    }
+  }, [id])
+
+  useEffect(() => { load(); loadTraffic() }, [load, loadTraffic])
 
   const createSeats = async () => {
     setCreating(true)
@@ -86,6 +137,22 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
     }
   }
 
+  const editQuota = async (s: Seat) => {
+    const cur = s.quota_bytes != null ? (s.quota_bytes / 1024 / 1024 / 1024).toString() : ''
+    const input = prompt(`设置 ${s.email} 的月配额(GB;留空=不限,0=不限)`, cur)
+    if (input === null) return
+    const gb = parseFloat(input.trim())
+    const quota_bytes = !input.trim() || !Number.isFinite(gb) || gb <= 0 ? null : Math.trunc(gb * 1024 * 1024 * 1024)
+    await patchSeat(s.id, { quota_bytes, quota_period: 'monthly' })
+    toast.success(quota_bytes == null ? '已设为不限' : `配额 ${input.trim()} GB`)
+  }
+
+  const rollPeriod = async (s: Seat) => {
+    if (!confirm(`重置 ${s.email} 的配额周期?used 归零,被配额停用的终端下轮 poll 恢复。`)) return
+    await patchSeat(s.id, { roll_period: true })
+    toast.success('已滚动周期,used 归零')
+  }
+
   const deleteSeat = async (seatId: string, email: string) => {
     if (!confirm(`删除名额 ${email}?agent 下轮会移除其 xray user。`)) return
     try {
@@ -112,6 +179,16 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
         <Link href="/app/admin/nodes"><Button variant="ghost" size="sm"><ArrowLeft className="w-4 h-4 mr-1" />返回节点</Button></Link>
         <h1 className="text-xl font-semibold">节点终端(名额)管理</h1>
       </div>
+
+      {/* 节点流量榜(近 7 天) */}
+      {traffic && (
+        <div className="flex items-center gap-6 border rounded-lg p-4 bg-muted/30 text-sm">
+          <div className="flex items-center gap-2 font-medium"><Gauge className="w-4 h-4" />近 7 天节点流量</div>
+          <div>总计 <span className="font-mono">{formatBytes(traffic.node_total_bytes)}</span></div>
+          <div className="text-muted-foreground">↑ {formatBytes(traffic.node_uplink_bytes)} · ↓ {formatBytes(traffic.node_downlink_bytes)}</div>
+          <div className="text-muted-foreground">活跃终端 {traffic.terminals.length}</div>
+        </div>
+      )}
 
       {/* 发名额 */}
       <div className="flex items-end gap-3 border rounded-lg p-4">
@@ -144,6 +221,8 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
               <TableHead>状态</TableHead>
               <TableHead>到期</TableHead>
               <TableHead>并发IP</TableHead>
+              <TableHead>配额(月)</TableHead>
+              <TableHead>7天流量</TableHead>
               <TableHead>下发</TableHead>
               <TableHead>订阅</TableHead>
               <TableHead>操作</TableHead>
@@ -151,7 +230,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
           </TableHeader>
           <TableBody>
             {seats.length === 0 && (
-              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-6">暂无名额,点上方「发名额」</TableCell></TableRow>
+              <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-6">暂无名额,点上方「发名额」</TableCell></TableRow>
             )}
             {seats.map((s) => (
               <TableRow key={s.id}>
@@ -165,6 +244,20 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
                 </TableCell>
                 <TableCell className="text-xs">{s.expires_at ? new Date(s.expires_at).toLocaleString() : '不过期'}</TableCell>
                 <TableCell className="text-xs">{s.ip_limit ?? '不限'}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    <QuotaCell used={s.used_bytes} quota={s.quota_bytes} />
+                    <Button variant="ghost" size="sm" className="h-6 px-1" title="设置配额" onClick={() => editQuota(s)}>
+                      <Gauge className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  {s.quota_bytes != null && (
+                    <span className="text-[10px] text-muted-foreground">
+                      {s.over_action === 'alert' ? '仅告警' : s.over_action === 'throttle' ? '限速→停' : '超额停用'}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell className="text-xs font-mono">{formatBytes(trafficByEmail.get(s.email) ?? 0)}</TableCell>
                 <TableCell className="text-xs">
                   {s.last_reconcile_error
                     ? <span className="text-red-500" title={s.last_reconcile_error}>错误</span>
@@ -178,9 +271,16 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
                   </Button>
                 </TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="sm" onClick={() => deleteSeat(s.id, s.email)}>
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
+                  <div className="flex items-center">
+                    {s.quota_bytes != null && (
+                      <Button variant="ghost" size="sm" title="重置配额周期(used 归零)" onClick={() => rollPeriod(s)}>
+                        <RotateCcw className="w-4 h-4 text-blue-500" />
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => deleteSeat(s.id, s.email)}>
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

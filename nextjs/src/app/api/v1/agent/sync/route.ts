@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
+import { buildTrafficStatRows, type HourlyXrayTraffic } from '@/lib/traffic/node-traffic-upsert'
 import crypto from 'crypto'
 import { gunzipSync } from 'zlib'
 
@@ -55,6 +56,7 @@ interface ConfigSnapshot {
 export async function POST(request: NextRequest) {
   const body = await parseBody(request) as any
   const { agent, summary, batch_id, events, commands, config_snapshots, metrics, ip_latency } = body
+  const hourly_xray_traffic = body.hourly_xray_traffic
 
   if (!agent?.instance_id || !body.timestamp || !body.hmac || !batch_id) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -152,6 +154,59 @@ export async function POST(request: NextRequest) {
         .from('ip_latency_matrix' as any)
         .upsert(rows as any, { onConflict: 'ip,source_node' })
       if (latErr) console.error('ip_latency_matrix upsert error:', latErr.message)
+    }
+  }
+
+  // 4d. P2b:每节点/每终端流量回灌。agent syncer 批次带 hourly_xray_traffic:
+  //     [{ hour_start, scope('inbound'|'user'), tag(inbound_tag|email), uplink_bytes, downlink_bytes }]。
+  //     映射 inbound_tag/email → node_id 后 upsert node_traffic_stat(PK=node_id,email,bucket_hour)。
+  //     ⚠️ 用「覆盖」而非「累加」:agent 只发已完成整点小时桶(值稳定),失败重试用新 batch_id
+  //     重发同批小时、绕过上面的 batch_id 幂等守卫——覆盖天然幂等,累加会翻倍。见 51 §12.2。
+  //     不带 / 无节点 / 全丢弃则 no-op;失败不阻断 sync 主流程(与 events 同策略)。
+  if (Array.isArray(hourly_xray_traffic) && hourly_xray_traffic.length > 0) {
+    try {
+      const { data: nodes } = await adminClient
+        .from('nodes')
+        .select('id, inbound_tag')
+        .eq('vps_instance_id', vpsId)
+      const nodeIds = (nodes || []).map((n: any) => n.id as string)
+
+      if (nodeIds.length > 0) {
+        const inboundTagToNode = new Map<string, string>()
+        for (const n of nodes as any[]) {
+          if (n.inbound_tag) inboundTagToNode.set(n.inbound_tag, n.id)
+        }
+
+        // email → node_id(仅本 VPS 名下节点的已登记终端)
+        const emailToNode = new Map<string, string>()
+        const { data: clientRows } = await adminClient
+          .from('node_clients')
+          .select('node_id, email')
+          .in('node_id', nodeIds)
+        for (const c of (clientRows || []) as any[]) {
+          if (c.email) emailToNode.set(c.email, c.node_id)
+        }
+
+        const { rows, skipped } = buildTrafficStatRows(
+          hourly_xray_traffic as HourlyXrayTraffic[],
+          { inboundTagToNode, emailToNode, nodeIds },
+        )
+        if (skipped > 0) {
+          console.warn(`node_traffic_stat: ${skipped} 行无法归属 node_id 已丢弃 (instance=${agent.instance_id})`)
+        }
+        if (rows.length > 0) {
+          const nowIso = new Date().toISOString()
+          const { error: trafficErr } = await adminClient
+            .from('node_traffic_stat' as any)
+            .upsert(
+              rows.map((r) => ({ ...r, updated_at: nowIso })) as any,
+              { onConflict: 'node_id,email,bucket_hour' },
+            )
+          if (trafficErr) console.error('node_traffic_stat upsert error:', trafficErr.message)
+        }
+      }
+    } catch (e) {
+      console.error('node_traffic_stat section error:', (e as Error).message)
     }
   }
 

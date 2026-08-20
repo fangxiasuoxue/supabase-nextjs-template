@@ -22,14 +22,21 @@ function verifyHmac(instanceId: string, timestamp: number, hmac: string): boolea
 interface AppliedItem {
   node_id?: string
   email?: string
-  state?: string // added | removed | unchanged | error
+  state?: string // added | removed | over_quota | unchanged | error
   error?: string
+}
+
+interface UsageItem {
+  node_id?: string
+  email?: string
+  used_bytes?: number // P2c:agent 本地账本回灌镜像(周期至今用量;非执行依据)
 }
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}))
   const { instance_id, timestamp, hmac } = body
   const applied: AppliedItem[] = Array.isArray(body?.applied) ? body.applied : []
+  const usage: UsageItem[] = Array.isArray(body?.usage) ? body.usage : []
   if (!instance_id || !timestamp || !hmac) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
@@ -66,6 +73,7 @@ export async function POST(request: NextRequest) {
       patch.last_reconcile_error = String(item.error ?? 'unknown').slice(0, 500)
       errors++
     } else {
+      // added/removed/over_quota 均为正常生效态(over_quota=因超额移除,非下发错误)
       patch.last_reconcile_error = null
     }
     const { error } = await admin
@@ -76,5 +84,19 @@ export async function POST(request: NextRequest) {
     if (!error) updated++
   }
 
-  return NextResponse.json({ ok: true, updated, errors })
+  // P2c:回灌 used_bytes 镜像(供后台展示/配额告警;执行依据是 agent 本地账本,非此列)。
+  let usageUpdated = 0
+  for (const item of usage) {
+    if (!item?.email || !item?.node_id) continue
+    if (!allowedNodeIds.has(item.node_id)) continue // 越权丢弃
+    if (typeof item.used_bytes !== 'number' || !Number.isFinite(item.used_bytes)) continue
+    const { error } = await admin
+      .from('node_clients')
+      .update({ used_bytes: Math.max(0, Math.trunc(item.used_bytes)) } as any)
+      .eq('node_id', item.node_id)
+      .eq('email', item.email)
+    if (!error) usageUpdated++
+  }
+
+  return NextResponse.json({ ok: true, updated, errors, usage_updated: usageUpdated })
 }
