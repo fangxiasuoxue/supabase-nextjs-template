@@ -202,6 +202,12 @@ export default function AdminNodesPage() {
                     </TableCell>
                     <TableCell className="text-right pr-8">
                       <div className="flex items-center justify-end gap-1">
+                        <Link href={`/app/admin/nodes/${node.id}/clients`}>
+                          <Button
+                            variant="ghost" size="sm"
+                            className="h-8 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-cyan-50 hover:text-cyan-700"
+                          >终端</Button>
+                        </Link>
                         <Button
                           variant="ghost" size="sm" disabled={busyId === node.id || node.status === 'deleted'}
                           onClick={() => handleRename(node)}

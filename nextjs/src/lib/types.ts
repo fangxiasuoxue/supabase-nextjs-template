@@ -14,6 +14,92 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_service_status: {
+        Row: {
+          account_id: string | null
+          checked_at: string
+          companion_project: string | null
+          detail: string | null
+          id: string
+          rate_limit_until: string | null
+          service: string
+          status: string | null
+          sub2api_acct: number | null
+        }
+        Insert: {
+          account_id?: string | null
+          checked_at?: string
+          companion_project?: string | null
+          detail?: string | null
+          id?: string
+          rate_limit_until?: string | null
+          service: string
+          status?: string | null
+          sub2api_acct?: number | null
+        }
+        Update: {
+          account_id?: string | null
+          checked_at?: string
+          companion_project?: string | null
+          detail?: string | null
+          id?: string
+          rate_limit_until?: string | null
+          service?: string
+          status?: string | null
+          sub2api_acct?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_service_status_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounts: {
+        Row: {
+          adspower_profile: string | null
+          creds_ref: string | null
+          email: string
+          gcp_project: string | null
+          id: string
+          kind: string | null
+          notes: string | null
+          role: string | null
+          service_account: string | null
+          synced_at: string
+          vps: string[] | null
+        }
+        Insert: {
+          adspower_profile?: string | null
+          creds_ref?: string | null
+          email: string
+          gcp_project?: string | null
+          id: string
+          kind?: string | null
+          notes?: string | null
+          role?: string | null
+          service_account?: string | null
+          synced_at?: string
+          vps?: string[] | null
+        }
+        Update: {
+          adspower_profile?: string | null
+          creds_ref?: string | null
+          email?: string
+          gcp_project?: string | null
+          id?: string
+          kind?: string | null
+          notes?: string | null
+          role?: string | null
+          service_account?: string | null
+          synced_at?: string
+          vps?: string[] | null
+        }
+        Relationships: []
+      }
       agent_events: {
         Row: {
           agent_time: string
@@ -489,9 +575,10 @@ export type Database = {
           http_port: number | null
           https_port: number | null
           id: number
-          ip: string
+          ip: string | null
           ip_version: string | null
           isp_name: string | null
+          label: string | null
           last_ip: string | null
           last_latency_ms: number | null
           last_speed_kbps: number | null
@@ -529,9 +616,10 @@ export type Database = {
           http_port?: number | null
           https_port?: number | null
           id?: never
-          ip: string
+          ip?: string | null
           ip_version?: string | null
           isp_name?: string | null
+          label?: string | null
           last_ip?: string | null
           last_latency_ms?: number | null
           last_speed_kbps?: number | null
@@ -569,9 +657,10 @@ export type Database = {
           http_port?: number | null
           https_port?: number | null
           id?: never
-          ip?: string
+          ip?: string | null
           ip_version?: string | null
           isp_name?: string | null
+          label?: string | null
           last_ip?: string | null
           last_latency_ms?: number | null
           last_speed_kbps?: number | null
@@ -593,6 +682,30 @@ export type Database = {
           source_url?: string | null
           status?: string | null
           type?: string | null
+        }
+        Relationships: []
+      }
+      ip_latency_matrix: {
+        Row: {
+          id: number
+          ip: string
+          latency_ms: number | null
+          source_node: string
+          tested_at: string
+        }
+        Insert: {
+          id?: number
+          ip: string
+          latency_ms?: number | null
+          source_node: string
+          tested_at?: string
+        }
+        Update: {
+          id?: number
+          ip?: string
+          latency_ms?: number | null
+          source_node?: string
+          tested_at?: string
         }
         Relationships: []
       }
@@ -673,6 +786,83 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      node_clients: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          cred_ref: string
+          email: string
+          enabled: boolean
+          expires_at: string | null
+          id: string
+          ip_limit: number | null
+          label: string | null
+          last_reconcile_error: string | null
+          last_reconciled_at: string | null
+          node_id: string
+          over_action: string
+          period_started_at: string | null
+          protocol: string
+          quota_bytes: number | null
+          quota_period: string
+          subscribe_token: string | null
+          updated_at: string
+          used_bytes: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          cred_ref: string
+          email: string
+          enabled?: boolean
+          expires_at?: string | null
+          id?: string
+          ip_limit?: number | null
+          label?: string | null
+          last_reconcile_error?: string | null
+          last_reconciled_at?: string | null
+          node_id: string
+          over_action?: string
+          period_started_at?: string | null
+          protocol?: string
+          quota_bytes?: number | null
+          quota_period?: string
+          subscribe_token?: string | null
+          updated_at?: string
+          used_bytes?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          cred_ref?: string
+          email?: string
+          enabled?: boolean
+          expires_at?: string | null
+          id?: string
+          ip_limit?: number | null
+          label?: string | null
+          last_reconcile_error?: string | null
+          last_reconciled_at?: string | null
+          node_id?: string
+          over_action?: string
+          period_started_at?: string | null
+          protocol?: string
+          quota_bytes?: number | null
+          quota_period?: string
+          subscribe_token?: string | null
+          updated_at?: string
+          used_bytes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "node_clients_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       node_deployments: {
         Row: {
@@ -798,6 +988,41 @@ export type Database = {
         }
         Relationships: []
       }
+      node_traffic_stat: {
+        Row: {
+          bucket_hour: string
+          downlink_bytes: number
+          email: string
+          node_id: string
+          updated_at: string
+          uplink_bytes: number
+        }
+        Insert: {
+          bucket_hour: string
+          downlink_bytes?: number
+          email?: string
+          node_id: string
+          updated_at?: string
+          uplink_bytes?: number
+        }
+        Update: {
+          bucket_hour?: string
+          downlink_bytes?: number
+          email?: string
+          node_id?: string
+          updated_at?: string
+          uplink_bytes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "node_traffic_stat_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nodes: {
         Row: {
           config_hash: string | null
@@ -810,12 +1035,13 @@ export type Database = {
           ip_resource_ids: string[] | null
           last_deployed_at: string | null
           name: string
+          node_quota_bytes: number | null
           order_id: string | null
           outbound_strategy: string
           port: number
           profile_id: string | null
           protocol: string
-          public_ip: unknown
+          public_ip: string | null
           remark: string | null
           status: string | null
           subscribe_token: string | null
@@ -834,12 +1060,13 @@ export type Database = {
           ip_resource_ids?: string[] | null
           last_deployed_at?: string | null
           name: string
+          node_quota_bytes?: number | null
           order_id?: string | null
           outbound_strategy?: string
           port: number
           profile_id?: string | null
           protocol: string
-          public_ip?: unknown
+          public_ip?: string | null
           remark?: string | null
           status?: string | null
           subscribe_token?: string | null
@@ -858,12 +1085,13 @@ export type Database = {
           ip_resource_ids?: string[] | null
           last_deployed_at?: string | null
           name?: string
+          node_quota_bytes?: number | null
           order_id?: string | null
           outbound_strategy?: string
           port?: number
           profile_id?: string | null
           protocol?: string
-          public_ip?: unknown
+          public_ip?: string | null
           remark?: string | null
           status?: string | null
           subscribe_token?: string | null
@@ -994,6 +1222,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      phones: {
+        Row: {
+          account: string | null
+          balance_code: string | null
+          carrier: string | null
+          cost: number | null
+          created_at: string
+          die_date: string | null
+          id: string
+          location: string | null
+          name_label: string | null
+          phone: string
+          source: string | null
+          updated_at: string
+        }
+        Insert: {
+          account?: string | null
+          balance_code?: string | null
+          carrier?: string | null
+          cost?: number | null
+          created_at?: string
+          die_date?: string | null
+          id?: string
+          location?: string | null
+          name_label?: string | null
+          phone: string
+          source?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account?: string | null
+          balance_code?: string | null
+          carrier?: string | null
+          cost?: number | null
+          created_at?: string
+          die_date?: string | null
+          id?: string
+          location?: string | null
+          name_label?: string | null
+          phone?: string
+          source?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       proxy_test_results: {
         Row: {
@@ -1221,6 +1494,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      subscription_bundles: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string | null
+          token: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          token: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          token?: string
+        }
+        Relationships: []
       }
       system_configs: {
         Row: {
@@ -1646,6 +1940,33 @@ export type Database = {
         Relationships: []
       }
       vps_metrics_2026_04: {
+        Row: {
+          cpu_percent: number | null
+          disk_percent: number | null
+          id: number
+          instance_id: string
+          mem_percent: number | null
+          recorded_at: string
+        }
+        Insert: {
+          cpu_percent?: number | null
+          disk_percent?: number | null
+          id?: number
+          instance_id: string
+          mem_percent?: number | null
+          recorded_at?: string
+        }
+        Update: {
+          cpu_percent?: number | null
+          disk_percent?: number | null
+          id?: number
+          instance_id?: string
+          mem_percent?: number | null
+          recorded_at?: string
+        }
+        Relationships: []
+      }
+      vps_metrics_default: {
         Row: {
           cpu_percent: number | null
           disk_percent: number | null
