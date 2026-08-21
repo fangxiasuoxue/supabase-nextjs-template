@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback, use as usePromise } from 'react'
 import { toast } from 'sonner'
-import { Loader2, Plus, Trash2, Copy, ArrowLeft, RotateCcw, Gauge, CalendarClock } from 'lucide-react'
+import { Loader2, Plus, Trash2, Copy, ArrowLeft, RotateCcw, Gauge, CalendarClock, Link as LinkIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import Link from 'next/link'
@@ -27,6 +27,7 @@ interface Seat {
   over_action: string | null
   period_started_at: string | null
   used_bytes: number | null
+  vless_url: string | null
   created_at: string
 }
 
@@ -195,6 +196,12 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
     toast.success('订阅链接已复制')
   }
 
+  const copyVless = (url: string | null) => {
+    if (!url) return toast.error('无 vless 链接(节点 base 配置未就绪)')
+    navigator.clipboard.writeText(url)
+    toast.success('vless 链接已复制')
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
@@ -299,9 +306,15 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
                       : <span className="text-muted-foreground">待下发</span>}
                 </TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="sm" onClick={() => copySubUrl(s.subscribe_token)}>
-                    <Copy className="w-3 h-3 mr-1" />复制
-                  </Button>
+                  <div className="flex flex-col gap-0.5">
+                    <Button variant="ghost" size="sm" className="h-6 justify-start" onClick={() => copySubUrl(s.subscribe_token)}>
+                      <Copy className="w-3 h-3 mr-1" />订阅
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-6 justify-start" disabled={!s.vless_url}
+                      title={s.vless_url ?? '节点 base 配置未就绪'} onClick={() => copyVless(s.vless_url)}>
+                      <LinkIcon className="w-3 h-3 mr-1" />vless
+                    </Button>
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center">

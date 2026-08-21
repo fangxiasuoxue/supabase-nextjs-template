@@ -17,6 +17,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
+import { swapVlessUuid, extractBaseShareLink } from '@/lib/clients/node-client-admin'
 
 export async function GET(
   _request: NextRequest,
@@ -42,7 +43,7 @@ export async function GET(
     return new NextResponse('Not Found', { status: 404 })
   }
 
-  // 2) 取该 node 最新一次带 rendered_config 的部署快照(订阅内容来源)
+  // 2) 取该 node 最新一次带 rendered_config 的部署快照(base share link 来源)
   const { data: deployment } = await admin
     .from('node_deployments')
     .select('rendered_config, status, created_at')
@@ -52,11 +53,37 @@ export async function GET(
     .limit(1)
     .maybeSingle()
 
-  // 3) 从 rendered_config 中提取订阅内容(通常为 base64 的 share link 列表)。
-  //    格式尚未在跨仓库侧最终确定,这里只做保守提取:
-  //      - 字符串   → 直接作为订阅正文
-  //      - 对象含 subscription / content / share_links 字段 → 取之
-  //    提取不到任何内容时,进入优雅降级(空订阅)。
+  // 3) 节点级订阅 = 该 node 全部启用终端(seat)的合集(每个换自己的 uuid,复用节点 reality 参数)。
+  //    含所有 user 用户 → 一个节点订阅地址导入即得该节点下全部名额。见 docs/current/51 §11.4。
+  const base = extractBaseShareLink(deployment?.rendered_config)
+  if (base) {
+    const { data: clients } = await admin
+      .from('node_clients')
+      .select('email, cred_ref, label, enabled')
+      .eq('node_id', node.id)
+      .eq('enabled', true)
+      .order('created_at', { ascending: true })
+
+    const links: string[] = []
+    for (const c of (clients ?? []) as any[]) {
+      if (!c.cred_ref) continue
+      try {
+        links.push(swapVlessUuid(base, c.cred_ref, c.label || c.email))
+      } catch {
+        /* 跳过无法生成的 */
+      }
+    }
+    // 无终端时退化为节点自身 base 链接(匿名),使订阅不为空
+    if (links.length === 0) links.push(base)
+
+    const body = Buffer.from(links.join('\n'), 'utf-8').toString('base64')
+    return new NextResponse(body, {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+    })
+  }
+
+  // 4) base link 取不到 → 回退到 rendered_config 原始订阅正文(保守提取)。
   const subscriptionBody = extractSubscription(deployment?.rendered_config)
 
   if (subscriptionBody != null && subscriptionBody.length > 0) {

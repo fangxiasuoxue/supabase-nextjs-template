@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomBytes, randomUUID } from 'crypto'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { createSSRClient } from '@/lib/supabase/server'
-import { nodeSlug, buildSeatEmail } from '@/lib/clients/node-client-admin'
+import { nodeSlug, buildSeatEmail, swapVlessUuid, extractBaseShareLink } from '@/lib/clients/node-client-admin'
 
 // 终端(seat)管理:某 node 下的名额列表 / 批量发名额。
 // 设计依据:docs/current/51 §11.4。权限门 admin/ops(同其它 admin 路由)。
@@ -18,7 +18,9 @@ async function requireOps(): Promise<{ user: any } | { error: NextResponse }> {
   return { user }
 }
 
-// GET /api/v1/admin/nodes/[id]/clients — 列出该 node 的终端(不回 cred 明文)。
+// GET /api/v1/admin/nodes/[id]/clients — 列出该 node 的终端。
+// 返回每终端的 vless_url(直接连接链接;admin 管理需要,uuid 本就是 vless 链接必含的凭据)。
+// cred_ref 仅服务端用于拼 vless_url,不作为独立字段返回。
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const gate = await requireOps()
   if ('error' in gate) return gate.error
@@ -26,11 +28,39 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   const admin = await createServerAdminClient()
   const { data, error } = await admin
     .from('node_clients')
-    .select('id, node_id, email, protocol, label, enabled, expires_at, ip_limit, subscribe_token, last_reconciled_at, last_reconcile_error, quota_bytes, quota_period, over_action, period_started_at, used_bytes, created_at')
+    .select('id, node_id, email, protocol, label, enabled, expires_at, ip_limit, subscribe_token, last_reconciled_at, last_reconcile_error, quota_bytes, quota_period, over_action, period_started_at, used_bytes, cred_ref, created_at')
     .eq('node_id', id)
     .order('created_at', { ascending: true })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ clients: data ?? [] })
+
+  // 取该 node 最新 rendered_config 的 base vless 链接,给每终端换 uuid 生成 vless_url。
+  const base = await fetchNodeBaseLink(admin, id)
+  const clients = (data ?? []).map((c: any) => {
+    const { cred_ref, ...rest } = c
+    let vless_url: string | null = null
+    if (base && cred_ref) {
+      try {
+        vless_url = swapVlessUuid(base, cred_ref, c.label || c.email)
+      } catch {
+        vless_url = null
+      }
+    }
+    return { ...rest, vless_url }
+  })
+  return NextResponse.json({ clients })
+}
+
+// 取某 node 最新带 rendered_config 部署里的 base vless 链接(容错;取不到返回 null)。
+async function fetchNodeBaseLink(admin: any, nodeId: string): Promise<string | null> {
+  const { data } = await admin
+    .from('node_deployments')
+    .select('rendered_config, created_at')
+    .eq('node_id', nodeId)
+    .not('rendered_config', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return extractBaseShareLink(data?.rendered_config)
 }
 
 // POST /api/v1/admin/nodes/[id]/clients — 批量发 N 个名额(默认 1)。
