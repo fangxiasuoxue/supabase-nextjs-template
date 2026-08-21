@@ -1,0 +1,130 @@
+'use client'
+
+// 资源授权按钮 + 内联弹窗:把 node / node_client 授权给用户(admin 用)。
+// 见 docs/current/53。资源类型 node=节点管理员、node_client=端用户(只看自己 seat)。
+
+import { useState } from 'react'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { UserPlus, X, Loader2, Trash2 } from 'lucide-react'
+
+interface Assignment { id: string; user_id: string; email: string | null }
+interface UserLite { id: string; email: string; role: string | null }
+
+export function AssignButton({
+  resourceType,
+  resourceId,
+  title,
+  compact,
+}: {
+  resourceType: 'node' | 'node_client'
+  resourceId: string
+  title: string
+  compact?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const [users, setUsers] = useState<UserLite[]>([])
+  const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [sel, setSel] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const loadAll = async () => {
+    setBusy(true)
+    try {
+      const [ur, ar] = await Promise.all([
+        fetch('/api/users/list').then((r) => r.json()),
+        fetch(`/api/v1/admin/assign?resource_type=${resourceType}&resource_id=${resourceId}`).then((r) => r.json()),
+      ])
+      if (ur?.error) throw new Error(ur.error)
+      if (ar?.error) throw new Error(ar.error)
+      setUsers(ur.users ?? [])
+      setAssignments(ar.assignments ?? [])
+    } catch (e: any) {
+      toast.error(e.message || '加载失败')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const openModal = () => { setOpen(true); loadAll() }
+
+  const assign = async () => {
+    if (!sel) return toast.error('先选一个用户')
+    setBusy(true)
+    try {
+      const r = await fetch('/api/v1/admin/assign', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resource_type: resourceType, resource_id: resourceId, user_id: sel }),
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j?.error || '授权失败')
+      toast.success('已授权')
+      setSel('')
+      loadAll()
+    } catch (e: any) { toast.error(e.message) } finally { setBusy(false) }
+  }
+
+  const revoke = async (userId: string) => {
+    setBusy(true)
+    try {
+      const r = await fetch(`/api/v1/admin/assign?resource_type=${resourceType}&resource_id=${resourceId}&user_id=${userId}`, { method: 'DELETE' })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j?.error || '撤销失败')
+      toast.success('已撤销')
+      loadAll()
+    } catch (e: any) { toast.error(e.message) } finally { setBusy(false) }
+  }
+
+  const assignedIds = new Set(assignments.map((a) => a.user_id))
+  const pickable = users.filter((u) => !assignedIds.has(u.id))
+
+  return (
+    <>
+      <Button variant="ghost" size="sm" className={compact ? 'h-6 justify-start' : ''} onClick={openModal}>
+        <UserPlus className="w-3 h-3 mr-1" />授权
+      </Button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
+          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-semibold">{title}</h3>
+              <button onClick={() => setOpen(false)}><X className="w-4 h-4 text-muted-foreground" /></button>
+            </div>
+
+            <div className="mb-3">
+              <div className="mb-1 text-xs text-muted-foreground">已授权用户</div>
+              {assignments.length === 0 ? (
+                <div className="text-xs text-muted-foreground py-1">暂无</div>
+              ) : (
+                <div className="space-y-1">
+                  {assignments.map((a) => (
+                    <div key={a.id} className="flex items-center justify-between rounded border px-2 py-1 text-xs">
+                      <span className="font-mono">{a.email ?? a.user_id}</span>
+                      <button onClick={() => revoke(a.user_id)} disabled={busy}><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <select value={sel} onChange={(e) => setSel(e.target.value)} className="flex-1 rounded border px-2 py-1 text-sm">
+                <option value="">选择用户…</option>
+                {pickable.map((u) => (
+                  <option key={u.id} value={u.id}>{u.email}{u.role ? ` (${u.role})` : ''}</option>
+                ))}
+              </select>
+              <Button size="sm" onClick={assign} disabled={busy || !sel}>
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : '授权'}
+              </Button>
+            </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              {resourceType === 'node' ? '被授权用户(角色 user)登录后只看/管这个节点及其终端。' : '被授权用户登录后只看这个终端的订阅/二维码。'}
+              作用域生效见 SDD 53(增量2)。
+            </p>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}

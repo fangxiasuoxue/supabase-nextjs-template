@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import Link from 'next/link'
 import { formatBytes, quotaLevel, quotaPercent, type QuotaLevel } from '@/lib/traffic/quota-format'
+import { AssignButton } from '@/components/admin/AssignButton'
 
 interface Seat {
   id: string
@@ -284,6 +285,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
           <Button variant="ghost" size="sm" className="h-6 px-1" title="设节点到期" onClick={editNodeExpiry}><CalendarClock className="w-3 h-3" /></Button>
         </div>
         <span className="text-[11px] text-muted-foreground">命中(超总流量池 / 到期)→ 本节点全部终端下轮断开</span>
+        <div className="ml-auto"><AssignButton resourceType="node" resourceId={id} title="授权本节点给用户(节点管理员)" /></div>
       </div>
 
       {/* 发名额 */}
@@ -402,6 +404,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center">
+                    <AssignButton resourceType="node_client" resourceId={s.id} title={`授权终端 ${s.email} 给用户`} compact />
                     {s.quota_bytes != null && (
                       <Button variant="ghost" size="sm" title="重置配额周期(used 归零)" onClick={() => rollPeriod(s)}>
                         <RotateCcw className="w-4 h-4 text-blue-500" />

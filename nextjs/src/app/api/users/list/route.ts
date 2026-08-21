@@ -22,10 +22,12 @@ export async function GET() {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  // 3) 通过校验后才用 service_role 列用户
+  // 3) 通过校验后才用 service_role 列用户 + 附角色(供授权选择器展示/筛选)
   const admin = await createServerAdminClient()
   const { data, error } = await admin.auth.admin.listUsers({})
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  const users = (data?.users || []).map((u: any) => ({ id: u.id, email: u.email }))
+  const { data: roles } = await admin.from('user_roles').select('user_id, role')
+  const roleById = new Map((roles || []).map((r: any) => [r.user_id, r.role]))
+  const users = (data?.users || []).map((u: any) => ({ id: u.id, email: u.email, role: roleById.get(u.id) ?? null }))
   return NextResponse.json({ users })
 }
