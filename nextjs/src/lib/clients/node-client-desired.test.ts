@@ -73,3 +73,28 @@ test('buildDesiredResponse: 全集下发,顺序保持', () => {
   assert.equal(res.clients[1].enrolled, false) // 到期
   assert.equal(res.clients[1].email, 'acme-user02@node')
 })
+
+test('toDesiredClient: 节点级门命中 → 强制离册(enrolled=false)', () => {
+  const row = { ...baseRow, node_id: 'node-gated', enabled: true, expires_at: null }
+  const gated = new Set(['node-gated'])
+  const d = toDesiredClient(row, new Map(), NOW, gated)
+  assert.equal(d.enrolled, false)
+})
+
+test('toDesiredClient: 节点未命中门 → 正常在册', () => {
+  const row = { ...baseRow, node_id: 'node-ok', enabled: true, expires_at: null }
+  const d = toDesiredClient(row, new Map(), NOW, new Set(['other-node']))
+  assert.equal(d.enrolled, true)
+})
+
+test('buildDesiredResponse: gatedNodeIds 施加到该节点全部终端', () => {
+  const rows = [
+    { ...baseRow, node_id: 'n1', email: 'a@n' },
+    { ...baseRow, node_id: 'n1', email: 'b@n' },
+    { ...baseRow, node_id: 'n2', email: 'c@n' },
+  ]
+  const res = buildDesiredResponse(rows as any, new Map(), NOW, new Set(['n1']))
+  assert.equal(res.clients.find((c) => c.email === 'a@n')!.enrolled, false)
+  assert.equal(res.clients.find((c) => c.email === 'b@n')!.enrolled, false)
+  assert.equal(res.clients.find((c) => c.email === 'c@n')!.enrolled, true)
+})

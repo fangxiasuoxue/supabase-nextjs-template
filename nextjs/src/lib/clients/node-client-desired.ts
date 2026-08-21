@@ -49,12 +49,15 @@ export function isClientEnrolled(
   return nowSec < Math.floor(exp / 1000)
 }
 
-/** DB 行 → 下发 wire 对象。inboundTagByNode:node_id → inbound_tag。 */
+/** DB 行 → 下发 wire 对象。inboundTagByNode:node_id → inbound_tag。
+ *  gatedNodeIds:节点级总门命中的 node(到期/总配额超限)→ 该节点全部终端强制离册(enrolled=false)。 */
 export function toDesiredClient(
   row: NodeClientRow,
   inboundTagByNode: Map<string, string | null>,
   nowSec: number,
+  gatedNodeIds?: Set<string>,
 ): DesiredClient {
+  const nodeGated = gatedNodeIds?.has(row.node_id) ?? false
   return {
     node_id: row.node_id,
     inbound_tag: inboundTagByNode.get(row.node_id) ?? null,
@@ -64,7 +67,7 @@ export function toDesiredClient(
     enabled: row.enabled,
     expires_at: row.expires_at,
     ip_limit: row.ip_limit,
-    enrolled: isClientEnrolled(row, nowSec),
+    enrolled: isClientEnrolled(row, nowSec) && !nodeGated,
     quota_bytes: row.quota_bytes ?? null,
     quota_period: row.quota_period ?? null,
     period_started_at: row.period_started_at ?? null,
@@ -72,11 +75,12 @@ export function toDesiredClient(
   }
 }
 
-/** 组装完整下发响应(全集;agent 自行 reconcile)。 */
+/** 组装完整下发响应(全集;agent 自行 reconcile)。gatedNodeIds 见 toDesiredClient。 */
 export function buildDesiredResponse(
   rows: NodeClientRow[],
   inboundTagByNode: Map<string, string | null>,
   nowSec: number,
+  gatedNodeIds?: Set<string>,
 ): DesiredResponse {
-  return { clients: rows.map((r) => toDesiredClient(r, inboundTagByNode, nowSec)) }
+  return { clients: rows.map((r) => toDesiredClient(r, inboundTagByNode, nowSec, gatedNodeIds)) }
 }

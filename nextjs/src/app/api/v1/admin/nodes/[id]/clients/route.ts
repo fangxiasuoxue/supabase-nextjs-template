@@ -33,6 +33,13 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     .order('created_at', { ascending: true })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // 节点级总控制字段(供页面显示/编辑)
+  const { data: nodeMeta } = await admin
+    .from('nodes')
+    .select('node_quota_bytes, node_expires_at')
+    .eq('id', id)
+    .maybeSingle()
+
   // 取该 node 最新 rendered_config 的 base vless 链接,给每终端换 uuid 生成 vless_url。
   const base = await fetchNodeBaseLink(admin, id)
   const clients = (data ?? []).map((c: any) => {
@@ -47,7 +54,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     }
     return { ...rest, vless_url }
   })
-  return NextResponse.json({ clients })
+  return NextResponse.json({ clients, node: nodeMeta ?? null })
 }
 
 // 取某 node 最新带 rendered_config 部署里的 base vless 链接(容错;取不到返回 null)。
@@ -64,7 +71,8 @@ async function fetchNodeBaseLink(admin: any, nodeId: string): Promise<string | n
 }
 
 // POST /api/v1/admin/nodes/[id]/clients — 批量发 N 个名额(默认 1)。
-// body: { count?, label?, expires_at?, ip_limit? }
+// body: { count?, label?, expires_at?, ip_limit?, quota_bytes? }
+// 批量时 expires_at/quota_bytes 对本批全部名额施加同一到期与同一配额。
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const gate = await requireOps()
   if ('error' in gate) return gate.error
@@ -75,6 +83,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const expiresAt: string | null = body?.expires_at ? String(body.expires_at) : null
   const ipLimit: number | null =
     body?.ip_limit === undefined || body?.ip_limit === null ? null : Math.max(0, parseInt(body.ip_limit, 10) || 0)
+  const quotaBytes: number | null =
+    body?.quota_bytes === undefined || body?.quota_bytes === null || Number(body.quota_bytes) <= 0
+      ? null
+      : Math.trunc(Number(body.quota_bytes))
 
   const admin = await createServerAdminClient()
 
@@ -101,6 +113,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       enabled: true,
       expires_at: expiresAt,
       ip_limit: ipLimit,
+      quota_bytes: quotaBytes,
+      period_started_at: quotaBytes != null ? new Date().toISOString() : null,
       subscribe_token: randomBytes(24).toString('hex'), // 48 hex = 192bit
       created_by: gate.user.id,
     }

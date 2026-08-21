@@ -49,11 +49,30 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   const { id } = await ctx.params
   const body = await req.json().catch(() => ({}))
 
-  const s = sanitizeNodeUpdate(body)
-  if ('error' in s) return NextResponse.json({ error: s.error }, { status: 400 })
+  // 节点级总控制(数值/可空,不走字符串 sanitizer):node_quota_bytes(总流量池)、node_expires_at(节点到期)。
+  const { node_quota_bytes, node_expires_at, ...rest } = body ?? {}
+  const patch: Record<string, unknown> = {}
+  if (node_quota_bytes !== undefined) {
+    if (node_quota_bytes === null || Number(node_quota_bytes) <= 0) patch.node_quota_bytes = null
+    else {
+      const q = Number(node_quota_bytes)
+      if (!Number.isFinite(q)) return NextResponse.json({ error: 'node_quota_bytes 非法' }, { status: 400 })
+      patch.node_quota_bytes = Math.trunc(q)
+    }
+  }
+  if (node_expires_at !== undefined) {
+    patch.node_expires_at = node_expires_at === null || !String(node_expires_at).trim() ? null : String(node_expires_at)
+  }
+  // 其余字段(name 等)走原字符串 sanitizer
+  if (Object.keys(rest).length > 0) {
+    const s = sanitizeNodeUpdate(rest)
+    if ('error' in s) return NextResponse.json({ error: s.error }, { status: 400 })
+    Object.assign(patch, s.patch)
+  }
+  if (Object.keys(patch).length === 0) return NextResponse.json({ error: '无可更新字段' }, { status: 400 })
 
   const admin = await createServerAdminClient()
-  const { data, error } = await admin.from('nodes').update(s.patch as any).eq('id', id).select('id, name, status').maybeSingle()
+  const { data, error } = await admin.from('nodes').update(patch as any).eq('id', id).select('id, name, status').maybeSingle()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (!data) return NextResponse.json({ error: 'Node not found' }, { status: 404 })
   return NextResponse.json({ data })
