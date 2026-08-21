@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { buildTrafficStatRows, type HourlyXrayTraffic } from '@/lib/traffic/node-traffic-upsert'
+import { buildAccessStatRows, type AccessStatBucket } from '@/lib/traffic/access-ingest'
 import crypto from 'crypto'
 import { gunzipSync } from 'zlib'
 
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
   const body = await parseBody(request) as any
   const { agent, summary, batch_id, events, commands, config_snapshots, metrics, ip_latency } = body
   const hourly_xray_traffic = body.hourly_xray_traffic
+  const access_stats = body.access_stats
 
   if (!agent?.instance_id || !body.timestamp || !body.hmac || !batch_id) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -207,6 +209,46 @@ export async function POST(request: NextRequest) {
       }
     } catch (e) {
       console.error('node_traffic_stat section error:', (e as Error).message)
+    }
+  }
+
+  // 4e. P3:访问日志小时桶回灌。agent 批次带 access_stats:
+  //     [{ bucket_hour, email, domain, outbound_tag, hits, uniq_clients }]。
+  //     email→node_id(node_clients 反查)+ 单节点兜底,upsert node_access_stat(覆盖幂等,同 4d)。
+  //     失败不阻断 sync 主流程。
+  if (Array.isArray(access_stats) && access_stats.length > 0) {
+    try {
+      const { data: nodes } = await adminClient
+        .from('nodes')
+        .select('id')
+        .eq('vps_instance_id', vpsId)
+      const nodeIds = (nodes || []).map((n: any) => n.id as string)
+      if (nodeIds.length > 0) {
+        const emailToNode = new Map<string, string>()
+        const { data: clientRows } = await adminClient
+          .from('node_clients')
+          .select('node_id, email')
+          .in('node_id', nodeIds)
+        for (const c of (clientRows || []) as any[]) {
+          if (c.email) emailToNode.set(c.email, c.node_id)
+        }
+        const { rows, skipped } = buildAccessStatRows(access_stats as AccessStatBucket[], { emailToNode, nodeIds })
+        if (skipped > 0) {
+          console.warn(`node_access_stat: ${skipped} 桶无法归属 node_id 已丢弃 (instance=${agent.instance_id})`)
+        }
+        if (rows.length > 0) {
+          const nowIso = new Date().toISOString()
+          const { error: accessErr } = await adminClient
+            .from('node_access_stat' as any)
+            .upsert(
+              rows.map((r) => ({ ...r, updated_at: nowIso })) as any,
+              { onConflict: 'node_id,email,domain,outbound_tag,bucket_hour' },
+            )
+          if (accessErr) console.error('node_access_stat upsert error:', accessErr.message)
+        }
+      }
+    } catch (e) {
+      console.error('node_access_stat section error:', (e as Error).message)
     }
   }
 
