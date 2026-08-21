@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback, use as usePromise } from 'react'
 import { toast } from 'sonner'
-import { Loader2, Plus, Trash2, Copy, ArrowLeft, RotateCcw, Gauge } from 'lucide-react'
+import { Loader2, Plus, Trash2, Copy, ArrowLeft, RotateCcw, Gauge, CalendarClock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import Link from 'next/link'
@@ -153,6 +153,28 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
     toast.success('已滚动周期,used 归零')
   }
 
+  const editExpiry = async (s: Seat) => {
+    const cur = s.expires_at ? new Date(s.expires_at).toISOString().slice(0, 10) : ''
+    const input = prompt(
+      `设置 ${s.email} 到期(YYYY-MM-DD;或 +30 表示30天后;留空=不过期)。到期后 agent 下轮自动断开。`,
+      cur,
+    )
+    if (input === null) return
+    const t = input.trim()
+    let expires_at: string | null
+    if (!t) {
+      expires_at = null
+    } else if (/^\+\d+$/.test(t)) {
+      expires_at = new Date(Date.now() + parseInt(t.slice(1), 10) * 86400000).toISOString()
+    } else {
+      const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(t) ? `${t}T23:59:59Z` : t)
+      if (Number.isNaN(d.getTime())) return toast.error('日期格式无法识别(用 YYYY-MM-DD 或 +天数)')
+      expires_at = d.toISOString()
+    }
+    await patchSeat(s.id, { expires_at })
+    toast.success(expires_at ? `到期设为 ${new Date(expires_at).toLocaleString()}` : '已设为不过期')
+  }
+
   const deleteSeat = async (seatId: string, email: string) => {
     if (!confirm(`删除名额 ${email}?agent 下轮会移除其 xray user。`)) return
     try {
@@ -242,7 +264,18 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
                     {s.enabled ? '启用' : '停用'}
                   </Button>
                 </TableCell>
-                <TableCell className="text-xs">{s.expires_at ? new Date(s.expires_at).toLocaleString() : '不过期'}</TableCell>
+                <TableCell className="text-xs">
+                  <button
+                    className="inline-flex items-center gap-1 hover:underline"
+                    title="设置/修改到期(点击)"
+                    onClick={() => editExpiry(s)}
+                  >
+                    <CalendarClock className="w-3 h-3 text-muted-foreground" />
+                    {s.expires_at
+                      ? <span className={new Date(s.expires_at) < new Date() ? 'text-red-500' : ''}>{new Date(s.expires_at).toLocaleDateString()}</span>
+                      : <span className="text-muted-foreground">不过期</span>}
+                  </button>
+                </TableCell>
                 <TableCell className="text-xs">{s.ip_limit ?? '不限'}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
