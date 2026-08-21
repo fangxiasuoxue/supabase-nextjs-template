@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback, use as usePromise } from 'react'
 import { toast } from 'sonner'
-import { Loader2, Plus, Trash2, Copy, ArrowLeft, RotateCcw, Gauge, CalendarClock, Link as LinkIcon } from 'lucide-react'
+import { Loader2, Plus, Trash2, Copy, ArrowLeft, RotateCcw, Gauge, CalendarClock, Link as LinkIcon, QrCode } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import Link from 'next/link'
@@ -392,6 +392,11 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
                     <Button variant="ghost" size="sm" className="h-6 justify-start" disabled={!s.vless_url}
                       title={s.vless_url ?? '节点 base 配置未就绪'} onClick={() => copyVless(s.vless_url)}>
                       <LinkIcon className="w-3 h-3 mr-1" />vless
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-6 justify-start" disabled={!s.subscribe_token}
+                      title="打开客户二维码页(可发给客户)"
+                      onClick={() => s.subscribe_token && window.open(`/s/${s.subscribe_token}`, '_blank')}>
+                      <QrCode className="w-3 h-3 mr-1" />二维码
                     </Button>
                   </div>
                 </TableCell>
