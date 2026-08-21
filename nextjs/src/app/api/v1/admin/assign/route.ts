@@ -3,7 +3,7 @@ import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { createSSRClient } from '@/lib/supabase/server'
 
 // 资源授权(把 node / node_client 指派给用户)。仅 admin。
-// 设计依据:docs/current/53-node-rbac-reseller-sdd.md。归属真相 = resource_assignments。
+// 设计依据:docs/current/53-node-rbac-reseller-sdd.md。归属真相 = access_grants。
 // 授权本身不改数据面;作用域生效由各 admin 路由的 scope 判定承担(增量2)。
 
 const RESOURCE_TYPES = new Set(['node', 'node_client'])
@@ -30,8 +30,8 @@ export async function GET(req: NextRequest) {
   }
   const admin = await createServerAdminClient()
   const { data: rows, error } = await (admin as any)
-    .from('resource_assignments')
-    .select('id, user_id, assigned_by, created_at')
+    .from('access_grants')
+    .select('id, user_id, granted_by, created_at')
     .eq('resource_type', resourceType)
     .eq('resource_id', resourceId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   const admin = await createServerAdminClient()
   // 幂等:已存在则视为成功
   const { data: existing } = await (admin as any)
-    .from('resource_assignments')
+    .from('access_grants')
     .select('id')
     .eq('resource_type', resource_type)
     .eq('resource_id', resource_id)
@@ -64,8 +64,8 @@ export async function POST(req: NextRequest) {
   if (existing) return NextResponse.json({ ok: true, id: (existing as any).id, idempotent: true })
 
   const { data, error } = await (admin as any)
-    .from('resource_assignments')
-    .insert({ resource_type, resource_id, user_id, assigned_by: gate.user.id } as any)
+    .from('access_grants')
+    .insert({ resource_type, resource_id, user_id, granted_by: gate.user.id } as any)
     .select('id')
     .maybeSingle()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -85,7 +85,7 @@ export async function DELETE(req: NextRequest) {
   }
   const admin = await createServerAdminClient()
   const { error } = await (admin as any)
-    .from('resource_assignments')
+    .from('access_grants')
     .delete()
     .eq('resource_type', resource_type)
     .eq('resource_id', resource_id)
