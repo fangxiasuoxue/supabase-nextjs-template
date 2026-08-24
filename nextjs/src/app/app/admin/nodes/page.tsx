@@ -5,7 +5,7 @@ import { createSPASassClientAuthenticated } from '@/lib/supabase/client'
 import { NodeSubscriptionCard } from '@/components/admin/nodes/NodeSubscriptionCard'
 import { RegisterExistingNodeDialog } from '@/components/admin/nodes/RegisterExistingNodeDialog'
 import { toast } from 'sonner'
-import { Loader2, Network, Plus } from 'lucide-react'
+import { Loader2, Network, Plus, QrCode, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { checkIsAdmin, getUserPermissionsAction } from '@/app/actions/auth'
@@ -24,6 +24,16 @@ interface Node {
   created_at: string
 }
 
+// SDD 55 · P2a:端用户门户的 client(只回端用户字段,不含 node 拓扑)。
+interface MyClient {
+  id: string
+  label: string | null
+  email: string | null
+  enabled: boolean
+  expires_at: string | null
+  token: string | null
+}
+
 export default function AdminNodesPage() {
   const [nodes, setNodes] = useState<Node[]>([])
   const [loading, setLoading] = useState(true)
@@ -32,6 +42,10 @@ export default function AdminNodesPage() {
   // SDD 55 · P0:节点生命周期按钮(创建部署/部署历史/登记已有落地)仅 manage 可见。
   // canManage = admin ∨ 模块级 nodes.can_manage(与 AppLayout 同源判定)。
   const [canManage, setCanManage] = useState(false)
+  // SDD 55 · P2a:非 manage 用户走「端用户门户」——只看被授权给自己的 client。
+  const [roleResolved, setRoleResolved] = useState(false)
+  const [myClients, setMyClients] = useState<MyClient[]>([])
+  const [portalLoading, setPortalLoading] = useState(true)
 
   const fetchNodes = useCallback(async () => {
     try {
@@ -64,16 +78,24 @@ export default function AdminNodesPage() {
 
   useEffect(() => {
     (async () => {
+      let manage = false
       try {
         const [isAdmin, perms] = await Promise.all([
           checkIsAdmin(),
           getUserPermissionsAction(),
         ])
-        setCanManage(
-          isAdmin ||
-          (perms || []).some((p: any) => p.module === 'nodes' && p.can_manage),
-        )
-      } catch { setCanManage(false) }
+        manage = isAdmin || (perms || []).some((p: any) => p.module === 'nodes' && p.can_manage)
+      } catch { manage = false }
+      setCanManage(manage)
+      setRoleResolved(true)
+      // 非 manage → 端用户门户:取被授权给自己的 client。
+      if (!manage) {
+        try {
+          const r = await fetch('/api/v1/me/clients')
+          const j = await r.json()
+          if (r.ok) setMyClients(j.clients ?? [])
+        } catch { /* 空态兜底 */ } finally { setPortalLoading(false) }
+      }
     })()
   }, [])
 
@@ -118,6 +140,87 @@ export default function AdminNodesPage() {
       toast.success('删除任务已下发(suspended → 拆除后转 deleted)')
       fetchNodes()
     } catch (e: any) { toast.error(e.message) } finally { setBusyId(null) }
+  }
+
+  // 角色未定前先不渲染,避免管理员/端用户视图闪切。
+  if (!roleResolved) {
+    return (
+      <div className="flex items-center justify-center h-48 gap-3">
+        <Loader2 className="h-5 w-5 animate-spin text-cyan-600" />
+        <span className="text-[10px] uppercase tracking-widest text-muted-foreground animate-pulse">加载中...</span>
+      </div>
+    )
+  }
+
+  // SDD 55 · P2a:非 manage 用户 = 端用户门户,只看被授权给自己的 client。
+  if (!canManage) {
+    const seatStatus = (c: MyClient) => {
+      if (!c.enabled) return { text: '已停用', cls: 'text-slate-500 bg-slate-50 border-slate-200' }
+      if (c.expires_at && new Date(c.expires_at).getTime() < Date.now())
+        return { text: '已到期', cls: 'text-red-700 bg-red-50 border-red-200' }
+      return { text: '正常', cls: 'text-green-700 bg-green-50 border-green-200' }
+    }
+    return (
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div>
+          <div className="flex items-center gap-3 text-cyan-600 mb-1">
+            <QrCode className="h-4 w-4" />
+            <span className="text-[10px] uppercase tracking-[0.3em] font-black text-cyan-600">My Subscriptions</span>
+          </div>
+          <h2 className="text-3xl font-black tracking-tight">我的订阅</h2>
+          <p className="text-muted-foreground text-sm">你被授权的节点订阅;点「打开」查看二维码与链接,导入客户端即可用。</p>
+        </div>
+
+        {portalLoading ? (
+          <div className="flex items-center justify-center h-48 gap-3">
+            <Loader2 className="h-5 w-5 animate-spin text-cyan-600" />
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground animate-pulse">加载中...</span>
+          </div>
+        ) : myClients.length === 0 ? (
+          <div className="glass-card-premium rounded-[2.5rem] h-48 flex flex-col items-center justify-center gap-4 opacity-40">
+            <QrCode className="h-10 w-10" />
+            <span className="text-xs font-black uppercase tracking-widest">暂无授权订阅</span>
+            <span className="text-[11px] text-muted-foreground">请联系管理员为你分配节点终端</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {myClients.map((c) => {
+              const st = seatStatus(c)
+              return (
+                <div key={c.id} className="glass-card-premium rounded-[2rem] p-6 flex flex-col gap-4">
+                  <div className="flex items-start justify-between">
+                    <div className="min-w-0">
+                      <div className="font-black text-lg truncate">{c.label || c.email || '我的节点'}</div>
+                      {c.label && c.email && (
+                        <div className="tech-mono text-[11px] text-muted-foreground/60 truncate">{c.email}</div>
+                      )}
+                    </div>
+                    <span className={`inline-flex px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase tracking-widest ${st.cls}`}>
+                      {st.text}
+                    </span>
+                  </div>
+                  {c.expires_at && (
+                    <div className="text-[11px] text-muted-foreground/70">
+                      有效期至 {new Date(c.expires_at).toLocaleString('zh-CN')}
+                    </div>
+                  )}
+                  {c.token ? (
+                    <Link href={`/s/${c.token}`} target="_blank" className="mt-auto">
+                      <Button className="w-full rounded-xl h-10 text-xs font-black uppercase tracking-widest">
+                        <ExternalLink className="mr-2 h-3.5 w-3.5" />
+                        打开(二维码/链接)
+                      </Button>
+                    </Link>
+                  ) : (
+                    <div className="mt-auto text-[11px] text-muted-foreground/60">订阅未就绪,请稍后</div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
