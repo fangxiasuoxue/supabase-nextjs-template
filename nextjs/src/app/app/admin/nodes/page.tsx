@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { Loader2, Network, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { checkIsAdmin, getUserPermissionsAction } from '@/app/actions/auth'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
@@ -28,6 +29,9 @@ export default function AdminNodesPage() {
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [bundleToken, setBundleToken] = useState<string | null>(null)
+  // SDD 55 · P0:节点生命周期按钮(创建部署/部署历史/登记已有落地)仅 manage 可见。
+  // canManage = admin ∨ 模块级 nodes.can_manage(与 AppLayout 同源判定)。
+  const [canManage, setCanManage] = useState(false)
 
   const fetchNodes = useCallback(async () => {
     try {
@@ -57,6 +61,21 @@ export default function AdminNodesPage() {
   }, [])
 
   useEffect(() => { fetchNodes() }, [fetchNodes])
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [isAdmin, perms] = await Promise.all([
+          checkIsAdmin(),
+          getUserPermissionsAction(),
+        ])
+        setCanManage(
+          isAdmin ||
+          (perms || []).some((p: any) => p.module === 'nodes' && p.can_manage),
+        )
+      } catch { setCanManage(false) }
+    })()
+  }, [])
 
   const statusColor = (s: string) =>
     s === 'active' ? 'text-green-700 bg-green-50 border-green-200'
@@ -112,20 +131,22 @@ export default function AdminNodesPage() {
           <h2 className="text-3xl font-black tracking-tight">节点管理</h2>
           <p className="text-muted-foreground text-sm">管理所有已部署节点与订阅信息</p>
         </div>
-        <div className="flex gap-3">
-          <RegisterExistingNodeDialog onRegistered={fetchNodes} />
-          <Link href="/app/admin/nodes/deployments">
-            <Button variant="outline" className="border-slate-300 hover:bg-slate-50 rounded-xl h-10 text-xs font-black uppercase tracking-widest">
-              部署历史
-            </Button>
-          </Link>
-          <Link href="/app/admin/nodes/deploy">
-            <Button className="rounded-xl h-10 text-xs font-black uppercase tracking-widest">
-              <Plus className="mr-2 h-3.5 w-3.5" />
-              创建部署
-            </Button>
-          </Link>
-        </div>
+        {canManage && (
+          <div className="flex gap-3">
+            <RegisterExistingNodeDialog onRegistered={fetchNodes} />
+            <Link href="/app/admin/nodes/deployments">
+              <Button variant="outline" className="border-slate-300 hover:bg-slate-50 rounded-xl h-10 text-xs font-black uppercase tracking-widest">
+                部署历史
+              </Button>
+            </Link>
+            <Link href="/app/admin/nodes/deploy">
+              <Button className="rounded-xl h-10 text-xs font-black uppercase tracking-widest">
+                <Plus className="mr-2 h-3.5 w-3.5" />
+                创建部署
+              </Button>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* 聚合订阅:一个地址含所有 active 节点 */}
