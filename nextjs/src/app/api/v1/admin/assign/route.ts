@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   const admin = await createServerAdminClient()
   const { data: rows, error } = await (admin as any)
     .from('access_grants')
-    .select('id, user_id, granted_by, created_at')
+    .select('id, user_id, granted_by, created_at, level')
     .eq('resource_type', resourceType)
     .eq('resource_id', resourceId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -43,33 +43,48 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ assignments })
 }
 
-// POST /api/v1/admin/assign — body { resource_type, resource_id, user_id } → 授权(幂等)。
+// POST /api/v1/admin/assign — body { resource_type, resource_id, user_id, level? } → 授权。
+// SDD 55:level ∈ {read,write,manage};node_client 恒 'read'(端用户只读自己订阅);
+//         node 默认 'read',由 UI 显式选 write/manage。已存在则**更新为最新 level**(E12)。
+const LEVELS = new Set(['read', 'write', 'manage'])
 export async function POST(req: NextRequest) {
   const gate = await requireAdmin()
   if ('error' in gate) return gate.error
   const body = await req.json().catch(() => ({}))
-  const { resource_type, resource_id, user_id } = body
+  const { resource_type, resource_id, user_id, level: rawLevel } = body
   if (!RESOURCE_TYPES.has(resource_type) || !resource_id || !user_id) {
     return NextResponse.json({ error: '缺 resource_type/resource_id/user_id' }, { status: 400 })
   }
+  // level 归一:node_client 恒 read;node 取合法传入值,否则默认 read。
+  const level = resource_type === 'node_client'
+    ? 'read'
+    : (LEVELS.has(rawLevel) ? rawLevel : 'read')
+
   const admin = await createServerAdminClient()
-  // 幂等:已存在则视为成功
+  // 已存在 → 更新 level(允许改级/降级,覆盖为最新);否则插入。
   const { data: existing } = await (admin as any)
     .from('access_grants')
-    .select('id')
+    .select('id, level')
     .eq('resource_type', resource_type)
     .eq('resource_id', resource_id)
     .eq('user_id', user_id)
     .maybeSingle()
-  if (existing) return NextResponse.json({ ok: true, id: (existing as any).id, idempotent: true })
+  if (existing) {
+    if ((existing as any).level !== level) {
+      const { error: upErr } = await (admin as any)
+        .from('access_grants').update({ level } as any).eq('id', (existing as any).id)
+      if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 })
+    }
+    return NextResponse.json({ ok: true, id: (existing as any).id, level, updated: true })
+  }
 
   const { data, error } = await (admin as any)
     .from('access_grants')
-    .insert({ resource_type, resource_id, user_id, granted_by: gate.user.id } as any)
+    .insert({ resource_type, resource_id, user_id, level, granted_by: gate.user.id } as any)
     .select('id')
     .maybeSingle()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true, id: (data as any)?.id }, { status: 201 })
+  return NextResponse.json({ ok: true, id: (data as any)?.id, level }, { status: 201 })
 }
 
 // DELETE /api/v1/admin/assign?resource_type=&resource_id=&user_id= — 撤销授权。

@@ -8,8 +8,17 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { UserPlus, X, Loader2, Trash2 } from 'lucide-react'
 
-interface Assignment { id: string; user_id: string; email: string | null }
+interface Assignment { id: string; user_id: string; email: string | null; level?: string }
 interface UserLite { id: string; email: string; role: string | null }
+
+// SDD 55:node 授权分级。node_client 恒 read(端用户只读)。
+type Level = 'read' | 'write' | 'manage'
+const LEVEL_LABEL: Record<string, string> = { read: '只读', write: '运营', manage: '管理' }
+const LEVEL_HINT: Record<Level, string> = {
+  read: '只读:看节点与其终端',
+  write: '运营:管终端/发名额/加时长·流量(不碰节点生命周期)',
+  manage: '管理:含创建部署/删节点(受 VPS 授权约束)',
+}
 
 export function AssignButton({
   resourceType,
@@ -27,6 +36,7 @@ export function AssignButton({
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [sel, setSel] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
+  const [level, setLevel] = useState<Level>(resourceType === 'node' ? 'write' : 'read')
 
   const toggle = (uid: string) => setSel((prev) => {
     const n = new Set(prev)
@@ -62,7 +72,7 @@ export function AssignButton({
       const results = await Promise.all(ids.map((uid) =>
         fetch('/api/v1/admin/assign', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ resource_type: resourceType, resource_id: resourceId, user_id: uid }),
+          body: JSON.stringify({ resource_type: resourceType, resource_id: resourceId, user_id: uid, level }),
         }).then((r) => r.ok).catch(() => false),
       ))
       const ok = results.filter(Boolean).length
@@ -110,7 +120,14 @@ export function AssignButton({
                   {assignments.map((a) => (
                     <div key={a.id} className="flex items-center justify-between rounded border px-2 py-1 text-xs">
                       <span className="font-mono">{a.email ?? a.user_id}</span>
-                      <button onClick={() => revoke(a.user_id)} disabled={busy}><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
+                      <div className="flex items-center gap-2">
+                        {resourceType === 'node' && (
+                          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                            {LEVEL_LABEL[a.level ?? 'read']}
+                          </span>
+                        )}
+                        <button onClick={() => revoke(a.user_id)} disabled={busy}><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -137,14 +154,31 @@ export function AssignButton({
                 </label>
               ))}
             </div>
+            {resourceType === 'node' && (
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">授权级别</span>
+                <select
+                  value={level}
+                  onChange={(e) => setLevel(e.target.value as Level)}
+                  className="rounded border px-2 py-1 text-xs"
+                >
+                  <option value="read">只读</option>
+                  <option value="write">运营</option>
+                  <option value="manage">管理</option>
+                </select>
+                <span className="text-[10px] text-muted-foreground">{LEVEL_HINT[level]}</span>
+              </div>
+            )}
             <div className="mt-2 flex justify-end">
               <Button size="sm" onClick={assign} disabled={busy || sel.size === 0}>
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : `授权选中(${sel.size})`}
               </Button>
             </div>
             <p className="mt-2 text-[11px] text-muted-foreground">
-              {resourceType === 'node' ? '被授权用户(角色 user)登录后只看/管这个节点及其终端。' : '被授权用户登录后只看这个终端的订阅/二维码。'}
-              作用域生效见 SDD 53(增量2)。
+              {resourceType === 'node'
+                ? '被授权用户登录后只看/管这个节点及其终端;能做什么由上面的「授权级别」决定(可对已授权者重设级别=覆盖)。'
+                : '被授权用户登录后只看这个终端的订阅/二维码(端用户恒只读)。'}
+              作用域生效见 SDD 55。
             </p>
           </div>
         </div>
