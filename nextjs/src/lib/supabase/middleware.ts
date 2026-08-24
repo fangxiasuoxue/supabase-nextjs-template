@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { enforceAdminRouteAccess } from '@/lib/auth/adminRouteGuard'
 
 export async function updateSession(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
@@ -41,6 +42,15 @@ export async function updateSession(request: NextRequest) {
         url.pathname = '/auth/login'
         return NextResponse.redirect(url)
     }
+
+    // /app/admin/* 服务端路由门:隐藏菜单项 ≠ 拦访问,这里对直连 URL 做真正的授权
+    // 校验(deny-by-default)。无权访问 → 弹回 /app。详见 adminRouteGuard。
+    const adminGuardRedirect = await enforceAdminRouteAccess(
+        supabase,
+        request,
+        user?.user ?? null,
+    )
+    if (adminGuardRedirect) return adminGuardRedirect
 
     // IMPORTANT: You *must* return the supabaseResponse object as it is.
     // If you're creating a new response object with NextResponse.next() make sure to:
