@@ -1,20 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
-import { createSSRClient } from '@/lib/supabase/server'
+import { requireSeatAccess } from '@/lib/auth/resourceAccess'
 
-// 单个终端(seat)的启停 / 续期 / 限并发 / 删除。设计依据:docs/current/51 §11.4。
-// 删除是硬删:agent reconcile 据本地账本会把对应 xray user RemoveUser(§11.3)。
-
-async function requireOps(): Promise<{ user: any } | { error: NextResponse }> {
-  const authClient = await createSSRClient()
-  const { data: { user }, error } = await authClient.auth.getUser()
-  if (!user || error) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-  const { data: role } = await authClient.from('user_roles').select('role').eq('user_id', user.id).single()
-  if (!role || !['admin', 'ops'].includes((role as any).role)) {
-    return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-  }
-  return { user }
-}
+// 单个终端(seat)的启停 / 续期 / 限并发 / 删除。设计依据:docs/current/51 §11.4 · SDD 55 P2b。
+// 权限门:对该 seat 所属 node 有 write(admin/ops 旁路)。硬删见 §11.3(agent RemoveUser)。
 
 // PATCH /api/v1/admin/clients/[id]
 //   body: { enabled?, expires_at?, ip_limit?, label?,
@@ -26,9 +15,9 @@ const OVER_ACTIONS = new Set(['disable', 'throttle', 'alert'])
 const QUOTA_PERIODS = new Set(['monthly', 'custom'])
 
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const gate = await requireOps()
-  if ('error' in gate) return gate.error
   const { id } = await ctx.params
+  const gate = await requireSeatAccess(id, 'write')
+  if ('error' in gate) return gate.error
   const body = await req.json().catch(() => ({}))
 
   const patch: Record<string, any> = {}
@@ -84,9 +73,9 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 
 // DELETE /api/v1/admin/clients/[id] — 硬删名额(agent 下轮 reconcile 会 RemoveUser)。
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const gate = await requireOps()
-  if ('error' in gate) return gate.error
   const { id } = await ctx.params
+  const gate = await requireSeatAccess(id, 'write')
+  if ('error' in gate) return gate.error
   const admin = await createServerAdminClient()
   const { data, error } = await admin
     .from('node_clients')

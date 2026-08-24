@@ -1,4 +1,6 @@
+import { NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
+import { createSSRClient } from '@/lib/supabase/server'
 
 // ────────────────────────────────────────────────────────────────────────────
 // SDD 55 · P1b —— 资源级能力判定(access_grants + level)。
@@ -73,6 +75,46 @@ export async function hasResourceAccess(
     .maybeSingle()
   const lvl = (data as { level?: GrantLevel } | null)?.level
   return !!lvl && levelGte(lvl, minLevel)
+}
+
+// ── 路由门 ─────────────────────────────────────────────────────────────────
+// requireNodeAccess:替代各 node 相关 admin 路由的 requireOps —— admin/ops 旁路,
+// 否则要求登录用户对该 node 有 ≥ minLevel 的 access_grants(node)。per-node 判定。
+// 用法:const gate = await requireNodeAccess(nodeId, 'write'); if ('error' in gate) return gate.error
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function requireNodeAccess(
+  nodeId: string,
+  minLevel: GrantLevel,
+): Promise<{ user: { id: string } } | { error: NextResponse }> {
+  const authClient = await createSSRClient()
+  const { data: { user }, error } = await authClient.auth.getUser()
+  if (!user || error) {
+    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  }
+  // hasResourceAccess 内含 admin/ops 全局旁路。
+  if (await hasResourceAccess(user.id, 'node', nodeId, minLevel)) {
+    return { user: { id: user.id } }
+  }
+  return { error: NextResponse.json({ error: `Forbidden(需对该节点有 ${minLevel} 权限)` }, { status: 403 }) }
+}
+
+// requireSeatAccess:seat(node_client)操作路由用 —— 先查 seat 所属 node,再按 node 判级。
+export async function requireSeatAccess(
+  seatId: string,
+  minLevel: GrantLevel,
+): Promise<{ user: { id: string } } | { error: NextResponse }> {
+  const admin = await createServerAdminClient()
+  const { data: seat } = await admin
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .from('node_clients' as any)
+    .select('node_id')
+    .eq('id', seatId)
+    .maybeSingle()
+  const nodeId = (seat as { node_id?: string } | null)?.node_id
+  if (!nodeId) {
+    return { error: NextResponse.json({ error: 'Client not found' }, { status: 404 }) }
+  }
+  return requireNodeAccess(nodeId, minLevel)
 }
 
 /** 列出某用户被授权(≥ minLevel)的资源 id 集合,用于列表类过滤。 */

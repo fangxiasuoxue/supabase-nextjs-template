@@ -34,6 +34,17 @@ interface MyClient {
   token: string | null
 }
 
+// SDD 55 · P2b:二级代理被授权的 node + 级别。
+interface MyNode {
+  id: string
+  name: string | null
+  protocol: string | null
+  status: string
+  inbound_tag: string | null
+  created_at: string
+  level: 'read' | 'write' | 'manage'
+}
+
 export default function AdminNodesPage() {
   const [nodes, setNodes] = useState<Node[]>([])
   const [loading, setLoading] = useState(true)
@@ -45,6 +56,7 @@ export default function AdminNodesPage() {
   // SDD 55 · P2a:非 manage 用户走「端用户门户」——只看被授权给自己的 client。
   const [roleResolved, setRoleResolved] = useState(false)
   const [myClients, setMyClients] = useState<MyClient[]>([])
+  const [myNodes, setMyNodes] = useState<MyNode[]>([])
   const [portalLoading, setPortalLoading] = useState(true)
 
   const fetchNodes = useCallback(async () => {
@@ -88,12 +100,15 @@ export default function AdminNodesPage() {
       } catch { manage = false }
       setCanManage(manage)
       setRoleResolved(true)
-      // 非 manage → 端用户门户:取被授权给自己的 client。
+      // 非 manage → 取被授权给自己的 node(二级代理)+ client(端用户)。
       if (!manage) {
         try {
-          const r = await fetch('/api/v1/me/clients')
-          const j = await r.json()
-          if (r.ok) setMyClients(j.clients ?? [])
+          const [rn, rc] = await Promise.all([
+            fetch('/api/v1/me/nodes').then((r) => r.json()).catch(() => ({})),
+            fetch('/api/v1/me/clients').then((r) => r.json()).catch(() => ({})),
+          ])
+          setMyNodes(rn?.nodes ?? [])
+          setMyClients(rc?.clients ?? [])
         } catch { /* 空态兜底 */ } finally { setPortalLoading(false) }
       }
     })()
@@ -152,7 +167,7 @@ export default function AdminNodesPage() {
     )
   }
 
-  // SDD 55 · P2a:非 manage 用户 = 端用户门户,只看被授权给自己的 client。
+  // SDD 55 · P2a/P2b:非 manage 用户 —— 二级代理(我管理的节点)+ 端用户(我的订阅)。
   if (!canManage) {
     const seatStatus = (c: MyClient) => {
       if (!c.enabled) return { text: '已停用', cls: 'text-slate-500 bg-slate-50 border-slate-200' }
@@ -160,64 +175,109 @@ export default function AdminNodesPage() {
         return { text: '已到期', cls: 'text-red-700 bg-red-50 border-red-200' }
       return { text: '正常', cls: 'text-green-700 bg-green-50 border-green-200' }
     }
+    const levelLabel: Record<string, string> = { read: '只读', write: '运营', manage: '管理' }
+    const hasNodes = myNodes.length > 0
+    const hasClients = myClients.length > 0
     return (
-      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div>
-          <div className="flex items-center gap-3 text-cyan-600 mb-1">
-            <QrCode className="h-4 w-4" />
-            <span className="text-[10px] uppercase tracking-[0.3em] font-black text-cyan-600">My Subscriptions</span>
-          </div>
-          <h2 className="text-3xl font-black tracking-tight">我的订阅</h2>
-          <p className="text-muted-foreground text-sm">你被授权的节点订阅;点「打开」查看二维码与链接,导入客户端即可用。</p>
-        </div>
-
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {portalLoading ? (
           <div className="flex items-center justify-center h-48 gap-3">
             <Loader2 className="h-5 w-5 animate-spin text-cyan-600" />
             <span className="text-[10px] uppercase tracking-widest text-muted-foreground animate-pulse">加载中...</span>
           </div>
-        ) : myClients.length === 0 ? (
+        ) : (!hasNodes && !hasClients) ? (
           <div className="glass-card-premium rounded-[2.5rem] h-48 flex flex-col items-center justify-center gap-4 opacity-40">
             <QrCode className="h-10 w-10" />
-            <span className="text-xs font-black uppercase tracking-widest">暂无授权订阅</span>
-            <span className="text-[11px] text-muted-foreground">请联系管理员为你分配节点终端</span>
+            <span className="text-xs font-black uppercase tracking-widest">暂无授权</span>
+            <span className="text-[11px] text-muted-foreground">请联系管理员为你分配节点或终端</span>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {myClients.map((c) => {
-              const st = seatStatus(c)
-              return (
-                <div key={c.id} className="glass-card-premium rounded-[2rem] p-6 flex flex-col gap-4">
-                  <div className="flex items-start justify-between">
-                    <div className="min-w-0">
-                      <div className="font-black text-lg truncate">{c.label || c.email || '我的节点'}</div>
-                      {c.label && c.email && (
-                        <div className="tech-mono text-[11px] text-muted-foreground/60 truncate">{c.email}</div>
-                      )}
-                    </div>
-                    <span className={`inline-flex px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase tracking-widest ${st.cls}`}>
-                      {st.text}
-                    </span>
+          <>
+            {hasNodes && (
+              <section className="space-y-4">
+                <div>
+                  <div className="flex items-center gap-3 text-cyan-600 mb-1">
+                    <Network className="h-4 w-4" />
+                    <span className="text-[10px] uppercase tracking-[0.3em] font-black text-cyan-600">My Nodes</span>
                   </div>
-                  {c.expires_at && (
-                    <div className="text-[11px] text-muted-foreground/70">
-                      有效期至 {new Date(c.expires_at).toLocaleString('zh-CN')}
-                    </div>
-                  )}
-                  {c.token ? (
-                    <Link href={`/s/${c.token}`} target="_blank" className="mt-auto">
-                      <Button className="w-full rounded-xl h-10 text-xs font-black uppercase tracking-widest">
-                        <ExternalLink className="mr-2 h-3.5 w-3.5" />
-                        打开(二维码/链接)
-                      </Button>
-                    </Link>
-                  ) : (
-                    <div className="mt-auto text-[11px] text-muted-foreground/60">订阅未就绪,请稍后</div>
-                  )}
+                  <h2 className="text-3xl font-black tracking-tight">我管理的节点</h2>
+                  <p className="text-muted-foreground text-sm">你被授权管理的节点;点「管理终端」发名额/续期/配额(级别决定可做的操作)。</p>
                 </div>
-              )
-            })}
-          </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {myNodes.map((n) => (
+                    <div key={n.id} className="glass-card-premium rounded-[2rem] p-6 flex flex-col gap-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-black text-lg truncate">{n.name || n.inbound_tag || n.id.slice(0, 8)}</div>
+                          <div className="tech-mono text-[11px] text-muted-foreground/60 truncate">{n.protocol ?? '--'} · {n.inbound_tag ?? '--'}</div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className={`inline-flex px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase tracking-widest ${statusColor(n.status)}`}>
+                            {n.status}
+                          </span>
+                          <span className="rounded bg-cyan-50 border border-cyan-200 px-1.5 py-0.5 text-[10px] font-black text-cyan-700">{levelLabel[n.level]}</span>
+                        </div>
+                      </div>
+                      <Link href={`/app/admin/nodes/${n.id}/clients`} className="mt-auto">
+                        <Button className="w-full rounded-xl h-10 text-xs font-black uppercase tracking-widest">
+                          管理终端
+                          <ExternalLink className="ml-2 h-3.5 w-3.5" />
+                        </Button>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {hasClients && (
+              <section className="space-y-4">
+                <div>
+                  <div className="flex items-center gap-3 text-cyan-600 mb-1">
+                    <QrCode className="h-4 w-4" />
+                    <span className="text-[10px] uppercase tracking-[0.3em] font-black text-cyan-600">My Subscriptions</span>
+                  </div>
+                  <h2 className="text-3xl font-black tracking-tight">我的订阅</h2>
+                  <p className="text-muted-foreground text-sm">你被授权的节点订阅;点「打开」查看二维码与链接,导入客户端即可用。</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {myClients.map((c) => {
+                    const st = seatStatus(c)
+                    return (
+                      <div key={c.id} className="glass-card-premium rounded-[2rem] p-6 flex flex-col gap-4">
+                        <div className="flex items-start justify-between">
+                          <div className="min-w-0">
+                            <div className="font-black text-lg truncate">{c.label || c.email || '我的节点'}</div>
+                            {c.label && c.email && (
+                              <div className="tech-mono text-[11px] text-muted-foreground/60 truncate">{c.email}</div>
+                            )}
+                          </div>
+                          <span className={`inline-flex px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase tracking-widest ${st.cls}`}>
+                            {st.text}
+                          </span>
+                        </div>
+                        {c.expires_at && (
+                          <div className="text-[11px] text-muted-foreground/70">
+                            有效期至 {new Date(c.expires_at).toLocaleString('zh-CN')}
+                          </div>
+                        )}
+                        {c.token ? (
+                          <Link href={`/s/${c.token}`} target="_blank" className="mt-auto">
+                            <Button className="w-full rounded-xl h-10 text-xs font-black uppercase tracking-widest">
+                              <ExternalLink className="mr-2 h-3.5 w-3.5" />
+                              打开(二维码/链接)
+                            </Button>
+                          </Link>
+                        ) : (
+                          <div className="mt-auto text-[11px] text-muted-foreground/60">订阅未就绪,请稍后</div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+          </>
         )}
       </div>
     )

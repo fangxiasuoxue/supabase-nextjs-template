@@ -1,30 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomBytes, randomUUID } from 'crypto'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
-import { createSSRClient } from '@/lib/supabase/server'
+import { requireNodeAccess } from '@/lib/auth/resourceAccess'
 import { nodeSlug, buildSeatEmail, swapVlessUuid, extractBaseShareLink } from '@/lib/clients/node-client-admin'
 
 // 终端(seat)管理:某 node 下的名额列表 / 批量发名额。
-// 设计依据:docs/current/51 §11.4。权限门 admin/ops(同其它 admin 路由)。
-
-async function requireOps(): Promise<{ user: any } | { error: NextResponse }> {
-  const authClient = await createSSRClient()
-  const { data: { user }, error } = await authClient.auth.getUser()
-  if (!user || error) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-  const { data: role } = await authClient.from('user_roles').select('role').eq('user_id', user.id).single()
-  if (!role || !['admin', 'ops'].includes((role as any).role)) {
-    return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-  }
-  return { user }
-}
+// 设计依据:docs/current/51 §11.4 · SDD 55 P2b。
+// 权限门:GET=对该 node 有 read;POST(发名额)=对该 node 有 write。admin/ops 旁路。
 
 // GET /api/v1/admin/nodes/[id]/clients — 列出该 node 的终端。
 // 返回每终端的 vless_url(直接连接链接;admin 管理需要,uuid 本就是 vless 链接必含的凭据)。
 // cred_ref 仅服务端用于拼 vless_url,不作为独立字段返回。
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const gate = await requireOps()
-  if ('error' in gate) return gate.error
   const { id } = await ctx.params
+  const gate = await requireNodeAccess(id, 'read')
+  if ('error' in gate) return gate.error
   const admin = await createServerAdminClient()
   const { data, error } = await admin
     .from('node_clients')
@@ -74,9 +64,9 @@ async function fetchNodeBaseLink(admin: any, nodeId: string): Promise<string | n
 // body: { count?, label?, expires_at?, ip_limit?, quota_bytes? }
 // 批量时 expires_at/quota_bytes 对本批全部名额施加同一到期与同一配额。
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const gate = await requireOps()
-  if ('error' in gate) return gate.error
   const { id } = await ctx.params
+  const gate = await requireNodeAccess(id, 'write')
+  if ('error' in gate) return gate.error
   const body = await req.json().catch(() => ({}))
   const count = Math.min(Math.max(parseInt(body?.count ?? 1, 10) || 1, 1), 50) // 1..50 上限防误操作
   const label: string | null = body?.label ? String(body.label).slice(0, 200) : null

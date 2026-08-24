@@ -1,26 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
-import { createSSRClient } from '@/lib/supabase/server'
+import { requireNodeAccess } from '@/lib/auth/resourceAccess'
 import { sanitizeNodeUpdate, buildDeleteDeployment } from '@/lib/nodes/node-lifecycle'
 
-// 权限门:admin/ops。返回 user 或 null(已写好错误响应)。
-async function requireOps(): Promise<{ user: any } | { error: NextResponse }> {
-  const authClient = await createSSRClient()
-  const { data: { user }, error } = await authClient.auth.getUser()
-  if (!user || error) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-  const { data: role } = await authClient.from('user_roles').select('role').eq('user_id', user.id).single()
-  if (!role || !['admin', 'ops'].includes((role as any).role)) {
-    return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-  }
-  return { user }
-}
+// SDD 55 P2b/P2c 权限门:PATCH 节点级配额/到期=write、改名等元数据=manage;
+// DELETE 节点(生命周期)=manage。admin/ops 旁路。删节点护栏(有 seat / 无 VPS)见 P2c 前端。
 
 // DELETE /api/v1/admin/nodes/[id] — 下发删除:建 task_type=delete 部署 + node→suspended。
 // agent poller 会去机器上拆 inbound;成功后 result 路由把 node 置 deleted(见 node-lifecycle)。
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const gate = await requireOps()
-  if ('error' in gate) return gate.error
   const { id } = await ctx.params
+  const gate = await requireNodeAccess(id, 'manage')
+  if ('error' in gate) return gate.error
   const admin = await createServerAdminClient()
 
   const { data: node } = await admin.from('nodes').select('id, status').eq('id', id).maybeSingle()
@@ -44,13 +35,15 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
 
 // PATCH /api/v1/admin/nodes/[id] — 修改节点元数据(v1 仅白名单字段,见 node-lifecycle)。
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const gate = await requireOps()
-  if ('error' in gate) return gate.error
   const { id } = await ctx.params
   const body = await req.json().catch(() => ({}))
 
   // 节点级总控制(数值/可空,不走字符串 sanitizer):node_quota_bytes(总流量池)、node_expires_at(节点到期)。
   const { node_quota_bytes, node_expires_at, ...rest } = body ?? {}
+  // SDD 55:仅改节点级配额/到期=write;改名等元数据(rest,如 name)=manage(节点生命周期)。
+  const needsManage = Object.keys(rest).length > 0
+  const gate = await requireNodeAccess(id, needsManage ? 'manage' : 'write')
+  if ('error' in gate) return gate.error
   const patch: Record<string, unknown> = {}
   if (node_quota_bytes !== undefined) {
     if (node_quota_bytes === null || Number(node_quota_bytes) <= 0) patch.node_quota_bytes = null
