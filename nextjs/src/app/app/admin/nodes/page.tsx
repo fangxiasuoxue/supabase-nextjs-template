@@ -62,6 +62,8 @@ export default function AdminNodesPage() {
   // SDD 55 · P2c:门户内 manage 节点的生命周期护栏 —— 是否持有任一 VPS 授权。
   // 无 VPS → 「创建部署」置灰(R1)、删除节点强警告「无法重建」(R2)。
   const [hasVps, setHasVps] = useState(false)
+  // SDD 55 · P4/E6:端用户「我的合订阅」token(合并全部被授权 seat,客户导一次含全部)。
+  const [subBundleToken, setSubBundleToken] = useState<string | null>(null)
 
   const fetchNodes = useCallback(async () => {
     try {
@@ -95,14 +97,16 @@ export default function AdminNodesPage() {
   // 门户数据源(二级代理 node + 端用户 client + 自身 VPS 授权),可在删节点后复用刷新。
   const fetchPortal = useCallback(async () => {
     try {
-      const [rn, rc, rv] = await Promise.all([
+      const [rn, rc, rv, rb] = await Promise.all([
         fetch('/api/v1/me/nodes').then((r) => r.json()).catch(() => ({})),
         fetch('/api/v1/me/clients').then((r) => r.json()).catch(() => ({})),
         fetch('/api/v1/me/vps').then((r) => r.json()).catch(() => ({})),
+        fetch('/api/v1/me/sub-bundle').then((r) => r.json()).catch(() => ({})),
       ])
       setMyNodes(rn?.nodes ?? [])
       setMyClients(rc?.clients ?? [])
       setHasVps(!!rv?.hasVps)
+      setSubBundleToken(rb?.token ?? null)
     } catch { /* 空态兜底 */ } finally { setPortalLoading(false) }
   }, [])
 
@@ -307,6 +311,17 @@ export default function AdminNodesPage() {
                   <h2 className="text-3xl font-black tracking-tight">我的订阅</h2>
                   <p className="text-muted-foreground text-sm">你被授权的节点订阅;点「打开」查看二维码与链接,导入客户端即可用。</p>
                 </div>
+                {/* E6:多于 1 个终端时,给一个「合并订阅」——一次导入全部被授权终端。 */}
+                {subBundleToken && myClients.length > 1 && (
+                  <div className="max-w-md">
+                    <NodeSubscriptionCard
+                      token={subBundleToken}
+                      pathPrefix="/sub/u"
+                      heading="我的合并订阅(全部终端)"
+                    />
+                    <p className="mt-1 text-[11px] text-muted-foreground/70">一个地址含你被授权的全部终端;新增/撤销终端后重新拉取即自动更新。</p>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {myClients.map((c) => {
                     const st = seatStatus(c)
