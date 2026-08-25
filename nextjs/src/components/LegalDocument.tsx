@@ -4,13 +4,15 @@ import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { useLanguage } from '@/lib/context/LanguageContext';
 
 interface LegalDocumentProps {
-    filePath: string;
+    fileName: string;
     title: string;
 }
 
-const LegalDocument: React.FC<LegalDocumentProps> = ({ filePath, title }) => {
+const LegalDocument: React.FC<LegalDocumentProps> = ({ fileName, title }) => {
+    const { language, t } = useLanguage();
     const [content, setContent] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -19,23 +21,30 @@ const LegalDocument: React.FC<LegalDocumentProps> = ({ filePath, title }) => {
         setLoading(true);
         setError(null);
 
-        fetch(filePath)
-            .then(response => {
+        const localizedPath = `/terms/${language}/${fileName}`;
+        const fallbackPath = `/terms/${fileName}`;
+
+        const loadFrom = (path: string) =>
+            fetch(path).then(response => {
                 if (!response.ok) {
                     throw new Error('Failed to load document');
                 }
                 return response.text();
-            })
+            });
+
+        // Prefer the language-specific document; fall back to the flat file if missing.
+        loadFrom(localizedPath)
+            .catch(() => loadFrom(fallbackPath))
             .then(text => {
                 setContent(text);
                 setLoading(false);
             })
             .catch(error => {
                 console.error('Error loading markdown:', error);
-                setError('Failed to load document. Please try again later.');
+                setError(t('legal.loadError'));
                 setLoading(false);
             });
-    }, [filePath]);
+    }, [fileName, language, t]);
 
     return (
         <Card className="w-full max-w-4xl mx-auto my-8">

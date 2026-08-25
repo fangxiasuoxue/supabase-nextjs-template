@@ -10,7 +10,7 @@ import {
     X,
     ChevronDown,
     LogOut,
-    Key, Files, LucideListTodo, Settings, Server, MessageSquare, Bell, Globe,
+    Key, Files, Settings, Server, MessageSquare, Bell, Globe,
 } from 'lucide-react';
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
@@ -104,9 +104,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         const hasMessagesPermission = isAdmin || permissions.some(p => p.module === 'messages' && p.can_menu);
         // SDD 54:域名管理(与 node 同 RBAC 套路;'domain' 模块权限,admin 直通,分域授权留 P4)
         const hasDomainPermission = isAdmin || permissions.some(p => p.module === 'domain' && p.can_menu);
-
-        baseNav.push({ name: t('nav.storage'), href: '/app/storage', icon: Files });
-        baseNav.push({ name: t('nav.table'), href: '/app/table', icon: LucideListTodo });
 
         if (hasIpPermission) {
             baseNav.push({ name: t('nav.ip'), href: '/app/ip', icon: Files });

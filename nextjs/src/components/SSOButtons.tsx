@@ -2,6 +2,7 @@
 
 import { createSPAClient } from '@/lib/supabase/client';
 import Link from "next/link";
+import { useLanguage } from '@/lib/context/LanguageContext';
 
 type Provider = 'github' | 'google' | 'facebook' | 'apple';
 
@@ -67,6 +68,7 @@ function getEnabledProviders(): Provider[] {
 }
 
 export default function SSOButtons({ onError }: SSOButtonsProps) {
+    const { t } = useLanguage();
     const handleSSOLogin = async (provider: Provider) => {
         try {
             const supabase = createSPAClient();
@@ -82,7 +84,7 @@ export default function SSOButtons({ onError }: SSOButtonsProps) {
             if (err instanceof Error) {
                 onError?.(err.message);
             } else {
-                onError?.('An unknown error occurred');
+                onError?.(t('auth.sso.errUnknown'));
             }
         }
     };
@@ -100,7 +102,7 @@ export default function SSOButtons({ onError }: SSOButtonsProps) {
                     <div className="w-full border-t border-gray-300"/>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                    <span className="bg-white px-2 text-gray-500">Or continue with</span>
+                    <span className="bg-white px-2 text-gray-500">{t('auth.sso.continueWith')}</span>
                 </div>
             </div>
 
@@ -119,20 +121,20 @@ export default function SSOButtons({ onError }: SSOButtonsProps) {
                                 </div>
                             </div>
                             <span className="mx-auto text-sm font-semibold">
-                Continue with {config.name}
+                {t('auth.sso.continueProvider', { name: config.name })}
               </span>
                         </button>
                     );
                 })}
             </div>
             <div className="mt-4 text-center text-xs text-gray-500">
-                By creating an account via selected provider, you agree to our{' '}
+                {t('auth.sso.agreePrefix')}{' '}
                 <Link href="/legal/terms" className="text-blue-600 hover:text-blue-800 underline">
-                    Terms and Conditions
+                    {t('auth.sso.terms')}
                 </Link>
-                {' '}and{' '}
+                {' '}{t('auth.sso.and')}{' '}
                 <Link href="/legal/privacy" className="text-blue-600 hover:text-blue-800 underline">
-                    Privacy Policy
+                    {t('auth.sso.privacy')}
                 </Link>
             </div>
         </div>

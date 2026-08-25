@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Key, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import {Factor} from "@supabase/auth-js";
 import { MFAEnrollTOTPParams } from '@supabase/auth-js';
+import { useLanguage } from '@/lib/context/LanguageContext';
 
 
 interface MFASetupProps {
@@ -12,6 +13,7 @@ interface MFASetupProps {
 }
 
 export function MFASetup({ onStatusChange }: MFASetupProps) {
+    const { t } = useLanguage();
     const [factors, setFactors] = useState<Factor[]>([]);
     const [step, setStep] = useState<'list' | 'name' | 'enroll'>('list');
     const [factorId, setFactorId] = useState('');
@@ -33,7 +35,7 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
             setLoading(false);
         } catch (err) {
             console.error('Error fetching MFA factors:', err);
-            setError(err instanceof Error ? err.message : 'Failed to fetch MFA status');
+            setError(err instanceof Error ? err.message : t('auth.mfaSetup.fetchError'));
             setLoading(false);
         }
     };
@@ -44,7 +46,7 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
 
     const startEnrollment = async () => {
         if (!friendlyName.trim()) {
-            setError('Please provide a name for this authentication method');
+            setError(t('auth.mfaSetup.errName'));
             return;
         }
 
@@ -66,7 +68,7 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
             setQR(data.totp.qr_code);
             setStep('enroll');
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to start MFA enrollment');
+            setError(err instanceof Error ? err.message : t('auth.mfaSetup.errEnroll'));
             setStep('name');
         } finally {
             setActionInProgress(false);
@@ -95,7 +97,7 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
             resetEnrollment();
             onStatusChange?.();
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to verify MFA code');
+            setError(err instanceof Error ? err.message : t('auth.mfaSetup.errVerify'));
         } finally {
             setActionInProgress(false);
         }
@@ -114,7 +116,7 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
             await fetchFactors();
             onStatusChange?.();
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to unenroll MFA factor');
+            setError(err instanceof Error ? err.message : t('auth.mfaSetup.errUnenroll'));
         } finally {
             setActionInProgress(false);
         }
@@ -144,10 +146,10 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Key className="h-5 w-5" />
-                    Two-Factor Authentication (2FA)
+                    {t('auth.mfaSetup.title')}
                 </CardTitle>
                 <CardDescription>
-                    Add an additional layer of security to your account
+                    {t('auth.mfaSetup.desc')}
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -169,10 +171,10 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
                                     )}
                                     <div>
                                         <p className="font-medium">
-                                            {factor.friendly_name || 'Authenticator App'}
+                                            {factor.friendly_name || t('auth.mfaSetup.deviceDefault')}
                                         </p>
                                         <p className="text-sm text-gray-500">
-                                            Added on {new Date(factor.created_at).toLocaleDateString()}
+                                            {t('auth.mfaSetup.addedOn', { date: new Date(factor.created_at).toLocaleDateString() })}
                                         </p>
                                     </div>
                                 </div>
@@ -181,7 +183,7 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
                                     disabled={actionInProgress}
                                     className="px-3 py-1 text-sm text-red-600 hover:text-red-700 disabled:opacity-50"
                                 >
-                                    Remove
+                                    {t('auth.mfaSetup.remove')}
                                 </button>
                             </div>
                         ))}
@@ -192,7 +194,7 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
                     <div className="space-y-4">
                         <div className="space-y-2">
                             <label htmlFor="friendly-name" className="block text-sm font-medium text-gray-700">
-                                Device Name
+                                {t('auth.mfaSetup.nameLabel')}
                             </label>
                             <input
                                 id="friendly-name"
@@ -200,11 +202,11 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
                                 value={friendlyName}
                                 onChange={(e) => setFriendlyName(e.target.value)}
                                 className="mt-1 block w-full rounded-md bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 shadow-sm focus:ring-2 focus:ring-cyan-600/20 focus:border-cyan-600 sm:text-sm"
-                                placeholder="e.g., Work Phone, Personal iPhone"
+                                placeholder={t('auth.mfaSetup.namePlaceholder')}
                                 autoFocus
                             />
                             <p className="text-sm text-gray-500">
-                                Give this authentication method a name to help you identify it later
+                                {t('auth.mfaSetup.nameHelp')}
                             </p>
                         </div>
 
@@ -214,14 +216,14 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
                                 disabled={actionInProgress}
                                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
                             >
-                                Cancel
+                                {t('auth.mfaSetup.cancel')}
                             </button>
                             <button
                                 onClick={startEnrollment}
                                 disabled={actionInProgress || !friendlyName.trim()}
                                 className="flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
                             >
-                                {actionInProgress ? 'Processing...' : 'Continue'}
+                                {actionInProgress ? t('auth.mfaSetup.processing') : t('auth.mfaSetup.continue')}
                             </button>
                         </div>
                     </div>
@@ -233,7 +235,7 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
                             {qr && (
                                 <img
                                     src={qr}
-                                    alt="QR Code"
+                                    alt={t('auth.mfaSetup.qrAlt')}
                                     className="w-48 h-48 border rounded-lg p-2"
                                 />
                             )}
@@ -241,7 +243,7 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
 
                         <div className="space-y-2">
                             <label htmlFor="verify-code" className="block text-sm font-medium text-gray-700">
-                                Verification Code
+                                {t('auth.mfaSetup.codeLabel')}
                             </label>
                             <input
                                 id="verify-code"
@@ -249,7 +251,7 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
                                 value={verifyCode}
                                 onChange={(e) => setVerifyCode(e.target.value.trim())}
                                 className="mt-1 block w-full rounded-md bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 shadow-sm focus:ring-2 focus:ring-cyan-600/20 focus:border-cyan-600 sm:text-sm"
-                                placeholder="Enter code from your authenticator app"
+                                placeholder={t('auth.mfaSetup.codePlaceholder')}
                             />
                         </div>
 
@@ -259,14 +261,14 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
                                 disabled={actionInProgress}
                                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
                             >
-                                Cancel
+                                {t('auth.mfaSetup.cancel')}
                             </button>
                             <button
                                 onClick={verifyFactor}
                                 disabled={actionInProgress || verifyCode.length === 0}
                                 className="flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
                             >
-                                {actionInProgress ? 'Verifying...' : 'Verify'}
+                                {actionInProgress ? t('auth.mfaSetup.verifying') : t('auth.mfaSetup.verify')}
                             </button>
                         </div>
                     </div>
@@ -276,15 +278,15 @@ export function MFASetup({ onStatusChange }: MFASetupProps) {
                     <div className="space-y-4">
                         <p className="text-sm text-gray-600">
                             {factors.length === 0
-                                ? 'Protect your account with two-factor authentication. When enabled, you\'ll need to enter a code from your authenticator app in addition to your password when signing in.'
-                                : 'You can add additional authentication methods or remove existing ones.'}
+                                ? t('auth.mfaSetup.introEmpty')
+                                : t('auth.mfaSetup.introHas')}
                         </p>
                         <button
                             onClick={() => setStep('name')}
                             disabled={actionInProgress}
                             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
                         >
-                            {actionInProgress ? 'Processing...' : 'Add New Authentication Method'}
+                            {actionInProgress ? t('auth.mfaSetup.processing') : t('auth.mfaSetup.addMethod')}
                         </button>
                     </div>
                 )}

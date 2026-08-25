@@ -5,9 +5,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSPASassClient } from '@/lib/supabase/client';
 import { MFAVerification } from '@/components/MFAVerification';
+import { useLanguage } from '@/lib/context/LanguageContext';
 
 export default function TwoFactorAuthPage() {
     const router = useRouter();
+    const { t } = useLanguage();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -37,7 +39,7 @@ export default function TwoFactorAuthPage() {
 
             setLoading(false);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An error occurred');
+            setError(err instanceof Error ? err.message : t('auth.2fa.errGeneric'));
             setLoading(false);
         }
     };

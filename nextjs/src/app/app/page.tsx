@@ -2,7 +2,7 @@
 import React from 'react';
 import { useGlobal } from '@/lib/context/GlobalContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { CalendarDays, Settings, ExternalLink } from 'lucide-react';
+import { CalendarDays, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/context/LanguageContext';
 
@@ -82,30 +82,6 @@ export default function DashboardContent() {
                             </div>
                             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-cyan-600 mt-4">
                                 <span>Execution Layer</span>
-                                <div className="h-px flex-1 bg-cyan-200" />
-                            </div>
-                        </Link>
-
-                        <Link
-                            href="/app/table"
-                            className="group glass-card p-6 rounded-3xl hover:border-cyan-300 transition-all duration-300 relative overflow-hidden"
-                        >
-                            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                                <ExternalLink className="h-16 w-16" />
-                            </div>
-                            <div className="flex items-start gap-4 mb-4">
-                                <div className="p-3 bg-cyan-50 rounded-2xl border border-cyan-100 group-hover:border-cyan-300 transition-colors">
-                                    <ExternalLink className="h-6 w-6 text-cyan-600" />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-black tracking-tight">{t('dashboard.quickActions.examplePage.title')}</h3>
-                                    <p className="text-xs text-muted-foreground leading-relaxed mt-1 uppercase tracking-wider font-bold opacity-60">
-                                        {t('dashboard.quickActions.examplePage.desc')}
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-cyan-600 mt-4">
-                                <span>Network Layer</span>
                                 <div className="h-px flex-1 bg-cyan-200" />
                             </div>
                         </Link>

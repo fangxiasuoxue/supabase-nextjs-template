@@ -3,8 +3,10 @@ import { useState, useEffect } from 'react';
 import { createSPASassClient } from '@/lib/supabase/client';
 import { ArrowRight, ChevronRight } from 'lucide-react';
 import Link from "next/link";
+import { useLanguage } from '@/lib/context/LanguageContext';
 
 export default function AuthAwareButtons({ variant = 'primary' }) {
+    const { t } = useLanguage();
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loading, setLoading] = useState(true);
 
@@ -33,20 +35,20 @@ export default function AuthAwareButtons({ variant = 'primary' }) {
         return isAuthenticated ? (
             <Link
                 href="/app"
-                className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+                className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
             >
-                Go to Dashboard
+                {t('authcta.dashboard')}
             </Link>
         ) : (
             <>
-                <Link href="/auth/login" className="text-gray-600 hover:text-gray-900">
-                    Login
+                <Link href="/auth/login" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+                    {t('authcta.login')}
                 </Link>
                 <Link
                     href="/auth/register"
-                    className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+                    className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
                 >
-                    Get Started
+                    {t('authcta.getStarted')}
                 </Link>
             </>
         );
@@ -58,7 +60,7 @@ export default function AuthAwareButtons({ variant = 'primary' }) {
             href="/app"
             className="inline-flex items-center px-6 py-3 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 transition-colors"
         >
-            Go to Dashboard
+            {t('authcta.dashboard')}
             <ArrowRight className="ml-2 h-5 w-5" />
         </Link>
     ) : (
@@ -67,14 +69,14 @@ export default function AuthAwareButtons({ variant = 'primary' }) {
                 href="/auth/register"
                 className="inline-flex items-center px-6 py-3 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 transition-colors"
             >
-                Start Building Free
+                {t('authcta.getStarted')}
                 <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
             <Link
-                href="#features"
-                className="inline-flex items-center px-6 py-3 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                href="#services"
+                className="inline-flex items-center px-6 py-3 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition-colors"
             >
-                Learn More
+                {t('authcta.learnMore')}
                 <ChevronRight className="ml-2 h-5 w-5" />
             </Link>
         </>

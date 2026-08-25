@@ -14,7 +14,8 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 const STORAGE_KEY = "app_language"
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Lang>("en")
+  // SDD 57:后台默认中文;前台全量双语可切换(切换后持久化到 localStorage,前台可切 EN)
+  const [language, setLanguageState] = useState<Lang>("zh")
 
   useEffect(() => {
     try {

@@ -3,30 +3,32 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, FileText, ShieldAlert, RefreshCw } from 'lucide-react';
+import { useLanguage } from '@/lib/context/LanguageContext';
 
 const legalDocuments = [
     {
         id: 'privacy',
-        title: 'Privacy Policy',
+        titleKey: 'legal.nav.privacy.title',
         icon: ShieldAlert,
-        description: 'How we handle and protect your data'
+        descKey: 'legal.nav.privacy.desc'
     },
     {
         id: 'terms',
-        title: 'Terms of Service',
+        titleKey: 'legal.nav.terms.title',
         icon: FileText,
-        description: 'Rules and guidelines for using our service'
+        descKey: 'legal.nav.terms.desc'
     },
     {
         id: 'refund',
-        title: 'Refund Policy',
+        titleKey: 'legal.nav.refund.title',
         icon: RefreshCw,
-        description: 'Our policy on refunds and cancellations'
+        descKey: 'legal.nav.refund.desc'
     }
 ];
 
 export default function LegalLayout({ children } : { children: React.ReactNode }) {
     const router = useRouter();
+    const { t } = useLanguage();
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -37,7 +39,7 @@ export default function LegalLayout({ children } : { children: React.ReactNode }
                         className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" />
-                        Back
+                        {t('legal.back')}
                     </button>
                 </div>
 
@@ -46,8 +48,8 @@ export default function LegalLayout({ children } : { children: React.ReactNode }
                     <div className="w-full lg:w-64 flex-shrink-0">
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="p-4 border-b border-gray-200">
-                                <h2 className="text-lg font-semibold text-gray-900">Legal Documents</h2>
-                                <p className="text-sm text-gray-500 mt-1">Important information about our services</p>
+                                <h2 className="text-lg font-semibold text-gray-900">{t('legal.documentsTitle')}</h2>
+                                <p className="text-sm text-gray-500 mt-1">{t('legal.documentsSubtitle')}</p>
                             </div>
                             <nav className="p-4 space-y-2">
                                 {legalDocuments.map((doc) => (
@@ -59,8 +61,8 @@ export default function LegalLayout({ children } : { children: React.ReactNode }
                                         <div className="flex items-center gap-3">
                                             <doc.icon className="w-5 h-5 text-gray-400" />
                                             <div>
-                                                <div className="text-sm font-medium text-gray-900">{doc.title}</div>
-                                                <div className="text-xs text-gray-500">{doc.description}</div>
+                                                <div className="text-sm font-medium text-gray-900">{t(doc.titleKey)}</div>
+                                                <div className="text-xs text-gray-500">{t(doc.descKey)}</div>
                                             </div>
                                         </div>
                                     </Link>

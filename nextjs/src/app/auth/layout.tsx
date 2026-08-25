@@ -1,29 +1,33 @@
+'use client';
+
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { useLanguage } from '@/lib/context/LanguageContext';
 
 export default function AuthLayout({
                                        children,
                                    }: {
     children: React.ReactNode;
 }) {
+    const { t } = useLanguage();
     const productName = process.env.NEXT_PUBLIC_PRODUCTNAME;
     const testimonials = [
         {
-            quote: "This template helped us launch our SaaS product in just two weeks. The authentication and multi-tenancy features are rock solid.",
-            author: "Sarah Chen",
-            role: "CTO, TechStart",
+            quote: t('auth.layout.t1.quote'),
+            author: t('auth.layout.t1.author'),
+            role: t('auth.layout.t1.role'),
             avatar: "SC"
         },
         {
-            quote: "The best part is how well thought out the organization management is. It saved us months of development time.",
-            author: "Michael Roberts",
-            role: "Founder, DataFlow",
+            quote: t('auth.layout.t2.quote'),
+            author: t('auth.layout.t2.author'),
+            role: t('auth.layout.t2.role'),
             avatar: "MR"
         },
         {
-            quote: "Clean code, great documentation, and excellent support. Exactly what we needed to get our MVP off the ground.",
-            author: "Jessica Kim",
-            role: "Lead Developer, CloudScale",
+            quote: t('auth.layout.t3.quote'),
+            author: t('auth.layout.t3.author'),
+            role: t('auth.layout.t3.role'),
             avatar: "JK"
         }
     ];
@@ -40,14 +44,14 @@ export default function AuthLayout({
                             </div>
                             <span className="text-xl font-black tracking-tighter uppercase text-slate-900">{productName} <span className="text-cyan-600">PRO</span></span>
                         </div>
-                        <p className="text-[10px] text-slate-500 uppercase tracking-[0.4em] font-black">Next-Gen Node Infrastructure</p>
+                        <p className="text-[10px] text-slate-500 uppercase tracking-[0.4em] font-black">{t('auth.layout.brandTag')}</p>
                     </div>
 
                     <div className="space-y-8">
                         <h3 className="text-4xl font-black tracking-tighter leading-none uppercase text-slate-900">
-                            Secure <br />
-                            <span className="text-cyan-600">Identity</span> <br />
-                            Terminal
+                            {t('auth.layout.heroLine1')} <br />
+                            <span className="text-cyan-600">{t('auth.layout.heroLine2')}</span> <br />
+                            {t('auth.layout.heroLine3')}
                         </h3>
                         <div className="space-y-4">
                             {testimonials.slice(0, 2).map((testimonial, index) => (
@@ -89,7 +93,7 @@ export default function AuthLayout({
                         className="absolute left-10 top-10 flex items-center text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-cyan-600 transition-all group"
                     >
                         <ArrowLeft className="w-3.5 h-3.5 mr-2 group-hover:-translate-x-1 transition-transform" />
-                        Return to Origin
+                        {t('auth.layout.returnToOrigin')}
                     </Link>
 
                     <div className="w-full max-w-sm mx-auto">

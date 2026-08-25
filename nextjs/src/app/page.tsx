@@ -2,233 +2,196 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Globe, Shield, Users, Key, Database, Clock, Activity, Cpu, Lock, Terminal, Zap, ChevronRight } from 'lucide-react';
+import { ArrowRight, Boxes, Ship, Store, Cloud, Search, Bot, Languages } from 'lucide-react';
 import AuthAwareButtons from '@/components/AuthAwareButtons';
 import HomePricing from "@/components/HomePricing";
 import { useLanguage } from '@/lib/context/LanguageContext';
 
 export default function Home() {
   const productName = process.env.NEXT_PUBLIC_PRODUCTNAME || 'JIEDIAN';
-  const { language } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
 
   const features = [
-    {
-      icon: Terminal,
-      title: language === 'en' ? 'Node Infrastructure' : '节点基础设施',
-      description: language === 'en' ? 'Manage global proxy nodes with millisecond-precision telemetry.' : '以毫秒级精度管理全球代理节点。',
-      color: 'text-cyan-600'
-    },
-    {
-      icon: Shield,
-      title: language === 'en' ? 'Hardened Security' : '强化安全',
-      description: language === 'en' ? 'Multi-layer encryption and identity verification for every session.' : '为每个会话提供多层加密和身份验证。',
-      color: 'text-green-600'
-    },
-    {
-      icon: Zap,
-      title: language === 'en' ? 'Quantum Performance' : '量子性能',
-      description: language === 'en' ? 'Low-latency routing optimized for high-bandwidth operations.' : '针对高带宽操作优化的低延迟路由。',
-      color: 'text-amber-600'
-    },
-    {
-      icon: Database,
-      title: language === 'en' ? 'Asset Management' : '资产管理',
-      description: language === 'en' ? 'Unified control for VPS, IP ranges, and specialized containers.' : '对 VPS、IP 范围和专用容器的统一控制。',
-      color: 'text-rose-600'
-    },
-    {
-      icon: Activity,
-      title: language === 'en' ? 'Live Telemetry' : '实时遥测',
-      description: language === 'en' ? 'Real-time monitoring of node health and traffic patterns.' : '实时监控节点健康状况和流量模式。',
-      color: 'text-indigo-600'
-    },
-    {
-      icon: Lock,
-      title: language === 'en' ? 'Privacy Shield' : '隐私盾',
-      description: language === 'en' ? 'Next-gen tunneling protocols focused on anonymity.' : '专注于匿名性的下一代隧道协议。',
-      color: 'text-purple-600'
-    }
+    { icon: Boxes, key: 'supply', color: 'text-cyan-600' },
+    { icon: Ship, key: 'freight', color: 'text-blue-600' },
+    { icon: Store, key: 'operation', color: 'text-amber-600' },
+    { icon: Cloud, key: 'cloud', color: 'text-indigo-600' },
+    { icon: Search, key: 'site', color: 'text-emerald-600' },
+    { icon: Bot, key: 'ai', color: 'text-purple-600' },
+  ];
+
+  const stats = [
+    { key: 'countries' },
+    { key: 'shipments' },
+    { key: 'stores' },
+    { key: 'uptime' },
   ];
 
   return (
-    <div className="min-h-screen bg-white text-foreground font-sans selection:bg-primary/20 overflow-x-hidden">
-      {/* Background Effects */}
-      <div className="fixed inset-0 grid-background opacity-20 pointer-events-none" />
-      <div className="fixed inset-0 hero-glow opacity-40 pointer-events-none" />
-      
+    <div className="min-h-screen bg-white text-slate-900 font-sans overflow-x-hidden">
       {/* Navigation */}
-      <nav className="fixed top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-7xl bg-white/90 backdrop-blur rounded-3xl z-50 border border-slate-200 shadow-sm overflow-hidden px-6 py-4">
+      <nav className="fixed top-4 left-1/2 -translate-x-1/2 w-[94%] max-w-7xl bg-white/90 backdrop-blur rounded-2xl z-50 border border-slate-200 shadow-sm px-6 py-3">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center">
-              <span className="text-primary font-black text-xs">J</span>
+            <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center">
+              <span className="text-white font-bold text-sm">{productName.charAt(0)}</span>
             </div>
-            <span className="text-xl font-black tracking-tighter uppercase whitespace-nowrap">
-              {productName} <span className="text-primary">PRO</span>
-            </span>
+            <span className="text-lg font-bold tracking-tight whitespace-nowrap">{productName}</span>
           </div>
-          
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="#features" className="text-[10px] uppercase font-black tracking-widest text-muted-foreground hover:text-primary transition-colors">
-              Systems
+
+          <div className="flex items-center gap-6">
+            <Link href="#services" className="hidden md:inline text-sm font-medium text-slate-600 hover:text-primary-600 transition-colors">
+              {t('home.nav.services')}
             </Link>
-            <Link href="#pricing" className="text-[10px] uppercase font-black tracking-widest text-muted-foreground hover:text-primary transition-colors">
-              Access Tiers
+            <Link href="#plans" className="hidden md:inline text-sm font-medium text-slate-600 hover:text-primary-600 transition-colors">
+              {t('home.nav.solutions')}
             </Link>
+            <button
+              type="button"
+              onClick={() => setLanguage(language === 'en' ? 'zh' : 'en')}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-primary-600 transition-colors"
+              aria-label="Switch language"
+            >
+              <Languages className="w-4 h-4" />
+              {language === 'en' ? '中文' : 'EN'}
+            </button>
             <AuthAwareButtons variant="nav" />
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative pt-48 pb-32 flex flex-col items-center justify-center overflow-hidden">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
-        
-        <div className="relative z-10 max-w-5xl mx-auto px-6 text-center space-y-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-50 border border-slate-200 animate-in fade-in slide-in-from-top-4 duration-1000">
+      {/* Hero */}
+      <section className="relative pt-40 pb-24">
+        <div className="absolute inset-x-0 top-0 h-[520px] bg-gradient-to-b from-primary-50 to-white pointer-events-none" />
+        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center space-y-8">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-500 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-600" />
             </span>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Protocol v4.2.0 Active</span>
+            <span className="text-xs font-semibold text-primary-700">{t('home.hero.badge')}</span>
           </div>
 
-          <h1 className="text-6xl md:text-8xl font-black tracking-tighter leading-[0.9] uppercase animate-in fade-in slide-in-from-bottom-8 duration-1000 text-slate-900">
-            Next-Gen <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-cyan-700">Node Command</span> <br />
-            Center
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight text-slate-900">
+            {t('home.hero.title')}
           </h1>
 
-          <p className="max-w-2xl mx-auto text-muted-foreground font-medium text-lg md:text-xl leading-relaxed animate-in fade-in slide-in-from-bottom-8 delay-200 duration-1000">
-            Deploy, monitor, and scale your global infrastructure with millisecond-precision. 
-            The ultimate terminal for professional proxy and node management.
+          <p className="max-w-2xl mx-auto text-slate-600 text-lg leading-relaxed">
+            {t('home.hero.subtitle')}
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-in fade-in slide-in-from-bottom-8 delay-400 duration-1000">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-2">
             <AuthAwareButtons />
-            <Link href="/legal/docs" className="h-14 px-8 flex items-center gap-3 text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-primary border border-slate-200 hover:border-cyan-600/40 rounded-2xl transition-all">
-              <Terminal className="w-4 h-4" />
-              Technical Docs
+            <Link
+              href="#services"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition-colors"
+            >
+              {t('home.hero.ctaSecondary')}
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Bento Grid Features */}
-      <section id="features" className="py-32 relative">
+      {/* Services */}
+      <section id="services" className="py-24">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="mb-20 space-y-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Core Systems</p>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tighter uppercase">Integrated <br /> Capability</h2>
+          <div className="mb-14 text-center space-y-3">
+            <p className="text-sm font-semibold uppercase tracking-widest text-primary-600">{t('home.features.eyebrow')}</p>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">{t('home.features.heading')}</h2>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => (
+            {features.map((feature) => (
               <div
-                key={index}
-                className="glass-card-premium glass-card-hover rounded-[2.5rem] p-8 space-y-6 group border-slate-200"
+                key={feature.key}
+                className="rounded-2xl p-7 border border-slate-200 bg-white hover:shadow-md hover:border-slate-300 transition-all group"
               >
-                <div className={`w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/20 transition-all duration-500`}>
-                  <feature.icon className={`h-7 w-7 ${feature.color}`} />
+                <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center mb-5 group-hover:bg-primary-50 transition-colors">
+                  <feature.icon className={`h-6 w-6 ${feature.color}`} />
                 </div>
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-black tracking-tight uppercase group-hover:text-primary transition-colors">{feature.title}</h3>
-                  <p className="text-muted-foreground font-medium leading-relaxed italic">{feature.description}</p>
-                </div>
-                <div className="pt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary/40 group-hover:text-primary/100 transition-all">
-                  Initialize <ChevronRight className="w-3 h-3" />
-                </div>
+                <h3 className="text-xl font-semibold mb-2">{t(`home.feature.${feature.key}.title`)}</h3>
+                <p className="text-slate-600 leading-relaxed">{t(`home.feature.${feature.key}.desc`)}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Stats Display */}
-      <section className="py-24 border-y border-slate-200 bg-slate-50">
+      {/* Stats */}
+      <section className="py-20 border-y border-slate-200 bg-slate-50">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
-            {[
-              { label: 'Active Clusters', value: '1.2k+' },
-              { label: 'Latency Node', value: '14ms' },
-              { label: 'Uplink Capacity', value: '400Gbps' },
-              { label: 'Uptime Protocol', value: '99.99%' }
-            ].map((stat, index) => (
-              <div key={index} className="space-y-1">
-                <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">{stat.label}</div>
-                <div className="text-4xl font-black tech-mono tracking-tighter text-primary">{stat.value}</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
+            {stats.map((stat) => (
+              <div key={stat.key} className="text-center space-y-1">
+                <div className="text-4xl font-bold tracking-tight text-primary-600">{t(`home.stats.${stat.key}.value`)}</div>
+                <div className="text-sm font-medium text-slate-500">{t(`home.stats.${stat.key}.label`)}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <div id="pricing" className="py-32">
+      {/* Plans */}
+      <div id="plans">
         <HomePricing />
       </div>
 
-      {/* CTA Section */}
-      <section className="py-48 relative overflow-hidden">
-        <div className="absolute inset-0 bg-primary/5 -skew-y-3 origin-center scale-110" />
-        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center space-y-8">
-          <h2 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-none">
-            Ready to <br /> <span className="text-primary italic">Authorize?</span>
-          </h2>
-          <p className="text-xl text-muted-foreground font-medium">
-            Join the elite network of operators managing the digital frontier.
-          </p>
-          <div className="flex justify-center pt-4">
+      {/* CTA */}
+      <section className="py-28">
+        <div className="max-w-3xl mx-auto px-6 text-center space-y-6">
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight">{t('home.cta.heading')}</h2>
+          <p className="text-lg text-slate-600">{t('home.cta.subtitle')}</p>
+          <div className="flex justify-center pt-2">
             <Link
               href="/auth/register"
-              className="px-12 h-16 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl font-black uppercase tracking-[0.3em] text-[12px] shadow-sm transition-all active:scale-[0.98] flex items-center gap-4 group"
+              className="inline-flex items-center gap-3 px-10 h-14 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-semibold text-base shadow-sm transition-all active:scale-[0.98] group"
             >
-              Request Access Key
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+              {t('home.cta.button')}
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Technical Footer */}
-      <footer className="py-20 border-t border-slate-200 relative">
+      {/* Footer */}
+      <footer className="py-16 border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
-            <div className="col-span-2 space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
+            <div className="col-span-2 space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded bg-primary/20 border border-primary/30 flex items-center justify-center">
-                  <span className="text-primary font-black text-[10px]">J</span>
+                <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
+                  <span className="text-white font-bold text-xs">{productName.charAt(0)}</span>
                 </div>
-                <span className="text-sm font-black tracking-tighter uppercase">{productName} PRO</span>
+                <span className="text-base font-bold tracking-tight">{productName}</span>
               </div>
-              <p className="max-w-xs text-[10px] font-medium leading-relaxed text-muted-foreground/60 uppercase tracking-widest">
-                Professional node infrastructure for high-bandwidth operations. Built for performance and security.
-              </p>
+              <p className="max-w-xs text-sm leading-relaxed text-slate-500">{t('home.footer.blurb')}</p>
             </div>
-            
-            <div className="space-y-6">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Resources</h4>
-              <ul className="space-y-4">
-                <li><Link href="#features" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Documentation</Link></li>
-                <li><Link href="#pricing" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">API Reference</Link></li>
+
+            <div className="space-y-4">
+              <h4 className="text-sm font-semibold text-slate-900">{t('home.footer.services')}</h4>
+              <ul className="space-y-3">
+                <li><Link href="#services" className="text-sm text-slate-500 hover:text-primary-600 transition-colors">{t('home.feature.supply.title')}</Link></li>
+                <li><Link href="#services" className="text-sm text-slate-500 hover:text-primary-600 transition-colors">{t('home.feature.cloud.title')}</Link></li>
+                <li><Link href="#plans" className="text-sm text-slate-500 hover:text-primary-600 transition-colors">{t('home.nav.solutions')}</Link></li>
               </ul>
             </div>
 
-            <div className="space-y-6">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Legal</h4>
-              <ul className="space-y-4">
-                <li><Link href="/legal/privacy" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Privacy Protocol</Link></li>
-                <li><Link href="/legal/terms" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Terms of Use</Link></li>
+            <div className="space-y-4">
+              <h4 className="text-sm font-semibold text-slate-900">{t('home.footer.legal')}</h4>
+              <ul className="space-y-3">
+                <li><Link href="/legal/privacy" className="text-sm text-slate-500 hover:text-primary-600 transition-colors">{t('home.footer.privacy')}</Link></li>
+                <li><Link href="/legal/terms" className="text-sm text-slate-500 hover:text-primary-600 transition-colors">{t('home.footer.terms')}</Link></li>
               </ul>
             </div>
           </div>
-          
-          <div className="mt-20 pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-[8px] font-black uppercase tracking-[0.5em] text-muted-foreground/30">
-              © {new Date().getFullYear()} {productName} SYSTEMS. ALL RIGHTS RESERVED.
+
+          <div className="mt-14 pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-xs text-slate-400">
+              © {new Date().getFullYear()} {productName}. {t('home.footer.rights')}
             </p>
-            <div className="flex items-center gap-4">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">Core Status: Operational</span>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="text-xs text-slate-500">{t('home.footer.status')}</span>
             </div>
           </div>
         </div>

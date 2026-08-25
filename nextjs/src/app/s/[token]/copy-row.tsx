@@ -3,7 +3,17 @@
 import { useState } from 'react'
 
 // 公开单终端页的一行「标签 + 值 + 复制」。纯客户端小组件(复制需浏览器 API)。
-export default function CopyRow({ label, value }: { label: string; value: string }) {
+export default function CopyRow({
+  label,
+  value,
+  copyLabel = 'Copy',
+  copiedLabel = 'Copied',
+}: {
+  label: string
+  value: string
+  copyLabel?: string
+  copiedLabel?: string
+}) {
   const [copied, setCopied] = useState(false)
   const copy = async () => {
     try {
@@ -23,7 +33,7 @@ export default function CopyRow({ label, value }: { label: string; value: string
           onClick={copy}
           className="shrink-0 rounded bg-gray-900 px-2.5 py-1 text-xs text-white active:bg-gray-700"
         >
-          {copied ? '已复制' : '复制'}
+          {copied ? copiedLabel : copyLabel}
         </button>
       </div>
     </div>

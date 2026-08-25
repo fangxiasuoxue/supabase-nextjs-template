@@ -4,8 +4,10 @@ import { CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import {useState} from "react";
 import {createSPASassClient} from "@/lib/supabase/client";
+import { useLanguage } from '@/lib/context/LanguageContext';
 
 export default function VerifyEmailPage() {
+    const { t } = useLanguage();
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -13,7 +15,7 @@ export default function VerifyEmailPage() {
 
     const resendVerificationEmail = async () => {
         if (!email) {
-            setError('Please enter your email address');
+            setError(t('auth.verify.errNoEmail'));
             return;
         }
 
@@ -31,7 +33,7 @@ export default function VerifyEmailPage() {
             if (err instanceof Error) {
                 setError(err.message);
             } else {
-                setError('An unknown error occurred');
+                setError(t('auth.verify.errUnknown'));
             }
         } finally {
             setLoading(false);
@@ -46,17 +48,16 @@ export default function VerifyEmailPage() {
                 </div>
 
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Check your email
+                    {t('auth.verify.title')}
                 </h2>
 
                 <p className="text-gray-600 mb-8">
-                    We&#39;ve sent you an email with a verification link.
-                    Please check your inbox and click the link to verify your account.
+                    {t('auth.verify.desc')}
                 </p>
 
                 <div className="space-y-4">
                     <p className="text-sm text-gray-500">
-                        Didn&#39;t receive the email? Check your spam folder or enter your email to resend:
+                        {t('auth.verify.resendPrompt')}
                     </p>
 
                     {error && (
@@ -67,7 +68,7 @@ export default function VerifyEmailPage() {
 
                     {success && (
                         <div className="text-sm text-green-600 bg-green-50 rounded-md p-3">
-                            Verification email has been resent successfully.
+                            {t('auth.verify.resent')}
                         </div>
                     )}
 
@@ -76,7 +77,7 @@ export default function VerifyEmailPage() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="Enter your email address"
+                            placeholder={t('auth.verify.placeholder')}
                             className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500 text-sm"
                         />
                     </div>
@@ -86,7 +87,7 @@ export default function VerifyEmailPage() {
                         onClick={resendVerificationEmail}
                         disabled={loading}
                     >
-                        {loading ? 'Sending...' : 'Click here to resend'}
+                        {loading ? t('auth.verify.resending') : t('auth.verify.resend')}
                     </button>
                 </div>
 
@@ -95,7 +96,7 @@ export default function VerifyEmailPage() {
                         href="/auth/login"
                         className="text-sm font-medium text-primary-600 hover:text-primary-500"
                     >
-                        Return to login
+                        {t('auth.verify.returnToLogin')}
                     </Link>
                 </div>
             </div>
