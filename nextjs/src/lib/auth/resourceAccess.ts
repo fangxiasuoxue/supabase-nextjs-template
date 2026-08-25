@@ -117,43 +117,62 @@ export async function requireSeatAccess(
   return requireNodeAccess(nodeId, minLevel)
 }
 
-// ── VPS 授权(P2c 过渡:仍读 vps_allocations;P3 统一到 access_grants(resource_type='vps'))──
-// VPS 是「二值」授权(有/无),无分级:有分配即可在该 VPS 上创建部署。admin/ops 全局旁路。
-// 归属口径:state='allocated' 且 (assigned_to=userId ∨ owner=userId)。
+// ── VPS 授权(P3a 统一后:读 access_grants(resource_type='vps'))──
+// D1 统一:VPS 并入 access_grants,与 node 同一张真相表。level 语义(§3.2):
+//   write = 可作部署目标(R1 创建部署需此);manage = VPS 生命周期(admin/ops 旁路,不依赖此行)。
+// 归属真相 = access_grants('vps', vps_id, user, level);vps_allocations 保留作审计,
+// 由 vps.ts allocate/release 双写镜像到本表(migration 20260824000004 回填历史分配)。
 
-/** 列出某用户被分配(state=allocated)的 VPS id 集合(不含 admin/ops 旁路——那是全局)。 */
-export async function listGrantedVpsIds(userId: string): Promise<string[]> {
-  const admin = await createServerAdminClient()
-  const { data } = await admin
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .from('vps_allocations' as any)
-    .select('vps_id, owner, assigned_to, state')
-    .eq('state', 'allocated')
-  const rows = (data ?? []) as unknown as Array<{ vps_id: string; owner: string | null; assigned_to: string | null }>
-  const ids = rows
-    .filter((r) => r.assigned_to === userId || r.owner === userId)
-    .map((r) => r.vps_id)
-  return Array.from(new Set(ids))
+/** 列出某用户被授权(level≥minLevel,默认 write=可部署)的 VPS id(不含 admin/ops 旁路)。 */
+export async function listGrantedVpsIds(userId: string, minLevel: GrantLevel = 'write'): Promise<string[]> {
+  return listGrantedResourceIds(userId, 'vps', minLevel)
 }
 
-/** 用户对某 VPS 是否有授权(admin/ops 全局旁路)。用于创建部署的门(R1)。 */
-export async function hasVpsAccess(userId: string, vpsId: string): Promise<boolean> {
-  const admin = await createServerAdminClient()
-  if (await isGlobalOperator(admin, userId)) return true
-  const { data } = await admin
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .from('vps_allocations' as any)
-    .select('id, owner, assigned_to')
-    .eq('state', 'allocated')
-    .eq('vps_id', vpsId)
-  const rows = (data ?? []) as unknown as Array<{ owner: string | null; assigned_to: string | null }>
-  return rows.some((r) => r.assigned_to === userId || r.owner === userId)
+/** 用户对某 VPS 是否有 ≥minLevel(默认 write)授权(admin/ops 全局旁路)。创建部署的门(R1)。 */
+export async function hasVpsAccess(userId: string, vpsId: string, minLevel: GrantLevel = 'write'): Promise<boolean> {
+  return hasResourceAccess(userId, 'vps', vpsId, minLevel)
 }
 
-/** 用户是否持有任一 VPS 授权(不含 admin/ops 旁路)。用于「无 VPS 无法重建」护栏文案(R2)。 */
+/** 用户是否持有任一可部署 VPS(level≥write,不含 admin/ops 旁路)。护栏文案(R2)用。 */
 export async function userHasAnyVps(userId: string): Promise<boolean> {
-  const ids = await listGrantedVpsIds(userId)
+  const ids = await listGrantedVpsIds(userId, 'write')
   return ids.length > 0
+}
+
+/** 幂等授予:让某用户对某资源拥有 ≥level(不降级已有更高/同级)。部署自动授权 R4 / VPS 分配镜像用。 */
+export async function grantResourceAccess(
+  userId: string,
+  resourceType: ResourceType,
+  resourceId: string,
+  level: GrantLevel,
+  grantedBy?: string,
+): Promise<void> {
+  const admin = await createServerAdminClient()
+  const existing = await userGrantLevel(userId, resourceType, resourceId)
+  if (existing && levelGte(existing, level)) return // 不降级
+  await admin
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .from('access_grants' as any)
+    .upsert(
+      { user_id: userId, resource_type: resourceType, resource_id: resourceId, level, granted_by: grantedBy ?? userId },
+      { onConflict: 'resource_type,resource_id,user_id' },
+    )
+}
+
+/** 撤销某用户对某资源的授权(删授权行)。VPS 回收镜像(release)用。 */
+export async function revokeResourceAccess(
+  userId: string,
+  resourceType: ResourceType,
+  resourceId: string,
+): Promise<void> {
+  const admin = await createServerAdminClient()
+  await admin
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .from('access_grants' as any)
+    .delete()
+    .eq('user_id', userId)
+    .eq('resource_type', resourceType)
+    .eq('resource_id', resourceId)
 }
 
 /** 幂等授予:让某用户对某 node 拥有 manage(部署成功后自动授权 R4)。已存在更高/同级则不降级。 */
@@ -162,16 +181,7 @@ export async function grantNodeAccess(
   nodeId: string,
   level: GrantLevel = 'manage',
 ): Promise<void> {
-  const admin = await createServerAdminClient()
-  const existing = await userGrantLevel(userId, 'node', nodeId)
-  if (existing && levelGte(existing, level)) return // 不降级
-  await admin
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .from('access_grants' as any)
-    .upsert(
-      { user_id: userId, resource_type: 'node', resource_id: nodeId, level, granted_by: userId },
-      { onConflict: 'resource_type,resource_id,user_id' },
-    )
+  return grantResourceAccess(userId, 'node', nodeId, level)
 }
 
 /** 列出某用户被授权(≥ minLevel)的资源 id 集合,用于列表类过滤。 */

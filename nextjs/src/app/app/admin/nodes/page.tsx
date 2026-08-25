@@ -43,6 +43,7 @@ interface MyNode {
   inbound_tag: string | null
   created_at: string
   level: 'read' | 'write' | 'manage'
+  vpsOk?: boolean // P3b/R3:该 node 所在 VPS 是否被授权(可重部署);false→打标「⚠ 无 VPS」
 }
 
 export default function AdminNodesPage() {
@@ -246,6 +247,11 @@ export default function AdminNodesPage() {
                             {n.status}
                           </span>
                           <span className="rounded bg-cyan-50 border border-cyan-200 px-1.5 py-0.5 text-[10px] font-black text-cyan-700">{levelLabel[n.level]}</span>
+                          {/* P3b/R3:manage 节点但无其所在 VPS 授权 → 不可重部署,打标警示。 */}
+                          {n.level === 'manage' && !n.vpsOk && (
+                            <span className="rounded bg-amber-50 border border-amber-300 px-1.5 py-0.5 text-[10px] font-black text-amber-700"
+                                  title="你无此节点所在 VPS 的授权,删除后无法重新部署">⚠ 无 VPS</span>
+                          )}
                         </div>
                       </div>
                       <div className="mt-auto space-y-2">

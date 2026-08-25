@@ -3,6 +3,7 @@
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { GCPService } from '@/lib/gcp/service'
 import { VPSInstance, VPSData, GCPInstance } from '@/types/vps'
+import { grantResourceAccess, revokeResourceAccess } from '@/lib/auth/resourceAccess'
 
 async function checkPermission(permission: 'read' | 'manage') {
     const { createSSRClient } = await import('@/lib/supabase/server')
@@ -279,6 +280,11 @@ export async function allocateVPSAction(vpsId: string, userId: string, notes?: s
             .insert(allocationData as any)
 
         if (error) throw error
+
+        // SDD 55 · P3a —— VPS 授权统一进 access_grants:分配即镜像 write(可作部署目标 R1)。
+        // 幂等,不降级已有 manage。vps_allocations 仍写(审计),两表由此保持一致。
+        await grantResourceAccess(userId, 'vps', vpsId, 'write')
+
         return { success: true, error: null }
     } catch (error: any) {
         console.error('allocateVPSAction error:', error)
@@ -292,6 +298,13 @@ export async function releaseVPSAction(allocationId: string): Promise<{ success:
         await checkPermission('manage')
         const adminClient: any = await createServerAdminClient()
 
+        // 先取被回收分配的 (vps_id, owner, assigned_to),回收后据此撤销 access_grants 镜像(R3)。
+        const { data: alloc } = await adminClient
+            .from('vps_allocations')
+            .select('vps_id, owner, assigned_to')
+            .eq('id', allocationId)
+            .maybeSingle()
+
         const { error } = await adminClient
             .from('vps_allocations')
             .update({
@@ -301,6 +314,25 @@ export async function releaseVPSAction(allocationId: string): Promise<{ success:
             .eq('id', allocationId)
 
         if (error) throw error
+
+        // SDD 55 · P3a/R3 —— 回收即撤销 VPS 授权镜像;但仅当该用户对该 VPS 无其它 allocated 分配时才撤,
+        // 避免多分配场景下误撤。撤销后其名下依赖该 VPS 的 node 变「不可重部署」(R3 反向依赖)。
+        if (alloc?.vps_id) {
+            const users = Array.from(new Set([alloc.owner, alloc.assigned_to].filter(Boolean))) as string[]
+            for (const uid of users) {
+                const { data: still } = await adminClient
+                    .from('vps_allocations')
+                    .select('id')
+                    .eq('state', 'allocated')
+                    .eq('vps_id', alloc.vps_id)
+                    .or(`owner.eq.${uid},assigned_to.eq.${uid}`)
+                    .limit(1)
+                if (!still || still.length === 0) {
+                    await revokeResourceAccess(uid, 'vps', alloc.vps_id)
+                }
+            }
+        }
+
         return { success: true, error: null }
     } catch (error: any) {
         console.error('releaseVPSAction error:', error)
