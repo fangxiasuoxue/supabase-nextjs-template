@@ -37,6 +37,9 @@ export function AssignButton({
   const [sel, setSel] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const [level, setLevel] = useState<Level>(resourceType === 'node' ? 'write' : 'read')
+  // D3:二级代理无用户目录(/api/users/list 仅 admin)。目录被拒 → 改用邮箱输入授权。
+  const [directoryForbidden, setDirectoryForbidden] = useState(false)
+  const [email, setEmail] = useState('')
 
   const toggle = (uid: string) => setSel((prev) => {
     const n = new Set(prev)
@@ -47,19 +50,43 @@ export function AssignButton({
   const loadAll = async () => {
     setBusy(true)
     try {
+      // 用户目录(仅 admin)与已授权列表分开取:目录 403 不阻断——二级代理走邮箱授权。
       const [ur, ar] = await Promise.all([
-        fetch('/api/users/list').then((r) => r.json()),
+        fetch('/api/users/list').then((r) => r.json()).catch(() => ({ error: 'forbidden' })),
         fetch(`/api/v1/admin/assign?resource_type=${resourceType}&resource_id=${resourceId}`).then((r) => r.json()),
       ])
-      if (ur?.error) throw new Error(ur.error)
+      if (ur?.error) {
+        setDirectoryForbidden(true)
+        setUsers([])
+      } else {
+        setDirectoryForbidden(false)
+        setUsers(ur.users ?? [])
+      }
       if (ar?.error) throw new Error(ar.error)
-      setUsers(ur.users ?? [])
       setAssignments(ar.assignments ?? [])
     } catch (e: any) {
       toast.error(e.message || '加载失败')
     } finally {
       setBusy(false)
     }
+  }
+
+  // D3:按邮箱授权(二级代理路径)。后端解析 email→user_id,找不到返回 404。
+  const assignByEmail = async () => {
+    const val = email.trim()
+    if (!val) return toast.error('请输入端用户邮箱')
+    setBusy(true)
+    try {
+      const r = await fetch('/api/v1/admin/assign', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resource_type: resourceType, resource_id: resourceId, user_email: val, level }),
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j?.error || '授权失败')
+      toast.success(`已授权 ${val}`)
+      setEmail('')
+      loadAll()
+    } catch (e: any) { toast.error(e.message) } finally { setBusy(false) }
   }
 
   const openModal = () => { setOpen(true); loadAll() }
@@ -134,27 +161,53 @@ export function AssignButton({
               )}
             </div>
 
-            <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-              <span>勾选用户(可多选)</span>
-              {pickable.length > 0 && (
-                <button className="hover:underline"
-                  onClick={() => setSel((prev) => prev.size === pickable.length ? new Set() : new Set(pickable.map((u) => u.id)))}>
-                  {sel.size === pickable.length ? '取消全选' : '全选'}
-                </button>
-              )}
-            </div>
-            <div className="max-h-52 space-y-0.5 overflow-y-auto rounded border p-1">
-              {pickable.length === 0 ? (
-                <div className="py-2 text-center text-xs text-muted-foreground">无可选用户(都已授权)</div>
-              ) : pickable.map((u) => (
-                <label key={u.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-muted">
-                  <input type="checkbox" checked={sel.has(u.id)} onChange={() => toggle(u.id)} />
-                  <span className="font-mono text-xs">{u.email}</span>
-                  {u.role ? <span className="text-[10px] text-muted-foreground">({u.role})</span> : null}
-                </label>
-              ))}
-            </div>
-            {resourceType === 'node' && (
+            {directoryForbidden && resourceType === 'node' ? (
+              // 非 admin 打开节点级授权:node/vps 级授权仅 admin(代理不能转授管理权)。
+              <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700">
+                节点管理权的授权仅 admin 可操作。你可在各终端上用「授权」把订阅发给端用户。
+              </div>
+            ) : directoryForbidden ? (
+              // D3 二级代理路径:无用户目录,按邮箱授权端用户。
+              <div className="space-y-1">
+                <div className="text-xs text-muted-foreground">授权给端用户(输入其登录邮箱)</div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') assignByEmail() }}
+                    placeholder="enduser@example.com"
+                    className="flex-1 rounded border px-2 py-1 text-sm font-mono"
+                  />
+                  <Button size="sm" onClick={assignByEmail} disabled={busy || !email.trim()}>
+                    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : '授权'}
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground">对方需已注册账号;授权后其登录即在「我的订阅」看到此终端。</p>
+              </div>
+            ) : (
+              <>
+                <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>勾选用户(可多选)</span>
+                  {pickable.length > 0 && (
+                    <button className="hover:underline"
+                      onClick={() => setSel((prev) => prev.size === pickable.length ? new Set() : new Set(pickable.map((u) => u.id)))}>
+                      {sel.size === pickable.length ? '取消全选' : '全选'}
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-52 space-y-0.5 overflow-y-auto rounded border p-1">
+                  {pickable.length === 0 ? (
+                    <div className="py-2 text-center text-xs text-muted-foreground">无可选用户(都已授权)</div>
+                  ) : pickable.map((u) => (
+                    <label key={u.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-muted">
+                      <input type="checkbox" checked={sel.has(u.id)} onChange={() => toggle(u.id)} />
+                      <span className="font-mono text-xs">{u.email}</span>
+                      {u.role ? <span className="text-[10px] text-muted-foreground">({u.role})</span> : null}
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
+            {resourceType === 'node' && !directoryForbidden && (
               <div className="mt-2 flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">授权级别</span>
                 <select
@@ -169,11 +222,13 @@ export function AssignButton({
                 <span className="text-[10px] text-muted-foreground">{LEVEL_HINT[level]}</span>
               </div>
             )}
-            <div className="mt-2 flex justify-end">
-              <Button size="sm" onClick={assign} disabled={busy || sel.size === 0}>
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : `授权选中(${sel.size})`}
-              </Button>
-            </div>
+            {!directoryForbidden && (
+              <div className="mt-2 flex justify-end">
+                <Button size="sm" onClick={assign} disabled={busy || sel.size === 0}>
+                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : `授权选中(${sel.size})`}
+                </Button>
+              </div>
+            )}
             <p className="mt-2 text-[11px] text-muted-foreground">
               {resourceType === 'node'
                 ? '被授权用户登录后只看/管这个节点及其终端;能做什么由上面的「授权级别」决定(可对已授权者重设级别=覆盖)。'
