@@ -117,6 +117,63 @@ export async function requireSeatAccess(
   return requireNodeAccess(nodeId, minLevel)
 }
 
+// ── VPS 授权(P2c 过渡:仍读 vps_allocations;P3 统一到 access_grants(resource_type='vps'))──
+// VPS 是「二值」授权(有/无),无分级:有分配即可在该 VPS 上创建部署。admin/ops 全局旁路。
+// 归属口径:state='allocated' 且 (assigned_to=userId ∨ owner=userId)。
+
+/** 列出某用户被分配(state=allocated)的 VPS id 集合(不含 admin/ops 旁路——那是全局)。 */
+export async function listGrantedVpsIds(userId: string): Promise<string[]> {
+  const admin = await createServerAdminClient()
+  const { data } = await admin
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .from('vps_allocations' as any)
+    .select('vps_id, owner, assigned_to, state')
+    .eq('state', 'allocated')
+  const rows = (data ?? []) as unknown as Array<{ vps_id: string; owner: string | null; assigned_to: string | null }>
+  const ids = rows
+    .filter((r) => r.assigned_to === userId || r.owner === userId)
+    .map((r) => r.vps_id)
+  return Array.from(new Set(ids))
+}
+
+/** 用户对某 VPS 是否有授权(admin/ops 全局旁路)。用于创建部署的门(R1)。 */
+export async function hasVpsAccess(userId: string, vpsId: string): Promise<boolean> {
+  const admin = await createServerAdminClient()
+  if (await isGlobalOperator(admin, userId)) return true
+  const { data } = await admin
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .from('vps_allocations' as any)
+    .select('id, owner, assigned_to')
+    .eq('state', 'allocated')
+    .eq('vps_id', vpsId)
+  const rows = (data ?? []) as unknown as Array<{ owner: string | null; assigned_to: string | null }>
+  return rows.some((r) => r.assigned_to === userId || r.owner === userId)
+}
+
+/** 用户是否持有任一 VPS 授权(不含 admin/ops 旁路)。用于「无 VPS 无法重建」护栏文案(R2)。 */
+export async function userHasAnyVps(userId: string): Promise<boolean> {
+  const ids = await listGrantedVpsIds(userId)
+  return ids.length > 0
+}
+
+/** 幂等授予:让某用户对某 node 拥有 manage(部署成功后自动授权 R4)。已存在更高/同级则不降级。 */
+export async function grantNodeAccess(
+  userId: string,
+  nodeId: string,
+  level: GrantLevel = 'manage',
+): Promise<void> {
+  const admin = await createServerAdminClient()
+  const existing = await userGrantLevel(userId, 'node', nodeId)
+  if (existing && levelGte(existing, level)) return // 不降级
+  await admin
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .from('access_grants' as any)
+    .upsert(
+      { user_id: userId, resource_type: 'node', resource_id: nodeId, level, granted_by: userId },
+      { onConflict: 'resource_type,resource_id,user_id' },
+    )
+}
+
 /** 列出某用户被授权(≥ minLevel)的资源 id 集合,用于列表类过滤。 */
 export async function listGrantedResourceIds(
   userId: string,

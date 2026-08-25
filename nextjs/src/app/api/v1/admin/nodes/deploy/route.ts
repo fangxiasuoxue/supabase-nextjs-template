@@ -4,6 +4,7 @@ import { createSSRClient } from '@/lib/supabase/server'
 import { createNodeWithDeployment, type NodeStore } from '@/lib/nodes/create-node-with-deployment'
 import { deriveNodeDefaults } from '@/lib/parsers/node-deploy-defaults'
 import { normalizeDeployMode, findNodeConflict } from '@/lib/nodes/node-lifecycle'
+import { hasVpsAccess, grantNodeAccess } from '@/lib/auth/resourceAccess'
 
 // POST /api/v1/admin/nodes/deploy — 创建节点部署任务(node + node_deployment)
 //
@@ -23,21 +24,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data: roleData } = await authClient
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', user.id)
-    .single()
-  if (!roleData || !['admin', 'ops'].includes((roleData as any).role)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
   const adminClient = await createServerAdminClient()
   const body = await request.json()
   const { vps_id, profile_id, deploy_mode, node_name, port, inbound_tag, public_ip } = body
 
   if (!vps_id || !profile_id) {
     return NextResponse.json({ error: 'vps_id and profile_id are required' }, { status: 400 })
+  }
+
+  // SDD 55 · P2c/R1 —— 创建部署的门:admin/ops 全局旁路,否则必须对目标 VPS 有授权。
+  // 无 VPS 授权则拒(前端「创建部署」按钮亦按 hasVps 置灰)。VPS 是创建部署的物理前提。
+  if (!(await hasVpsAccess(user.id, vps_id))) {
+    return NextResponse.json(
+      { error: '无 VPS 授权:创建部署需先由管理员为你分配目标 VPS' },
+      { status: 403 },
+    )
   }
 
   // 服务端取 vps 长名派生默认值(权威,防客户端传入短名脏值)。
@@ -110,6 +111,18 @@ export async function POST(request: NextRequest) {
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status })
   }
+
+  // SDD 55 · P2c/R4 —— 创建成功即自动授予创建者对该 node 的 manage(不降级已有更高级)。
+  // 令二级代理「谁部署谁管理」,无需管理员再手动授权。admin/ops 本已全局旁路,授了也无害。
+  if (result.nodeId) {
+    try {
+      await grantNodeAccess(user.id, result.nodeId, 'manage')
+    } catch (e) {
+      // 自动授权失败不阻断部署(节点已建);仅记录,管理员可事后补授。
+      console.error('[deploy] auto-grant manage failed:', (e as Error)?.message)
+    }
+  }
+
   return NextResponse.json(
     { data: { node_id: result.nodeId, deployment_id: result.deploymentId } },
     { status: 201 },

@@ -5,7 +5,7 @@ import { createSPASassClientAuthenticated } from '@/lib/supabase/client'
 import { NodeSubscriptionCard } from '@/components/admin/nodes/NodeSubscriptionCard'
 import { RegisterExistingNodeDialog } from '@/components/admin/nodes/RegisterExistingNodeDialog'
 import { toast } from 'sonner'
-import { Loader2, Network, Plus, QrCode, ExternalLink } from 'lucide-react'
+import { Loader2, Network, Plus, QrCode, ExternalLink, Rocket, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { checkIsAdmin, getUserPermissionsAction } from '@/app/actions/auth'
@@ -58,6 +58,9 @@ export default function AdminNodesPage() {
   const [myClients, setMyClients] = useState<MyClient[]>([])
   const [myNodes, setMyNodes] = useState<MyNode[]>([])
   const [portalLoading, setPortalLoading] = useState(true)
+  // SDD 55 · P2c:门户内 manage 节点的生命周期护栏 —— 是否持有任一 VPS 授权。
+  // 无 VPS → 「创建部署」置灰(R1)、删除节点强警告「无法重建」(R2)。
+  const [hasVps, setHasVps] = useState(false)
 
   const fetchNodes = useCallback(async () => {
     try {
@@ -88,6 +91,20 @@ export default function AdminNodesPage() {
 
   useEffect(() => { fetchNodes() }, [fetchNodes])
 
+  // 门户数据源(二级代理 node + 端用户 client + 自身 VPS 授权),可在删节点后复用刷新。
+  const fetchPortal = useCallback(async () => {
+    try {
+      const [rn, rc, rv] = await Promise.all([
+        fetch('/api/v1/me/nodes').then((r) => r.json()).catch(() => ({})),
+        fetch('/api/v1/me/clients').then((r) => r.json()).catch(() => ({})),
+        fetch('/api/v1/me/vps').then((r) => r.json()).catch(() => ({})),
+      ])
+      setMyNodes(rn?.nodes ?? [])
+      setMyClients(rc?.clients ?? [])
+      setHasVps(!!rv?.hasVps)
+    } catch { /* 空态兜底 */ } finally { setPortalLoading(false) }
+  }, [])
+
   useEffect(() => {
     (async () => {
       let manage = false
@@ -100,19 +117,10 @@ export default function AdminNodesPage() {
       } catch { manage = false }
       setCanManage(manage)
       setRoleResolved(true)
-      // 非 manage → 取被授权给自己的 node(二级代理)+ client(端用户)。
-      if (!manage) {
-        try {
-          const [rn, rc] = await Promise.all([
-            fetch('/api/v1/me/nodes').then((r) => r.json()).catch(() => ({})),
-            fetch('/api/v1/me/clients').then((r) => r.json()).catch(() => ({})),
-          ])
-          setMyNodes(rn?.nodes ?? [])
-          setMyClients(rc?.clients ?? [])
-        } catch { /* 空态兜底 */ } finally { setPortalLoading(false) }
-      }
+      // 非 manage → 取被授权给自己的 node(二级代理)+ client(端用户)+ VPS 授权。
+      if (!manage) await fetchPortal()
     })()
-  }, [])
+  }, [fetchPortal])
 
   const statusColor = (s: string) =>
     s === 'active' ? 'text-green-700 bg-green-50 border-green-200'
@@ -154,6 +162,28 @@ export default function AdminNodesPage() {
       if (!res.ok) throw new Error(json.error || '删除失败')
       toast.success('删除任务已下发(suspended → 拆除后转 deleted)')
       fetchNodes()
+    } catch (e: any) { toast.error(e.message) } finally { setBusyId(null) }
+  }
+
+  // SDD 55 · P2c/R2 —— 门户内二级代理删自己 manage 的节点。强警告;无 VPS 时特别提示无法重建。
+  const handlePortalDeleteNode = async (n: MyNode) => {
+    if (n.status === 'deleted') return
+    const noVpsWarn = hasVps ? '' :
+      `\n\n• 🛑 你当前【无 VPS 授权】,删除后【无法重新部署】此节点,可能导致你名下没有可用节点。\n` +
+      `  如需保留服务,请先联系管理员为你分配 VPS,或改用「续期/停用」而非删除。`
+    if (!window.confirm(
+      `确认删除你管理的节点「${n.name ?? n.inbound_tag ?? n.id.slice(0, 8)}」?\n\n` +
+      `• 将下发拆除机器上的落地 inbound（${n.inbound_tag ?? '—'}),不可撤销。\n` +
+      `• 该节点下的所有终端(名额)订阅将随之失效。` +
+      noVpsWarn,
+    )) return
+    setBusyId(n.id)
+    try {
+      const res = await fetch(`/api/v1/admin/nodes/${n.id}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || '删除失败')
+      toast.success('删除任务已下发(suspended → 拆除后转 deleted)')
+      fetchPortal()
     } catch (e: any) { toast.error(e.message) } finally { setBusyId(null) }
   }
 
@@ -218,12 +248,43 @@ export default function AdminNodesPage() {
                           <span className="rounded bg-cyan-50 border border-cyan-200 px-1.5 py-0.5 text-[10px] font-black text-cyan-700">{levelLabel[n.level]}</span>
                         </div>
                       </div>
-                      <Link href={`/app/admin/nodes/${n.id}/clients`} className="mt-auto">
-                        <Button className="w-full rounded-xl h-10 text-xs font-black uppercase tracking-widest">
-                          管理终端
-                          <ExternalLink className="ml-2 h-3.5 w-3.5" />
-                        </Button>
-                      </Link>
+                      <div className="mt-auto space-y-2">
+                        <Link href={`/app/admin/nodes/${n.id}/clients`}>
+                          <Button className="w-full rounded-xl h-10 text-xs font-black uppercase tracking-widest">
+                            管理终端
+                            <ExternalLink className="ml-2 h-3.5 w-3.5" />
+                          </Button>
+                        </Link>
+                        {/* SDD 55 · P2c:manage 级才见节点生命周期操作(创建部署需 VPS / 删除强警告)。 */}
+                        {n.level === 'manage' && (
+                          <div className="grid grid-cols-2 gap-2">
+                            {hasVps ? (
+                              <Link href="/app/admin/nodes/deploy">
+                                <Button variant="outline" className="w-full rounded-xl h-9 text-[11px] font-black uppercase tracking-widest border-slate-300">
+                                  <Rocket className="mr-1.5 h-3.5 w-3.5" />
+                                  创建部署
+                                </Button>
+                              </Link>
+                            ) : (
+                              <Button
+                                variant="outline" disabled title="无 VPS 授权:请联系管理员分配 VPS 后再创建部署"
+                                className="w-full rounded-xl h-9 text-[11px] font-black uppercase tracking-widest border-slate-200 opacity-50 cursor-not-allowed"
+                              >
+                                <Rocket className="mr-1.5 h-3.5 w-3.5" />
+                                无 VPS
+                              </Button>
+                            )}
+                            <Button
+                              variant="outline" disabled={busyId === n.id || n.status === 'deleted'}
+                              onClick={() => handlePortalDeleteNode(n)}
+                              className="w-full rounded-xl h-9 text-[11px] font-black uppercase tracking-widest border-red-200 text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                              {busyId === n.id ? '…' : '删除'}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
