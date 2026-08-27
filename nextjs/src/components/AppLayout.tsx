@@ -10,7 +10,7 @@ import {
     X,
     ChevronDown,
     LogOut,
-    Key, Files, Settings, Server, MessageSquare, Bell, Globe,
+    Key, Files, Settings, Server, MessageSquare, Bell, Globe, Zap,
 } from 'lucide-react';
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
@@ -104,6 +104,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         const hasMessagesPermission = isAdmin || permissions.some(p => p.module === 'messages' && p.can_menu);
         // SDD 54:域名管理(与 node 同 RBAC 套路;'domain' 模块权限,admin 直通,分域授权留 P4)
         const hasDomainPermission = isAdmin || permissions.some(p => p.module === 'domain' && p.can_menu);
+        // SDD 60:中转加速('transit' 模块权限,admin 直通)
+        const hasTransitPermission = isAdmin || permissions.some(p => p.module === 'transit' && p.can_menu);
 
         if (hasIpPermission) {
             baseNav.push({ name: t('nav.ip'), href: '/app/ip', icon: Files });
@@ -123,6 +125,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         if (hasDomainPermission) {
             baseNav.push({ name: '域名管理', href: '/app/domain', icon: Globe });
+        }
+
+        if (hasTransitPermission) {
+            baseNav.push({ name: '中转加速', href: '/app/transit', icon: Zap });
         }
 
         if (hasMessagesPermission) {

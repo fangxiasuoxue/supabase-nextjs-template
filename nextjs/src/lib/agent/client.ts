@@ -34,7 +34,8 @@ export async function callAgent(
     throw new Error(`VPS not found: ${vpsId}: ${vpsErr?.message}`)
   }
 
-  const url = `http://${(vps as any).public_ip}:8080${path}`
+  // jiedian-agent httpAddr = :4948(install-jiedian-node.sh 部署基线;现网全在 4948,非 8080)。
+  const url = `http://${(vps as any).public_ip}:4948${path}`
 
   return fetch(url, {
     ...options,
