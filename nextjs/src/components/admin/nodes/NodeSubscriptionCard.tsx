@@ -24,6 +24,11 @@ const SITE_URL = (
 export function NodeSubscriptionCard({ token, protocol, inboundTag, pathPrefix = '/sub', heading }: Props) {
   const [copied, setCopied] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  // SDD 61 #8:短链别名
+  const [shortUrl, setShortUrl] = useState<string | null>(null)
+  const [shortQr, setShortQr] = useState<string | null>(null)
+  const [minting, setMinting] = useState(false)
+  const [copiedShort, setCopiedShort] = useState(false)
 
   // 完整订阅 URL —— 客户端可直接导入
   const prefix = pathPrefix.replace(/\/$/, '')
@@ -54,6 +59,36 @@ export function NodeSubscriptionCard({ token, protocol, inboundTag, pathPrefix =
     setCopied(true)
     toast.success('订阅链接已复制')
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  // 铸造/取该订阅的短链别名(幂等:同一 target 返回既有短码),并生成短链二维码。
+  const handleMint = async () => {
+    if (!token || minting) return
+    setMinting(true)
+    try {
+      const res = await fetch('/api/v1/admin/sub-short-links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetPath: `${prefix}/${token}`, label: heading || protocol || null }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.url) throw new Error(data.error || '生成失败')
+      setShortUrl(data.url)
+      QRCode.toDataURL(data.url, { width: 160, margin: 1 }).then(setShortQr).catch(() => setShortQr(null))
+      toast.success('短链已生成')
+    } catch (e: any) {
+      toast.error(e?.message || '短链生成失败')
+    } finally {
+      setMinting(false)
+    }
+  }
+
+  const handleCopyShort = async () => {
+    if (!shortUrl) return
+    await navigator.clipboard.writeText(shortUrl)
+    setCopiedShort(true)
+    toast.success('短链已复制')
+    setTimeout(() => setCopiedShort(false), 2000)
   }
 
   if (!token) return (
@@ -105,6 +140,42 @@ export function NodeSubscriptionCard({ token, protocol, inboundTag, pathPrefix =
               {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5 text-cyan-600" />}
             </Button>
           </div>
+          {/* 一条链接通吃所有客户端(SDD 61:按 UA 自动转 Clash/sing-box/Surge,其余 base64) */}
+          <p className="text-[10px] text-cyan-700/70 font-medium">
+            一条链接自动适配所有客户端(Clash Meta / sing-box / v2rayNG / Shadowrocket / Surge)
+          </p>
+
+          {/* 短链别名(SDD 61 #8):又短又好记,扫码/复制皆可 */}
+          {!shortUrl ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleMint}
+              disabled={minting}
+              className="h-7 text-[10px] rounded-lg"
+            >
+              {minting ? '生成中…' : '生成短链'}
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2">
+              {shortQr && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={shortQr} alt="短链二维码" className="w-10 h-10 rounded bg-white border border-slate-200 shrink-0" />
+              )}
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200 flex-1 min-w-0">
+                <span className="tech-mono text-[11px] text-emerald-800 flex-1 truncate">{shortUrl}</span>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={handleCopyShort}
+                  className="h-6 w-6 rounded shrink-0 hover:bg-emerald-100"
+                >
+                  {copiedShort ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3 text-emerald-600" />}
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* 裸 token 作为次要信息小字展示 */}
           <p className="text-[9px] text-muted-foreground/40 tech-mono truncate">
             token: {token}
