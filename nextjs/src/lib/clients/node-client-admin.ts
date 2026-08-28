@@ -27,7 +27,9 @@ export function swapVlessUuid(baseLink: string, uuid: string, remark: string): s
   const hashIdx = baseLink.indexOf('#')
   // afterAt = "@host:port?query"(不含 fragment)
   const afterAt = hashIdx >= 0 ? baseLink.slice(at, hashIdx) : baseLink.slice(at)
-  return `${scheme}${uuid}${afterAt}#${remark}`
+  // remark 须 URL 编码:含空格/中文/特殊字符的裸 fragment 会被部分客户端(尤其 Clash Meta)
+  // 判为非法链接而整段拒绝。与 node-share-builder.buildVlessRealityShareUrl 的编码保持一致。
+  return `${scheme}${uuid}${afterAt}#${encodeURIComponent(remark)}`
 }
 
 /** 从节点 rendered_config 里取第一条 base share link(容错多种形状)。取不到返回 null。 */

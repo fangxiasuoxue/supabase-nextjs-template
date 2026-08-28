@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { swapVlessUuid, extractBaseShareLink } from '@/lib/clients/node-client-admin'
-import { buildSubscription } from '@/lib/parsers/node-share-builder'
+import { subscriptionResponse } from '@/lib/subscription/clientResponse'
 import { listGrantedResourceIds } from '@/lib/auth/resourceAccess'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
@@ -72,7 +72,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
   const unique = Array.from(new Set(links.filter(Boolean)))
   if (unique.length === 0) return empty()
 
-  return new NextResponse(buildSubscription(unique), {
-    status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
-  })
+  // SDD 61:Clash 类客户端 → sublink-worker 转 clash yaml;其它 → base64。失败回落 base64。
+  return subscriptionResponse(_req, unique)
 }

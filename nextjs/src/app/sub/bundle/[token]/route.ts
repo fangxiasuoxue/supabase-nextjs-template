@@ -13,10 +13,10 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
-import { buildSubscription } from '@/lib/parsers/node-share-builder'
+import { subscriptionResponse } from '@/lib/subscription/clientResponse'
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params
@@ -70,14 +70,8 @@ export async function GET(
   const uniqueLinks = Array.from(new Set(allLinks.filter(Boolean)))
 
   if (uniqueLinks.length > 0) {
-    const body = buildSubscription(uniqueLinks)
-    return new NextResponse(body, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-store',
-      },
-    })
+    // SDD 61:Clash 类客户端 → sublink-worker 转 clash yaml;其它 → base64。失败回落 base64。
+    return subscriptionResponse(request, uniqueLinks)
   }
 
   // 4) 优雅降级:bundle 有效但暂无可订阅节点 → HTTP 200 空订阅

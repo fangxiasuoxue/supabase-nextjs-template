@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { swapVlessUuid, extractBaseShareLink } from '@/lib/clients/node-client-admin'
+import { subscriptionResponse } from '@/lib/subscription/clientResponse'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
@@ -49,10 +50,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
     return new NextResponse('', { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
   }
 
-  // 4) 标准订阅格式 = base64(链接换行拼接)
-  const subscription = Buffer.from(link, 'utf-8').toString('base64')
-  return new NextResponse(subscription, {
-    status: 200,
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-  })
+  // 4) SDD 61:Clash 类客户端 → sublink-worker 转 clash yaml;其它 → base64。失败回落 base64。
+  return subscriptionResponse(_req, [link])
 }
