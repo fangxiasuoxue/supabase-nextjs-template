@@ -15,8 +15,12 @@
 import { NextResponse } from 'next/server'
 import { buildSubscription } from '@/lib/parsers/node-share-builder'
 
-// sublink-worker 基址(禁硬编码,可切自建/Docker 备份)。SDD 61 D6。
-const SUBLINK_BASE = (process.env.SUBLINK_BASE_URL || 'https://zz.3pay.top').replace(/\/+$/, '')
+// sublink-worker 基址(可切自建/Docker 备份)。SDD 61 D6。
+// 默认走 worker 原生域 workers.dev,而非人面向的 zz.3pay.top:
+//   ① 这是 Vercel→worker 的【服务端】跳,用户设备只连 panel,不受 workers.dev 国内被墙影响;
+//   ② 从而绕开 zz.3pay.top 上的公网限速(免费版 WAF 不能按 UA 豁免),避免 Vercel 出口 IP 被误限。
+// 见 SDD 61 §P2 / reference/sublink-worker-api.md。
+const SUBLINK_BASE = (process.env.SUBLINK_BASE_URL || 'https://sublink-worker.flextra.workers.dev').replace(/\/+$/, '')
 const MAX_INLINE_URL = 15000 // CF Worker 整条 URL 上限约 16KB,留余量;超出回落 base64
 const TIMEOUT_MS = 4500
 
