@@ -107,6 +107,7 @@ export default function IpManagementPage() {
   })
 
   const [canManage, setCanManage] = useState(false)
+  const [canWrite, setCanWrite] = useState(false)
   const [balance, setBalance] = useState<number | null>(null)
 
   // 列表状态
@@ -211,7 +212,9 @@ export default function IpManagementPage() {
       setError("")
       const supabase = await createSPASassClient()
       const perm = await supabase.hasModulePermission('ip', 'read')
+      const writePerm = await supabase.hasModulePermission('ip', 'write')
       const managePerm = await supabase.hasModulePermission('ip', 'manage')
+      setCanWrite(writePerm.allowed || managePerm.allowed)
       setCanManage(managePerm.allowed)
 
       if (managePerm.allowed) {
@@ -640,7 +643,8 @@ export default function IpManagementPage() {
       setError("")
       const supabase = await createSPASassClient()
       const perm = await supabase.hasModulePermission('ip', 'write')
-      if (!perm.allowed && !canManage) {
+      const managePerm = await supabase.hasModulePermission('ip', 'manage')
+      if (!perm.allowed && !managePerm.allowed) {
         setError('没有写入权限')
         return
       }
@@ -1162,12 +1166,16 @@ export default function IpManagementPage() {
                           </TableCell>
                           <TableCell className="text-center px-4">
                             <div className="inline-flex flex-col items-center gap-1">
-                              <Switch
-                                checked={!!asset.terminate_at_period_end}
-                                disabled={terminatingIds.has(asset.id)}
-                                onCheckedChange={(checked) => handleToggleTerminate(asset, checked)}
-                                className="data-[state=checked]:bg-red-600 data-[state=unchecked]:bg-green-600"
-                              />
+                              {canWrite ? (
+                                <Switch
+                                  checked={!!asset.terminate_at_period_end}
+                                  disabled={terminatingIds.has(asset.id)}
+                                  onCheckedChange={(checked) => handleToggleTerminate(asset, checked)}
+                                  className="data-[state=checked]:bg-red-600 data-[state=unchecked]:bg-green-600"
+                                />
+                              ) : (
+                                <div className={`w-2 h-2 rounded-full ${asset.terminate_at_period_end ? 'bg-red-600' : 'bg-green-600'}`} />
+                              )}
                               <span className={`text-[8px] font-black uppercase tracking-widest ${asset.terminate_at_period_end ? 'text-red-600' : 'text-green-600'}`}>
                                 {asset.terminate_at_period_end ? '到期停用' : '自动续用'}
                               </span>
@@ -1175,34 +1183,38 @@ export default function IpManagementPage() {
                           </TableCell>
                           <TableCell className="text-right pr-8">
                             <div className="flex gap-2 justify-end opacity-0 group-hover/row:opacity-100 transition-all duration-300 translate-x-4 group-hover/row:translate-x-0">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={() => handleTest(asset.id)}
-                                    disabled={testingIds.has(asset.id)}
-                                    className="h-9 w-9 bg-slate-100 hover:bg-cyan-50 rounded-xl"
-                                  >
-                                    <Activity className={`h-4 w-4 ${testingIds.has(asset.id) ? 'animate-spin text-cyan-600' : 'text-cyan-600'}`} />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent className="bg-white border-slate-200 shadow-sm text-[10px] font-black uppercase text-cyan-700">TELEMETRY_PING</TooltipContent>
-                              </Tooltip>
+                              {canWrite && (
+                                <>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => handleTest(asset.id)}
+                                        disabled={testingIds.has(asset.id)}
+                                        className="h-9 w-9 bg-slate-100 hover:bg-cyan-50 rounded-xl"
+                                      >
+                                        <Activity className={`h-4 w-4 ${testingIds.has(asset.id) ? 'animate-spin text-cyan-600' : 'text-cyan-600'}`} />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="bg-white border-slate-200 shadow-sm text-[10px] font-black uppercase text-cyan-700">TELEMETRY_PING</TooltipContent>
+                                  </Tooltip>
 
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={() => handleEdit(asset)}
-                                    className="h-9 w-9 bg-slate-100 hover:bg-slate-200 rounded-xl text-foreground"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent className="bg-white border-slate-200 shadow-sm text-[10px] font-black uppercase text-slate-700">RECONFIGURE_ASSET</TooltipContent>
-                              </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => handleEdit(asset)}
+                                        className="h-9 w-9 bg-slate-100 hover:bg-slate-200 rounded-xl text-foreground"
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="bg-white border-slate-200 shadow-sm text-[10px] font-black uppercase text-slate-700">RECONFIGURE_ASSET</TooltipContent>
+                                  </Tooltip>
+                                </>
+                              )}
 
                               {canManage && (
                                 <Tooltip>
@@ -1237,36 +1249,40 @@ export default function IpManagementPage() {
                                 <TooltipContent className="bg-white border-slate-200 shadow-sm text-[10px] font-black uppercase text-cyan-600">CLIENT_QR_IMPORT</TooltipContent>
                               </Tooltip>
 
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={() => handleAllocate(asset.id)}
-                                    className="h-9 w-9 bg-slate-100 hover:bg-blue-50 rounded-xl text-blue-600"
-                                  >
-                                    <UserPlus className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent className="bg-white border-slate-200 shadow-sm text-[10px] font-black uppercase text-blue-600">DELEGATE_ACCESS</TooltipContent>
-                              </Tooltip>
+                              {canManage && (
+                                <>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => handleAllocate(asset.id)}
+                                        className="h-9 w-9 bg-slate-100 hover:bg-blue-50 rounded-xl text-blue-600"
+                                      >
+                                        <UserPlus className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="bg-white border-slate-200 shadow-sm text-[10px] font-black uppercase text-blue-600">DELEGATE_ACCESS</TooltipContent>
+                                  </Tooltip>
 
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={() => {
-                                      setDeletingId(asset.id)
-                                      setShowDeleteDialog(true)
-                                    }}
-                                    className="h-9 w-9 bg-slate-100 hover:bg-red-50 rounded-xl text-red-600"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent className="bg-white border-slate-200 shadow-sm text-[10px] font-black uppercase text-red-600">PURGE_DATA</TooltipContent>
-                              </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          setDeletingId(asset.id)
+                                          setShowDeleteDialog(true)
+                                        }}
+                                        className="h-9 w-9 bg-slate-100 hover:bg-red-50 rounded-xl text-red-600"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="bg-white border-slate-200 shadow-sm text-[10px] font-black uppercase text-red-600">PURGE_DATA</TooltipContent>
+                                  </Tooltip>
+                                </>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
