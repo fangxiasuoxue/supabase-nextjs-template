@@ -22,6 +22,7 @@ export function VPSAuthDialog({ open, onOpenChange, vpsId, vpsName }: VPSAuthDia
     const [saving, setSaving] = useState(false)
     const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
     const [allocatedUsers, setAllocatedUsers] = useState<Set<string>>(new Set())
+    const [allocations, setAllocations] = useState<any[]>([])
 
     useEffect(() => {
         if (open) {
@@ -46,8 +47,9 @@ export function VPSAuthDialog({ open, onOpenChange, vpsId, vpsName }: VPSAuthDia
                 console.error('加载分配记录失败:', allocError)
             } else {
                 const allocated = new Set(allocations.map((a: any) => a.owner))
+                setAllocations(allocations)
                 setAllocatedUsers(allocated)
-                setSelectedUsers(allocated)
+                setSelectedUsers(new Set())
             }
         } catch (err) {
             toast.error('加载用户列表失败')
@@ -70,10 +72,8 @@ export function VPSAuthDialog({ open, onOpenChange, vpsId, vpsName }: VPSAuthDia
     const handleSave = async () => {
         setSaving(true)
         try {
-            // 为新选中的用户分配此 VPS 实例
-            const newAllocations = Array.from(selectedUsers).filter(
-                userId => !allocatedUsers.has(userId)
-            )
+            // 为新勾选的用户分配此 VPS 实例(已授权用户不再出现在待选列表)
+            const newAllocations = Array.from(selectedUsers)
 
             for (const userId of newAllocations) {
                 const { success, error } = await allocateVPSAction(vpsId, userId)
@@ -85,10 +85,11 @@ export function VPSAuthDialog({ open, onOpenChange, vpsId, vpsName }: VPSAuthDia
 
             if (newAllocations.length > 0) {
                 toast.success(`成功分配 ${newAllocations.length} 个用户`)
+                setSelectedUsers(new Set())
+                await loadUsers()
             } else {
                 toast.info('没有新的分配')
             }
-            onOpenChange(false)
         } catch (err) {
             toast.error('授权失败')
             console.error(err)
@@ -96,6 +97,9 @@ export function VPSAuthDialog({ open, onOpenChange, vpsId, vpsName }: VPSAuthDia
             setSaving(false)
         }
     }
+
+    const pickableUsers = users.filter((u) => !allocatedUsers.has(u.id))
+    const selectAllPickable = () => setSelectedUsers((prev) => prev.size === pickableUsers.length ? new Set() : new Set(pickableUsers.map((u) => u.id)))
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -111,34 +115,62 @@ export function VPSAuthDialog({ open, onOpenChange, vpsId, vpsName }: VPSAuthDia
                 ) : (
                     <div className="space-y-4">
                         <div className="text-sm text-muted-foreground">
-                            选择要授权访问此 VPS 实例的用户(管理员已自动排除):
+                            选择要授权访问此 VPS 实例的用户(管理员已自动排除，可一次勾选多人):
                         </div>
 
-                        <div className="max-h-[400px] overflow-y-auto space-y-2">
-                            {users.length === 0 ? (
-                                <div className="text-center py-8 text-muted-foreground">
-                                    没有可授权的用户
-                                </div>
+                        <div>
+                            <div className="mb-1 text-xs text-muted-foreground">已授权用户</div>
+                            {allocations.length === 0 ? (
+                                <div className="text-xs text-muted-foreground py-1">暂无</div>
                             ) : (
-                                users.map(user => (
-                                    <div
-                                        key={user.id}
-                                        className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded"
-                                    >
-                                        <Checkbox
-                                            id={user.id}
-                                            checked={selectedUsers.has(user.id)}
-                                            onCheckedChange={() => handleToggleUser(user.id)}
-                                        />
-                                        <label
-                                            htmlFor={user.id}
-                                            className="flex-1 text-sm cursor-pointer"
-                                        >
-                                            {user.email}
-                                        </label>
-                                    </div>
-                                ))
+                                <div className="space-y-1 max-h-28 overflow-y-auto rounded border p-1">
+                                    {allocations.map((a: any) => {
+                                        const u = users.find((x) => x.id === a.owner || x.id === a.assigned_to)
+                                        return (
+                                            <div key={a.id} className="flex items-center justify-between rounded border px-2 py-1 text-xs">
+                                                <span className="font-mono truncate">{u?.email || a.owner || a.assigned_to}</span>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
                             )}
+                        </div>
+
+                        <div>
+                            <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+                                <span>勾选用户(可多选)</span>
+                                {pickableUsers.length > 0 && (
+                                    <button className="hover:underline" onClick={selectAllPickable}>
+                                        {selectedUsers.size === pickableUsers.length ? '取消全选' : '全选'}
+                                    </button>
+                                )}
+                            </div>
+                            <div className="max-h-52 overflow-y-auto space-y-1 rounded border p-1">
+                                {pickableUsers.length === 0 ? (
+                                    <div className="text-center py-8 text-muted-foreground">
+                                        没有可授权的用户
+                                    </div>
+                                ) : (
+                                    pickableUsers.map(user => (
+                                        <div
+                                            key={user.id}
+                                            className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded"
+                                        >
+                                            <Checkbox
+                                                id={user.id}
+                                                checked={selectedUsers.has(user.id)}
+                                                onCheckedChange={() => handleToggleUser(user.id)}
+                                            />
+                                            <label
+                                                htmlFor={user.id}
+                                                className="flex-1 text-sm cursor-pointer font-mono truncate"
+                                            >
+                                                {user.email}
+                                            </label>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
                         </div>
 
                         <div className="flex justify-end space-x-2 pt-4">
@@ -159,7 +191,7 @@ export function VPSAuthDialog({ open, onOpenChange, vpsId, vpsName }: VPSAuthDia
                                         保存中...
                                     </>
                                 ) : (
-                                    '保存授权'
+                                    `授权选中(${selectedUsers.size})`
                                 )}
                             </Button>
                         </div>

@@ -577,13 +577,26 @@ export default function IpManagementPage() {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || '分配失败')
 
-      setShowAllocate(false)
-      setAllocatingId(null)
       setSelectedUserIds([])
       setAllocateNotes('')
       await fetchIpAssets()
     } catch (e: any) {
       setError(e?.message || '分配失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function revokeAllocate(userId: string) {
+    if (!allocatingId) return
+    try {
+      setLoading(true)
+      const res = await fetch(`/api/ip/allocate?ip_id=${allocatingId}&user_id=${encodeURIComponent(userId)}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || '撤销失败')
+      await fetchIpAssets()
+    } catch (e: any) {
+      setError(e?.message || '撤销失败')
     } finally {
       setLoading(false)
     }
@@ -671,6 +684,15 @@ export default function IpManagementPage() {
   // 需求 #2:隐藏过期>30天 + 按到期升序 已下沉到 DB 查询(fetchIpAssets),
   // 保证计数/分页/列表一致;这里直接用。行内到期色标仍由 ipExpiryStatus 计算。
   const visibleAssets = ipAssets
+  const allocatingAsset = allocatingId ? ipAssets.find((a) => a.id === allocatingId) : null
+  const assignedIdsForDialog = new Set((allocatingAsset?.assigned_users || []).map((u) => u.id))
+  const pickableUsersForDialog = users.filter((u) => !assignedIdsForDialog.has(u.id))
+
+  const toggleAllocateUser = (uid: string) => setSelectedUserIds(prev => {
+    const next = new Set(prev)
+    next.has(uid) ? next.delete(uid) : next.add(uid)
+    return Array.from(next)
+  })
 
   // 统计卡真实聚合(基于当前已加载的资产) — Bug #6
   const testedLatencies = ipAssets
@@ -1364,26 +1386,45 @@ export default function IpManagementPage() {
           <DialogHeader className="mb-4">
             <DialogTitle className="text-xl font-black uppercase tracking-tight">分配资产接口</DialogTitle>
           </DialogHeader>
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">目标用户列表 (Multiselect)</Label>
-              <select
-                multiple
-                value={selectedUserIds}
-                onChange={(e) => {
-                  const opts = Array.from(e.target.selectedOptions).map((o) => o.value)
-                  setSelectedUserIds(opts)
-                }}
-                className="w-full bg-white border border-slate-300 rounded-2xl p-4 h-48 text-sm text-slate-900 focus:ring-cyan-600/20 scrollbar-hide outline-none tech-mono"
-              >
-                {users.map((u) => (
-                  <option key={u.id} value={u.id} className="p-2 mb-1 rounded-lg hover:bg-slate-100">
-                    {u.email || u.id}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[9px] text-muted-foreground uppercase font-bold text-right tracking-widest">Hold CTRL/CMD for Multiple</p>
+          <div className="space-y-5">
+            <div>
+              <div className="mb-1 text-xs text-muted-foreground">已授权用户</div>
+              {(allocatingAsset?.assigned_users || []).length === 0 ? (
+                <div className="text-xs text-muted-foreground py-1">暂无</div>
+              ) : (
+                <div className="space-y-1 max-h-28 overflow-y-auto rounded border border-slate-200 p-1">
+                  {(allocatingAsset?.assigned_users || []).map((u) => (
+                    <div key={u.id} className="flex items-center justify-between rounded border px-2 py-1 text-xs">
+                      <span className="font-mono truncate">{u.email ?? u.id}</span>
+                      <button onClick={() => revokeAllocate(u.id)} disabled={loading} className="text-red-500 hover:text-red-700">撤销</button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+
+            <div>
+              <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+                <span>勾选用户(可多选)</span>
+                {pickableUsersForDialog.length > 0 && (
+                  <button className="hover:underline"
+                    onClick={() => setSelectedUserIds((prev) => prev.length === pickableUsersForDialog.length ? [] : pickableUsersForDialog.map((u) => u.id))}>
+                    {selectedUserIds.length === pickableUsersForDialog.length ? '取消全选' : '全选'}
+                  </button>
+                )}
+              </div>
+              <div className="max-h-52 space-y-0.5 overflow-y-auto rounded border border-slate-200 p-1">
+                {pickableUsersForDialog.length === 0 ? (
+                  <div className="py-2 text-center text-xs text-muted-foreground">无可选用户(都已授权)</div>
+                ) : pickableUsersForDialog.map((u) => (
+                  <label key={u.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-slate-50">
+                    <input type="checkbox" checked={selectedUserIds.includes(u.id)} onChange={() => toggleAllocateUser(u.id)} />
+                    <span className="font-mono text-xs truncate">{u.email || u.id}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">同步备注说明</Label>
               <Input
@@ -1399,7 +1440,7 @@ export default function IpManagementPage() {
               取消
             </Button>
             <Button className="btn-primary rounded-2xl h-12 px-8 font-bold text-xs uppercase" onClick={confirmAllocate} disabled={loading || selectedUserIds.length === 0}>
-              确认资产分配
+              授权选中({selectedUserIds.length})
             </Button>
           </DialogFooter>
         </DialogContent>
