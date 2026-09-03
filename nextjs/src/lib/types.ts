@@ -511,6 +511,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           deleted_at: string | null
+          display_name: string | null
           id: number
           ip_id: number | null
           notes: string | null
@@ -518,6 +519,7 @@ export type Database = {
           owner_id: string | null
           released_at: string | null
           state: string | null
+          terminate_at_period_end: boolean
         }
         Insert: {
           allocated_at?: string | null
@@ -526,6 +528,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           deleted_at?: string | null
+          display_name?: string | null
           id?: never
           ip_id?: number | null
           notes?: string | null
@@ -533,6 +536,7 @@ export type Database = {
           owner_id?: string | null
           released_at?: string | null
           state?: string | null
+          terminate_at_period_end?: boolean
         }
         Update: {
           allocated_at?: string | null
@@ -541,6 +545,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           deleted_at?: string | null
+          display_name?: string | null
           id?: never
           ip_id?: number | null
           notes?: string | null
@@ -548,6 +553,7 @@ export type Database = {
           owner_id?: string | null
           released_at?: string | null
           state?: string | null
+          terminate_at_period_end?: boolean
         }
         Relationships: [
           {

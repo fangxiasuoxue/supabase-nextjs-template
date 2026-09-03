@@ -61,7 +61,8 @@ type IpAsset = {
   last_speed_kbps: number | null
   last_tested_at: string | null
   terminate_at_period_end?: boolean | null
-  assigned_users?: { id: string, email: string | null }[]
+  assigned_users?: { id: string, email: string | null, display_name?: string | null, terminate_at_period_end?: boolean | null }[]
+  my_allocation?: { id: number, display_name: string | null, notes: string | null, terminate_at_period_end: boolean | null }
 }
 
 type FormData = {
@@ -264,27 +265,40 @@ export default function IpManagementPage() {
 
       let rows = ((data as any) || []) as IpAsset[]
 
-      // 管理员列表展示:该 IP 当前授权给了谁。auth.users 只能服务端列,所以用 /api/users/list 做 id→email 映射。
-      if (managePerm.allowed && rows.length > 0) {
+      if (rows.length > 0) {
         try {
-          const [allocRes, usersRes] = await Promise.all([
-            client.from('ip_allocations').select('ip_id, assignee_user_id, state, released_at').in('ip_id', rows.map(r => r.id)).eq('state', 'allocated').is('released_at', null),
-            fetch('/api/users/list', { credentials: 'same-origin' })
-          ])
-          const userJson = usersRes.ok ? await usersRes.json() : { users: [] }
-          const emailById = new Map<string, string | null>((userJson.users || []).map((u: any) => [String(u.id), u.email || null]))
-          const assignedByIp = new Map<number, { id: string, email: string | null }[]>()
-          ;((allocRes.data as any[]) || []).forEach((a) => {
-            if (!a.assignee_user_id) return
-            const assigneeId = String(a.assignee_user_id)
-            const arr = assignedByIp.get(a.ip_id) || []
-            if (!arr.some(x => x.id === assigneeId)) {
-              arr.push({ id: assigneeId, email: emailById.get(assigneeId) ?? null })
-            }
-            assignedByIp.set(a.ip_id, arr)
-          })
-          rows = rows.map(r => ({ ...r, assigned_users: assignedByIp.get(r.id) || [] }))
-          setUsers(userJson.users || [])
+          if (managePerm.allowed) {
+            // 管理员列表展示:该 IP 当前授权给了谁。auth.users 只能服务端列,所以用 /api/users/list 做 id→email 映射。
+            const [allocRes, usersRes] = await Promise.all([
+              client.from('ip_allocations').select('ip_id, assignee_user_id, state, released_at, display_name, notes, terminate_at_period_end').in('ip_id', rows.map(r => r.id)).eq('state', 'allocated').is('released_at', null),
+              fetch('/api/users/list', { credentials: 'same-origin' })
+            ])
+            const userJson = usersRes.ok ? await usersRes.json() : { users: [] }
+            const emailById = new Map<string, string | null>((userJson.users || []).map((u: any) => [String(u.id), u.email || null]))
+            const assignedByIp = new Map<number, { id: string, email: string | null, display_name?: string | null, terminate_at_period_end?: boolean | null }[]>()
+            ;((allocRes.data as any[]) || []).forEach((a) => {
+              if (!a.assignee_user_id) return
+              const assigneeId = String(a.assignee_user_id)
+              const arr = assignedByIp.get(a.ip_id) || []
+              if (!arr.some(x => x.id === assigneeId)) {
+                arr.push({ id: assigneeId, email: emailById.get(assigneeId) ?? null, display_name: a.display_name ?? a.notes ?? null, terminate_at_period_end: !!a.terminate_at_period_end })
+              }
+              assignedByIp.set(a.ip_id, arr)
+            })
+            rows = rows.map(r => ({ ...r, assigned_users: assignedByIp.get(r.id) || [] }))
+            setUsers(userJson.users || [])
+          } else {
+            // 普通用户:只取自己的授权行,使用 per-user display_name/notes 作为列表显示名与个人停用开关。
+            const { data: myAllocs } = await client
+              .from('ip_allocations')
+              .select('id, ip_id, display_name, notes, terminate_at_period_end')
+              .in('ip_id', rows.map(r => r.id))
+              .eq('state', 'allocated')
+              .is('released_at', null)
+            const byIp = new Map<number, { id: number, display_name: string | null, notes: string | null, terminate_at_period_end: boolean | null }>()
+            ;((myAllocs as any[]) || []).forEach((a) => byIp.set(a.ip_id, { id: a.id, display_name: a.display_name ?? null, notes: a.notes ?? null, terminate_at_period_end: !!a.terminate_at_period_end }))
+            rows = rows.map(r => ({ ...r, my_allocation: byIp.get(r.id) }))
+          }
         } catch (e) {
           console.warn('Failed to load ip assignees', e)
         }
@@ -571,7 +585,8 @@ export default function IpManagementPage() {
         body: JSON.stringify({
           ip_id: allocatingId,
           assignee_user_ids: selectedUserIds,
-          notes: allocateNotes
+          notes: allocateNotes,
+          display_name: allocateNotes
         })
       })
       const json = await res.json()
@@ -654,20 +669,25 @@ export default function IpManagementPage() {
     try {
       setTerminatingIds(prev => new Set(prev).add(asset.id))
       setError("")
-      const supabase = await createSPASassClient()
-      const perm = await supabase.hasModulePermission('ip', 'write')
-      const managePerm = await supabase.hasModulePermission('ip', 'manage')
-      if (!perm.allowed && !managePerm.allowed) {
-        setError('没有写入权限')
-        return
+      if (canWrite || canManage) {
+        const supabase = await createSPASassClient()
+        const client = supabase.getSupabaseClient() as any
+        const { error } = await client
+          .from('ip_assets')
+          .update({ terminate_at_period_end: checked })
+          .eq('id', asset.id)
+        if (error) throw error
+        setIpAssets(prev => prev.map(r => r.id === asset.id ? { ...r, terminate_at_period_end: checked } : r))
+      } else {
+        const res = await fetch('/api/ip/allocate', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ip_id: asset.id, terminate_at_period_end: checked })
+        })
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || '更新失败')
+        setIpAssets(prev => prev.map(r => r.id === asset.id ? { ...r, my_allocation: r.my_allocation ? { ...r.my_allocation, terminate_at_period_end: checked } : r.my_allocation } : r))
       }
-      const client = supabase.getSupabaseClient() as any
-      const { error } = await client
-        .from('ip_assets')
-        .update({ terminate_at_period_end: checked })
-        .eq('id', asset.id)
-      if (error) throw error
-      setIpAssets(prev => prev.map(r => r.id === asset.id ? { ...r, terminate_at_period_end: checked } : r))
     } catch (e: any) {
       setError(e?.message || '更新终止使用状态失败')
     } finally {
@@ -693,6 +713,14 @@ export default function IpManagementPage() {
     next.has(uid) ? next.delete(uid) : next.add(uid)
     return Array.from(next)
   })
+
+  const displayNameFor = (asset: IpAsset) => (
+    asset.my_allocation?.display_name || asset.my_allocation?.notes || asset.remark || asset.label || (asset.provider_id ? `#${asset.provider_id}` : asset.ip)
+  )
+  const terminateFor = (asset: IpAsset) => canWrite || canManage ? !!asset.terminate_at_period_end : !!asset.my_allocation?.terminate_at_period_end
+  const shouldShowAssetIdentity = canWrite || canManage
+  const shouldShowRemarkAssignees = canWrite || canManage
+  const tableColumnCount = (shouldShowAssetIdentity ? 1 : 0) + 1 + (shouldShowRemarkAssignees ? 1 : 0) + 3
 
   // 统计卡真实聚合(基于当前已加载的资产) — Bug #6
   const testedLatencies = ipAssets
@@ -1077,8 +1105,9 @@ export default function IpManagementPage() {
                 <Table>
                   <TableHeader className="bg-slate-50">
                     <TableRow className="border-slate-200 hover:bg-transparent h-14">
-                      <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] pl-8">资产识别 / ATTRIBUTES</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em]">备注 / 授权用户</TableHead>
+                      {shouldShowAssetIdentity && <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] pl-8">资产识别 / ATTRIBUTES</TableHead>}
+                      <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] pl-8">显示名称 / NAME</TableHead>
+                      {shouldShowRemarkAssignees && <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em]">备注 / 授权用户</TableHead>}
                       <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em]">遥测数据 / STATUS</TableHead>
                       <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] text-center">地址协议 / INTERFACE</TableHead>
                       <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] text-center">终止使用</TableHead>
@@ -1088,7 +1117,7 @@ export default function IpManagementPage() {
                   <TableBody>
                     {loading && ipAssets.length === 0 ? (
                       <TableRow className="border-none">
-                        <TableCell colSpan={6} className="h-[500px] text-center">
+                        <TableCell colSpan={tableColumnCount} className="h-[500px] text-center">
                           <div className="flex flex-col items-center justify-center gap-6">
                             <div className="relative">
                                 <div className="absolute inset-0 bg-cyan-100 blur-2xl animate-pulse rounded-full" />
@@ -1100,7 +1129,7 @@ export default function IpManagementPage() {
                       </TableRow>
                     ) : visibleAssets.length === 0 ? (
                       <TableRow className="border-none">
-                        <TableCell colSpan={6} className="h-[500px] text-center">
+                        <TableCell colSpan={tableColumnCount} className="h-[500px] text-center">
                           <div className="flex flex-col items-center justify-center gap-6 py-20 opacity-30 group cursor-default">
                              <div className="p-6 rounded-full bg-slate-100 border border-slate-200 group-hover:bg-slate-200 transition-colors">
                                 <Database className="h-12 w-12" />
@@ -1112,44 +1141,59 @@ export default function IpManagementPage() {
                     ) : (
                       visibleAssets.map((asset) => (
                         <TableRow key={asset.id} className="border-slate-200 hover:bg-slate-50 transition-all duration-300 group/row h-16">
-                          <TableCell className="pl-8 py-3">
-                            <div className="flex flex-col gap-1.5">
-                              {/* 名称 = proxy-cheap 规范标识(label=US01–US18/VN01,与网页/openwrt 一致);无则回退 provider_id */}
-                              <span className="text-sm font-black text-foreground group-hover/row:text-cyan-700 transition-colors uppercase tracking-tight">{asset.label || (asset.provider_id ? `#${asset.provider_id}` : "Legacy Module")}</span>
-                              <div className="flex items-center gap-3">
-                                <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[9px] font-black text-cyan-700 uppercase tracking-widest">
-                                  {asset.country_code || "XZ"}
-                                </span>
-                                <span className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-tight truncate max-w-[140px]">
-                                  {asset.isp_name || "Shadow Network"}
-                                </span>
-                              </div>
-                              {/* 需求 #2:到期色标(黄=3天内到期 / 红=已过期 / 绿=正常) */}
-                              <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-widest ${EXPIRY_TONE_CLASS[ipExpiryStatus(asset.expires_at).tone]}`}>
-                                <Clock className="h-2.5 w-2.5" />
-                                {ipExpiryStatus(asset.expires_at).label}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-3 max-w-[220px]">
-                            <div className="flex flex-col gap-2">
-                              <div className="text-xs font-bold text-slate-700 break-words">
-                                {asset.remark || <span className="text-muted-foreground/40">未填写备注</span>}
-                              </div>
-                              <div className="flex flex-wrap gap-1">
-                                {(asset.assigned_users || []).length > 0 ? (asset.assigned_users || []).slice(0, 3).map((u) => (
-                                  <span key={u.id} className="px-2 py-0.5 rounded-md bg-blue-50 border border-blue-100 text-[9px] font-black text-blue-700 max-w-[180px] truncate">
-                                    {u.email || u.id.slice(0, 8)}
+                          {shouldShowAssetIdentity && (
+                            <TableCell className="pl-8 py-3">
+                              <div className="flex flex-col gap-1.5">
+                                {/* 名称 = proxy-cheap 规范标识(label=US01–US18/VN01,与网页/openwrt 一致);无则回退 provider_id */}
+                                <span className="text-sm font-black text-foreground group-hover/row:text-cyan-700 transition-colors uppercase tracking-tight">{asset.label || (asset.provider_id ? `#${asset.provider_id}` : "Legacy Module")}</span>
+                                <div className="flex items-center gap-3">
+                                  <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[9px] font-black text-cyan-700 uppercase tracking-widest">
+                                    {asset.country_code || "XZ"}
                                   </span>
-                                )) : (
-                                  <span className="text-[9px] font-bold text-muted-foreground/40 uppercase">未授权</span>
-                                )}
-                                {(asset.assigned_users || []).length > 3 && (
-                                  <span className="text-[9px] font-black text-blue-600">+{(asset.assigned_users || []).length - 3}</span>
-                                )}
+                                  <span className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-tight truncate max-w-[140px]">
+                                    {asset.isp_name || "Shadow Network"}
+                                  </span>
+                                </div>
+                                {/* 需求 #2:到期色标(黄=3天内到期 / 红=已过期 / 绿=正常) */}
+                                <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-widest ${EXPIRY_TONE_CLASS[ipExpiryStatus(asset.expires_at).tone]}`}>
+                                  <Clock className="h-2.5 w-2.5" />
+                                  {ipExpiryStatus(asset.expires_at).label}
+                                </span>
                               </div>
+                            </TableCell>
+                          )}
+                          <TableCell className="pl-8 py-3 max-w-[220px]">
+                            <div className="flex flex-col gap-1.5">
+                              <span className="text-sm font-black text-foreground group-hover/row:text-cyan-700 transition-colors tracking-tight break-words">{displayNameFor(asset)}</span>
+                              {!shouldShowAssetIdentity && (
+                                <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-widest ${EXPIRY_TONE_CLASS[ipExpiryStatus(asset.expires_at).tone]}`}>
+                                  <Clock className="h-2.5 w-2.5" />
+                                  {ipExpiryStatus(asset.expires_at).label}
+                                </span>
+                              )}
                             </div>
                           </TableCell>
+                          {shouldShowRemarkAssignees && (
+                            <TableCell className="py-3 max-w-[240px]">
+                              <div className="flex flex-col gap-2">
+                                <div className="text-xs font-bold text-slate-700 break-words">
+                                  {asset.remark || <span className="text-muted-foreground/40">未填写备注</span>}
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                  {(asset.assigned_users || []).length > 0 ? (asset.assigned_users || []).slice(0, 3).map((u) => (
+                                    <span key={u.id} className={`px-2 py-0.5 rounded-md border text-[9px] font-black max-w-[180px] truncate ${u.terminate_at_period_end ? 'bg-red-50 border-red-100 text-red-700' : 'bg-blue-50 border-blue-100 text-blue-700'}`}>
+                                      {u.display_name ? `${u.display_name} · ` : ''}{u.email || u.id.slice(0, 8)}
+                                    </span>
+                                  )) : (
+                                    <span className="text-[9px] font-bold text-muted-foreground/40 uppercase">未授权</span>
+                                  )}
+                                  {(asset.assigned_users || []).length > 3 && (
+                                    <span className="text-[9px] font-black text-blue-600">+{(asset.assigned_users || []).length - 3}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </TableCell>
+                          )}
                           <TableCell>
                             <div className="flex flex-col gap-2">
                                 <div className="flex items-baseline gap-2">
@@ -1188,18 +1232,14 @@ export default function IpManagementPage() {
                           </TableCell>
                           <TableCell className="text-center px-4">
                             <div className="inline-flex flex-col items-center gap-1">
-                              {canWrite ? (
-                                <Switch
-                                  checked={!!asset.terminate_at_period_end}
-                                  disabled={terminatingIds.has(asset.id)}
-                                  onCheckedChange={(checked) => handleToggleTerminate(asset, checked)}
-                                  className="data-[state=checked]:bg-red-600 data-[state=unchecked]:bg-green-600"
-                                />
-                              ) : (
-                                <div className={`w-2 h-2 rounded-full ${asset.terminate_at_period_end ? 'bg-red-600' : 'bg-green-600'}`} />
-                              )}
-                              <span className={`text-[8px] font-black uppercase tracking-widest ${asset.terminate_at_period_end ? 'text-red-600' : 'text-green-600'}`}>
-                                {asset.terminate_at_period_end ? '到期停用' : '自动续用'}
+                              <Switch
+                                checked={terminateFor(asset)}
+                                disabled={terminatingIds.has(asset.id)}
+                                onCheckedChange={(checked) => handleToggleTerminate(asset, checked)}
+                                className="data-[state=checked]:bg-red-600 data-[state=unchecked]:bg-green-600"
+                              />
+                              <span className={`text-[8px] font-black uppercase tracking-widest ${terminateFor(asset) ? 'text-red-600' : 'text-green-600'}`}>
+                                {terminateFor(asset) ? '到期停用' : '继续使用'}
                               </span>
                             </div>
                           </TableCell>
@@ -1426,9 +1466,9 @@ export default function IpManagementPage() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">同步备注说明</Label>
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">给被授权用户看到的显示名称</Label>
               <Input
-                placeholder="Assign notes..."
+                placeholder="例如: 店铺A专用 / 张三手机 / US稳定线"
                 value={allocateNotes}
                 onChange={(e) => setAllocateNotes(e.target.value)}
                 className="bg-white border-slate-300 rounded-2xl h-12"

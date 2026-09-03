@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSSRClient } from '@/lib/supabase/server'
+import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 
 async function requireIpManage() {
   const ssr = await createSSRClient()
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
   const ip_id = body?.ip_id as number
   const ids = body?.assignee_user_ids as string[]
   const notes = body?.notes as string | undefined
+  const displayName = typeof body?.display_name === 'string' ? body.display_name : notes
   if (!ip_id || !Array.isArray(ids) || ids.length === 0) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
@@ -42,6 +44,7 @@ export async function POST(req: Request) {
     state: 'allocated',
     allocated_at: new Date().toISOString(),
     notes: notes ?? null,
+    display_name: displayName?.trim() || null,
     owner: uid,
     assignee_user_id: assignee,
   }))
@@ -68,6 +71,39 @@ export async function DELETE(req: Request) {
     .eq('assignee_user_id', userId)
     .eq('state', 'allocated')
     .is('released_at', null)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
+export async function PATCH(req: Request) {
+  const ssr = await createSSRClient()
+  const { data: auth } = await ssr.auth.getUser()
+  const uid = auth.user?.id
+  if (!uid) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
+
+  const body = await req.json()
+  const ipId = Number(body?.ip_id)
+  if (!ipId || typeof body?.terminate_at_period_end !== 'boolean') {
+    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
+  }
+
+  const admin = await createServerAdminClient()
+  const { data: alloc, error: loadError } = await admin
+    .from('ip_allocations')
+    .select('id')
+    .eq('ip_id', ipId)
+    .eq('assignee_user_id', uid)
+    .eq('state', 'allocated')
+    .is('released_at', null)
+    .limit(1)
+    .maybeSingle()
+  if (loadError) return NextResponse.json({ error: loadError.message }, { status: 500 })
+  if (!alloc?.id) return NextResponse.json({ error: 'Not assigned' }, { status: 403 })
+
+  const { error } = await admin
+    .from('ip_allocations')
+    .update({ terminate_at_period_end: body.terminate_at_period_end } as any)
+    .eq('id', alloc.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
