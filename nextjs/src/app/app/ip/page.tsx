@@ -1101,8 +1101,8 @@ export default function IpManagementPage() {
                 </Button>
               </div>
 
-              <div className="flex-1 overflow-x-auto scrollbar-hide">
-                <Table>
+              <div className="flex-1 overflow-x-auto">
+                <Table className={shouldShowAssetIdentity ? "min-w-[1320px]" : "min-w-[900px]"}>
                   <TableHeader className="bg-slate-50">
                     <TableRow className="border-slate-200 hover:bg-transparent h-14">
                       {shouldShowAssetIdentity && <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] pl-8">资产识别 / ATTRIBUTES</TableHead>}
@@ -1111,7 +1111,7 @@ export default function IpManagementPage() {
                       <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em]">遥测数据 / STATUS</TableHead>
                       <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] text-center">地址协议 / INTERFACE</TableHead>
                       <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] text-center">终止使用</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] text-right pr-8">指挥控制 / ACTIONS</TableHead>
+                      <TableHead className="sticky right-0 z-10 bg-slate-50 text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] text-right pr-8 shadow-[-12px_0_20px_-18px_rgba(15,23,42,0.7)]">指挥控制 / ACTIONS</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1243,8 +1243,8 @@ export default function IpManagementPage() {
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="text-right pr-8">
-                            <div className="flex gap-2 justify-end opacity-0 group-hover/row:opacity-100 transition-all duration-300 translate-x-4 group-hover/row:translate-x-0">
+                          <TableCell className="sticky right-0 z-10 bg-white/95 group-hover/row:bg-slate-50 text-right pr-8 shadow-[-12px_0_20px_-18px_rgba(15,23,42,0.7)]">
+                            <div className="flex gap-2 justify-end transition-all duration-300">
                               {canWrite && (
                                 <>
                                   <Tooltip>

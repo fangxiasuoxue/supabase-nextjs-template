@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { RoleSelect } from './RoleSelect'
 import { PermissionModal } from './PermissionModal'
+import { UserAssetsDialog } from './UserAssetsDialog'
 import { Loader2, Search, RefreshCw, Users, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -123,7 +124,8 @@ export function UserTable() {
                                         </span>
                                     </TableCell>
                                     <TableCell className="text-right pr-6">
-                                        <div className="flex justify-end opacity-40 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                                            <UserAssetsDialog user={user} />
                                             <PermissionModal user={user} onUpdate={fetchUsers} />
                                         </div>
                                     </TableCell>

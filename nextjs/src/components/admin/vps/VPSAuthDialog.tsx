@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { getNonAdminUsersAction } from '@/app/actions/admin'
-import { allocateVPSAction, getVPSAllocationsAction } from '@/app/actions/vps'
+import { allocateVPSAction, getVPSAllocationsAction, releaseVPSAction } from '@/app/actions/vps'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -98,6 +98,20 @@ export function VPSAuthDialog({ open, onOpenChange, vpsId, vpsName }: VPSAuthDia
         }
     }
 
+    const revoke = async (allocationId: string) => {
+        setSaving(true)
+        try {
+            const { success, error } = await releaseVPSAction(allocationId)
+            if (!success) throw new Error(error || '撤销失败')
+            toast.success('已撤销')
+            await loadUsers()
+        } catch (err: any) {
+            toast.error(err?.message || '撤销失败')
+        } finally {
+            setSaving(false)
+        }
+    }
+
     const pickableUsers = users.filter((u) => !allocatedUsers.has(u.id))
     const selectAllPickable = () => setSelectedUsers((prev) => prev.size === pickableUsers.length ? new Set() : new Set(pickableUsers.map((u) => u.id)))
 
@@ -127,8 +141,9 @@ export function VPSAuthDialog({ open, onOpenChange, vpsId, vpsName }: VPSAuthDia
                                     {allocations.map((a: any) => {
                                         const u = users.find((x) => x.id === a.owner || x.id === a.assigned_to)
                                         return (
-                                            <div key={a.id} className="flex items-center justify-between rounded border px-2 py-1 text-xs">
+                                            <div key={a.id} className="flex items-center justify-between gap-2 rounded border px-2 py-1 text-xs">
                                                 <span className="font-mono truncate">{u?.email || a.owner || a.assigned_to}</span>
+                                                <button onClick={() => revoke(a.id)} disabled={saving} className="text-red-500 hover:text-red-700 shrink-0">撤销</button>
                                             </div>
                                         )
                                     })}
