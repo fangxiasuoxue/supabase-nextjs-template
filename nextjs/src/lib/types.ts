@@ -599,6 +599,7 @@ export type Database = {
           source_raw: Json | null
           source_url: string | null
           status: string | null
+          terminate_at_period_end: boolean
           type: string | null
         }
         Insert: {
@@ -640,6 +641,7 @@ export type Database = {
           source_raw?: Json | null
           source_url?: string | null
           status?: string | null
+          terminate_at_period_end?: boolean
           type?: string | null
         }
         Update: {
@@ -681,6 +683,7 @@ export type Database = {
           source_raw?: Json | null
           source_url?: string | null
           status?: string | null
+          terminate_at_period_end?: boolean
           type?: string | null
         }
         Relationships: []

@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useLanguage } from "@/lib/context/LanguageContext";
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { IpLatencyMatrix } from "@/components/admin/ip/IpLatencyMatrix";
@@ -30,7 +32,8 @@ import {
   Terminal,
   Database,
   ArrowRightLeft,
-  Plus
+  Plus,
+  QrCode
 } from "lucide-react";
 
 type IpAsset = {
@@ -57,6 +60,8 @@ type IpAsset = {
   last_latency_ms: number | null
   last_speed_kbps: number | null
   last_tested_at: string | null
+  terminate_at_period_end?: boolean | null
+  assigned_users?: { id: string, email: string | null }[]
 }
 
 type FormData = {
@@ -133,6 +138,10 @@ export default function IpManagementPage() {
   // 测试状态
   const [testingIds, setTestingIds] = useState<Set<number>>(new Set())
   const [isTestingAll, setIsTestingAll] = useState(false)
+  const [terminatingIds, setTerminatingIds] = useState<Set<number>>(new Set())
+  const [qrAsset, setQrAsset] = useState<IpAsset | null>(null)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  const [qrConfigUrl, setQrConfigUrl] = useState("")
 
   // 需求:只看待续费(过期≤30天 + 3天内到期)
   const [renewalOnly, setRenewalOnly] = useState(false)
@@ -182,6 +191,20 @@ export default function IpManagementPage() {
     })
   }
 
+  const getProxyPort = (asset: IpAsset) => asset.socks5_port || asset.http_port || asset.https_port || null
+
+  const buildProxyConfigUrl = (asset: IpAsset) => {
+    const type = (asset.proxy_type || (asset.socks5_port ? 'socks5' : asset.https_port ? 'https' : 'http')).toLowerCase()
+    const port = getProxyPort(asset)
+    if (!asset.ip || !port) return ''
+    const userInfo = asset.auth_username
+      ? `${encodeURIComponent(asset.auth_username)}${asset.auth_password ? `:${encodeURIComponent(asset.auth_password)}` : ''}@`
+      : ''
+    const name = encodeURIComponent(asset.remark || asset.label || asset.ip)
+    if (type === 'socks5') return `socks://${userInfo}${asset.ip}:${port}#${name}`
+    return `${type}://${userInfo}${asset.ip}:${port}#${name}`
+  }
+
   const fetchIpAssets = async () => {
     try {
       setLoading(true)
@@ -200,7 +223,8 @@ export default function IpManagementPage() {
       // if (!perm.allowed) { ... }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let query = (supabase.getSupabaseClient() as any)
+      const client = supabase.getSupabaseClient() as any
+      let query = client
         .from('ip_assets')
         .select('*', { count: 'exact' })
 
@@ -235,8 +259,35 @@ export default function IpManagementPage() {
       const { data, error, count } = await query
       if (error) throw error
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setIpAssets((data as any) || [])
+      let rows = ((data as any) || []) as IpAsset[]
+
+      // 管理员列表展示:该 IP 当前授权给了谁。auth.users 只能服务端列,所以用 /api/users/list 做 id→email 映射。
+      if (managePerm.allowed && rows.length > 0) {
+        try {
+          const [allocRes, usersRes] = await Promise.all([
+            client.from('ip_allocations').select('ip_id, assignee_user_id, state, released_at').in('ip_id', rows.map(r => r.id)).eq('state', 'allocated').is('released_at', null),
+            fetch('/api/users/list', { credentials: 'same-origin' })
+          ])
+          const userJson = usersRes.ok ? await usersRes.json() : { users: [] }
+          const emailById = new Map<string, string | null>((userJson.users || []).map((u: any) => [String(u.id), u.email || null]))
+          const assignedByIp = new Map<number, { id: string, email: string | null }[]>()
+          ;((allocRes.data as any[]) || []).forEach((a) => {
+            if (!a.assignee_user_id) return
+            const assigneeId = String(a.assignee_user_id)
+            const arr = assignedByIp.get(a.ip_id) || []
+            if (!arr.some(x => x.id === assigneeId)) {
+              arr.push({ id: assigneeId, email: emailById.get(assigneeId) ?? null })
+            }
+            assignedByIp.set(a.ip_id, arr)
+          })
+          rows = rows.map(r => ({ ...r, assigned_users: assignedByIp.get(r.id) || [] }))
+          setUsers(userJson.users || [])
+        } catch (e) {
+          console.warn('Failed to load ip assignees', e)
+        }
+      }
+
+      setIpAssets(rows)
       setTotalCount(count || 0)
     } catch (e: any) {
       setError(e?.message || '加载失败')
@@ -569,6 +620,45 @@ export default function IpManagementPage() {
       setError(e?.message || '续期失败')
     } finally {
       setRenewLoading(false)
+    }
+  }
+
+  async function openQrDialog(asset: IpAsset) {
+    const url = buildProxyConfigUrl(asset)
+    if (!url) {
+      setError('该 IP 缺少协议/端口，无法生成客户端二维码')
+      return
+    }
+    setQrAsset(asset)
+    setQrConfigUrl(url)
+    setQrDataUrl(await QRCode.toDataURL(url, { width: 260, margin: 1 }))
+  }
+
+  async function handleToggleTerminate(asset: IpAsset, checked: boolean) {
+    try {
+      setTerminatingIds(prev => new Set(prev).add(asset.id))
+      setError("")
+      const supabase = await createSPASassClient()
+      const perm = await supabase.hasModulePermission('ip', 'write')
+      if (!perm.allowed && !canManage) {
+        setError('没有写入权限')
+        return
+      }
+      const client = supabase.getSupabaseClient() as any
+      const { error } = await client
+        .from('ip_assets')
+        .update({ terminate_at_period_end: checked })
+        .eq('id', asset.id)
+      if (error) throw error
+      setIpAssets(prev => prev.map(r => r.id === asset.id ? { ...r, terminate_at_period_end: checked } : r))
+    } catch (e: any) {
+      setError(e?.message || '更新终止使用状态失败')
+    } finally {
+      setTerminatingIds(prev => {
+        const next = new Set(prev)
+        next.delete(asset.id)
+        return next
+      })
     }
   }
 
@@ -962,15 +1052,17 @@ export default function IpManagementPage() {
                   <TableHeader className="bg-slate-50">
                     <TableRow className="border-slate-200 hover:bg-transparent h-14">
                       <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] pl-8">资产识别 / ATTRIBUTES</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em]">备注 / 授权用户</TableHead>
                       <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em]">遥测数据 / STATUS</TableHead>
                       <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] text-center">地址协议 / INTERFACE</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] text-center">终止使用</TableHead>
                       <TableHead className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] text-right pr-8">指挥控制 / ACTIONS</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loading && ipAssets.length === 0 ? (
                       <TableRow className="border-none">
-                        <TableCell colSpan={4} className="h-[500px] text-center">
+                        <TableCell colSpan={6} className="h-[500px] text-center">
                           <div className="flex flex-col items-center justify-center gap-6">
                             <div className="relative">
                                 <div className="absolute inset-0 bg-cyan-100 blur-2xl animate-pulse rounded-full" />
@@ -982,7 +1074,7 @@ export default function IpManagementPage() {
                       </TableRow>
                     ) : visibleAssets.length === 0 ? (
                       <TableRow className="border-none">
-                        <TableCell colSpan={4} className="h-[500px] text-center">
+                        <TableCell colSpan={6} className="h-[500px] text-center">
                           <div className="flex flex-col items-center justify-center gap-6 py-20 opacity-30 group cursor-default">
                              <div className="p-6 rounded-full bg-slate-100 border border-slate-200 group-hover:bg-slate-200 transition-colors">
                                 <Database className="h-12 w-12" />
@@ -1011,6 +1103,25 @@ export default function IpManagementPage() {
                                 <Clock className="h-2.5 w-2.5" />
                                 {ipExpiryStatus(asset.expires_at).label}
                               </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-3 max-w-[220px]">
+                            <div className="flex flex-col gap-2">
+                              <div className="text-xs font-bold text-slate-700 break-words">
+                                {asset.remark || <span className="text-muted-foreground/40">未填写备注</span>}
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {(asset.assigned_users || []).length > 0 ? (asset.assigned_users || []).slice(0, 3).map((u) => (
+                                  <span key={u.id} className="px-2 py-0.5 rounded-md bg-blue-50 border border-blue-100 text-[9px] font-black text-blue-700 max-w-[180px] truncate">
+                                    {u.email || u.id.slice(0, 8)}
+                                  </span>
+                                )) : (
+                                  <span className="text-[9px] font-bold text-muted-foreground/40 uppercase">未授权</span>
+                                )}
+                                {(asset.assigned_users || []).length > 3 && (
+                                  <span className="text-[9px] font-black text-blue-600">+{(asset.assigned_users || []).length - 3}</span>
+                                )}
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -1047,6 +1158,19 @@ export default function IpManagementPage() {
                                   {asset.http_port || asset.https_port || asset.socks5_port || "NULL"}
                                 </span>
                               </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center px-4">
+                            <div className="inline-flex flex-col items-center gap-1">
+                              <Switch
+                                checked={!!asset.terminate_at_period_end}
+                                disabled={terminatingIds.has(asset.id)}
+                                onCheckedChange={(checked) => handleToggleTerminate(asset, checked)}
+                                className="data-[state=checked]:bg-red-600 data-[state=unchecked]:bg-green-600"
+                              />
+                              <span className={`text-[8px] font-black uppercase tracking-widest ${asset.terminate_at_period_end ? 'text-red-600' : 'text-green-600'}`}>
+                                {asset.terminate_at_period_end ? '到期停用' : '自动续用'}
+                              </span>
                             </div>
                           </TableCell>
                           <TableCell className="text-right pr-8">
@@ -1098,6 +1222,20 @@ export default function IpManagementPage() {
                                   <TooltipContent className="bg-white border-slate-200 shadow-sm text-[10px] font-black uppercase text-amber-600">EXTEND_LEASE</TooltipContent>
                                 </Tooltip>
                               )}
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => openQrDialog(asset)}
+                                    className="h-9 w-9 bg-slate-100 hover:bg-cyan-50 rounded-xl text-cyan-600"
+                                  >
+                                    <QrCode className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-white border-slate-200 shadow-sm text-[10px] font-black uppercase text-cyan-600">CLIENT_QR_IMPORT</TooltipContent>
+                              </Tooltip>
 
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -1170,6 +1308,39 @@ export default function IpManagementPage() {
           </div>
         </div>
       </TooltipProvider>
+
+      {/* Dialogs: Client QR */}
+      <Dialog open={!!qrAsset} onOpenChange={(open) => { if (!open) { setQrAsset(null); setQrDataUrl(null); setQrConfigUrl('') } }}>
+        <DialogContent className="max-w-md bg-white border-slate-200 rounded-3xl shadow-xl">
+          <DialogHeader className="mb-4 text-center">
+            <DialogTitle className="text-xl font-black uppercase tracking-tight">客户端导入二维码</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-5 flex flex-col items-center">
+            <div className="p-3 bg-white border border-slate-200 rounded-2xl shadow-sm">
+              {qrDataUrl ? <img src={qrDataUrl} alt="IP客户端二维码" width={260} height={260} className="rounded-lg" /> : null}
+            </div>
+            <div className="w-full space-y-2">
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">配置链接</Label>
+              <textarea
+                readOnly
+                value={qrConfigUrl}
+                className="w-full h-24 rounded-2xl border border-slate-300 bg-slate-50 p-3 text-[11px] tech-mono text-slate-700 break-all"
+              />
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                用 Shadowrocket / v2rayNG 等客户端扫描。若客户端不识别该直连代理 URI，可手动按链接中的协议、账号、密码、地址和端口填写。
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="mt-6 gap-3">
+            <Button variant="ghost" className="rounded-2xl h-12 px-6 font-bold text-xs uppercase" onClick={() => { setQrAsset(null); setQrDataUrl(null); setQrConfigUrl('') }}>
+              关闭
+            </Button>
+            <Button className="btn-primary rounded-2xl h-12 px-8 font-bold text-xs uppercase" onClick={() => navigator.clipboard?.writeText(qrConfigUrl)}>
+              复制链接
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialogs: Allocation */}
       <Dialog open={showAllocate} onOpenChange={setShowAllocate}>
