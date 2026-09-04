@@ -48,6 +48,11 @@ const LEVEL_BAR: Record<QuotaLevel, string> = {
   over: 'bg-red-500',
 }
 
+const COMMON_OUTBOUND_OPTIONS = [
+  ...Array.from({ length: 18 }, (_, i) => i + 1).filter((n) => n !== 14).map((n) => `sz1-cheap-us${String(n).padStart(2, '0')}`),
+  ...['us1', 'us2', 'us3', 'us4', 'us5', 'us6', 'us7', 'us8', 'sg1'].map((site) => `sz1-land-${site}`),
+]
+
 function QuotaCell({ used, quota }: { used: number | null; quota: number | null }) {
   if (quota == null || quota <= 0) {
     return <span className="text-xs text-muted-foreground">不限 · {formatBytes(used)}</span>
@@ -148,10 +153,10 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
     }
   }
 
-  const editOutbound = async (s: Seat) => {
-    const input = prompt(`设置 ${s.email} 的出口 outbound tag(留空=清除)。例如 sz1-cheap-us01 / sz1-land-us8`, s.outbound_tag || '')
-    if (input === null) return
-    const outbound_tag = input.trim() || null
+  const outboundOptions = Array.from(new Set([...COMMON_OUTBOUND_OPTIONS, ...seats.map((s) => s.outbound_tag).filter(Boolean) as string[]])).sort()
+
+  const setOutbound = async (s: Seat, value: string) => {
+    const outbound_tag = value === '__default__' ? null : value
     await patchSeat(s.id, { outbound_tag })
     toast.success(outbound_tag ? `出口已设为 ${outbound_tag}` : '已清除出口绑定')
   }
@@ -390,9 +395,15 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
                   )}
                 </TableCell>
                 <TableCell className="text-xs">
-                  <button className="font-mono hover:underline text-cyan-700" onClick={() => editOutbound(s)} title="设置该终端的 outbound tag">
-                    {s.outbound_tag || '默认'}
-                  </button>
+                  <select
+                    value={s.outbound_tag || '__default__'}
+                    onChange={(e) => setOutbound(s, e.target.value)}
+                    className="w-40 rounded border border-slate-200 bg-white px-2 py-1 font-mono text-[11px]"
+                    title="选择该终端的 outbound tag;新增 outbound 能力另按 SDD 规划"
+                  >
+                    <option value="__default__">默认</option>
+                    {outboundOptions.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
+                  </select>
                 </TableCell>
                 <TableCell className="text-xs font-mono">{formatBytes(trafficByEmail.get(s.email) ?? 0)}</TableCell>
                 <TableCell className="text-xs">
