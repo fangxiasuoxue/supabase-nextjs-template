@@ -153,6 +153,14 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
     }
   }
 
+  const editLabel = async (s: Seat) => {
+    const input = prompt(`修改 ${s.email} 的显示名称/备注(会作为客户订阅里的名称;留空=清除)`, s.label || '')
+    if (input === null) return
+    const label = input.trim() || null
+    await patchSeat(s.id, { label })
+    toast.success(label ? `名称已改为 ${label}` : '已清除名称')
+  }
+
   const outboundOptions = Array.from(new Set([...COMMON_OUTBOUND_OPTIONS, ...seats.map((s) => s.outbound_tag).filter(Boolean) as string[]])).sort()
 
   const setOutbound = async (s: Seat, value: string) => {
@@ -361,7 +369,15 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
             {seats.map((s) => (
               <TableRow key={s.id}>
                 <TableCell className="font-mono text-xs">{s.email}</TableCell>
-                <TableCell>{s.label || '-'}</TableCell>
+                <TableCell>
+                  <button
+                    className="text-left hover:underline font-medium"
+                    title="点击修改该 client 的显示名称/备注"
+                    onClick={() => editLabel(s)}
+                  >
+                    {s.label || <span className="text-muted-foreground">未命名</span>}
+                  </button>
+                </TableCell>
                 <TableCell>
                   <Button variant={s.enabled ? 'default' : 'secondary'} size="sm"
                     onClick={() => patchSeat(s.id, { enabled: !s.enabled })}>
