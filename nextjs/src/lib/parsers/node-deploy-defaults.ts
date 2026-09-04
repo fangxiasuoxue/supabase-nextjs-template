@@ -1,7 +1,7 @@
 // 落地节点默认参数派生(纯函数,便于单测)。
 //
 // 背景/Bug:NodeDeployForm 曾用 vps_instances.gcp_instance_name(短名如 "gcp8")
-// 推 sitecode,得到 "gcp8" → 落成 jd-land-gcp8 / gcp8.ibfvps.dpdns.org(域名不解析)。
+// 推 sitecode,得到 "gcp8" → 落成 jd-land-gcp8 / gcp8.3pay.top(死域/不解析)。
 // 正确来源是 vps_instances.name(长名如 "us8-20260816-065259"),首段即 sitecode "us8"。
 // 本模块把这段派生抽成纯函数并回归测试,杜绝再退化。
 
@@ -18,7 +18,7 @@ export interface NodeDefaults {
   port: number
 }
 
-export const DEFAULT_DOMAIN_SUFFIX = 'ibfvps.dpdns.org'
+export const DEFAULT_DOMAIN_SUFFIX = process.env.NEXT_PUBLIC_NODE_DOMAIN_SUFFIX || '3pay.top'   // 2026-08-31 起;原 ibfvps.dpdns.org 免费域已删除
 
 // 推 sitecode:优先 name 首段(us8-2026… → us8);name 缺失时 gcpN → usN;再兜底原短名。
 export function deriveSite(vps: VpsLike): string {
