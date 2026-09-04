@@ -810,6 +810,8 @@ export type Database = {
           last_reconcile_error: string | null
           last_reconciled_at: string | null
           node_id: string
+          outbound_config: Json | null
+          outbound_tag: string | null
           over_action: string
           period_started_at: string | null
           protocol: string
@@ -832,6 +834,8 @@ export type Database = {
           last_reconcile_error?: string | null
           last_reconciled_at?: string | null
           node_id: string
+          outbound_config?: Json | null
+          outbound_tag?: string | null
           over_action?: string
           period_started_at?: string | null
           protocol?: string
@@ -854,6 +858,8 @@ export type Database = {
           last_reconcile_error?: string | null
           last_reconciled_at?: string | null
           node_id?: string
+          outbound_config?: Json | null
+          outbound_tag?: string | null
           over_action?: string
           period_started_at?: string | null
           protocol?: string

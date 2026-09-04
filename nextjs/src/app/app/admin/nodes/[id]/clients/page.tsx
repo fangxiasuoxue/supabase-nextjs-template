@@ -28,6 +28,8 @@ interface Seat {
   over_action: string | null
   period_started_at: string | null
   used_bytes: number | null
+  outbound_tag: string | null
+  outbound_config: any | null
   vless_url: string | null
   created_at: string
 }
@@ -144,6 +146,14 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
     } catch (e: any) {
       toast.error(e.message)
     }
+  }
+
+  const editOutbound = async (s: Seat) => {
+    const input = prompt(`设置 ${s.email} 的出口 outbound tag(留空=清除)。例如 sz1-cheap-us01 / sz1-land-us8`, s.outbound_tag || '')
+    if (input === null) return
+    const outbound_tag = input.trim() || null
+    await patchSeat(s.id, { outbound_tag })
+    toast.success(outbound_tag ? `出口已设为 ${outbound_tag}` : '已清除出口绑定')
   }
 
   const editQuota = async (s: Seat) => {
@@ -332,6 +342,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
               <TableHead>到期</TableHead>
               <TableHead>并发IP</TableHead>
               <TableHead>配额(月)</TableHead>
+              <TableHead>出口</TableHead>
               <TableHead>7天流量</TableHead>
               <TableHead>下发</TableHead>
               <TableHead>订阅</TableHead>
@@ -340,7 +351,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
           </TableHeader>
           <TableBody>
             {seats.length === 0 && (
-              <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-6">暂无名额,点上方「发名额」</TableCell></TableRow>
+              <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-6">暂无名额,点上方「发名额」</TableCell></TableRow>
             )}
             {seats.map((s) => (
               <TableRow key={s.id}>
@@ -377,6 +388,11 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
                       {s.over_action === 'alert' ? '仅告警' : s.over_action === 'throttle' ? '限速→停' : '超额停用'}
                     </span>
                   )}
+                </TableCell>
+                <TableCell className="text-xs">
+                  <button className="font-mono hover:underline text-cyan-700" onClick={() => editOutbound(s)} title="设置该终端的 outbound tag">
+                    {s.outbound_tag || '默认'}
+                  </button>
                 </TableCell>
                 <TableCell className="text-xs font-mono">{formatBytes(trafficByEmail.get(s.email) ?? 0)}</TableCell>
                 <TableCell className="text-xs">

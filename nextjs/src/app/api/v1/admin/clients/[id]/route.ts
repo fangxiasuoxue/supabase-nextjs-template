@@ -6,7 +6,7 @@ import { requireSeatAccess } from '@/lib/auth/resourceAccess'
 // 权限门:对该 seat 所属 node 有 write(admin/ops 旁路)。硬删见 §11.3(agent RemoveUser)。
 
 // PATCH /api/v1/admin/clients/[id]
-//   body: { enabled?, expires_at?, ip_limit?, label?,
+//   body: { enabled?, expires_at?, ip_limit?, label?, outbound_tag?, outbound_config?,
 //           quota_bytes?, quota_period?, over_action?, roll_period? }
 // P2e:quota_bytes/quota_period/over_action 为配额期望态(agent /clients/desired 下发,本地账本执行)。
 //   roll_period=true → 滚动周期起点(period_started_at=now)+ 归零 used_bytes 镜像:
@@ -26,6 +26,13 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (body?.ip_limit !== undefined)
     patch.ip_limit = body.ip_limit === null ? null : Math.max(0, parseInt(body.ip_limit, 10) || 0)
   if (body?.label !== undefined) patch.label = body.label === null ? null : String(body.label).slice(0, 200)
+  if (body?.outbound_tag !== undefined) {
+    const tag = body.outbound_tag === null ? '' : String(body.outbound_tag).trim()
+    patch.outbound_tag = tag ? tag.slice(0, 200) : null
+  }
+  if (body?.outbound_config !== undefined) {
+    patch.outbound_config = body.outbound_config === null ? null : body.outbound_config
+  }
 
   // 配额字段
   if (body?.quota_bytes !== undefined) {
@@ -64,7 +71,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     .from('node_clients')
     .update(patch as any)
     .eq('id', id)
-    .select('id, email, enabled, expires_at, ip_limit, label, quota_bytes, quota_period, over_action, period_started_at, used_bytes')
+    .select('id, email, enabled, expires_at, ip_limit, label, outbound_tag, outbound_config, quota_bytes, quota_period, over_action, period_started_at, used_bytes')
     .maybeSingle()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (!data) return NextResponse.json({ error: 'Client not found' }, { status: 404 })

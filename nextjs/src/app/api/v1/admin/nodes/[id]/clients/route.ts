@@ -18,7 +18,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   const admin = await createServerAdminClient()
   const { data, error } = await admin
     .from('node_clients')
-    .select('id, node_id, email, protocol, label, enabled, expires_at, ip_limit, subscribe_token, last_reconciled_at, last_reconcile_error, quota_bytes, quota_period, over_action, period_started_at, used_bytes, cred_ref, created_at')
+    .select('id, node_id, email, protocol, label, enabled, expires_at, ip_limit, subscribe_token, last_reconciled_at, last_reconcile_error, quota_bytes, quota_period, over_action, period_started_at, used_bytes, outbound_tag, outbound_config, cred_ref, created_at')
     .eq('node_id', id)
     .order('created_at', { ascending: true })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
