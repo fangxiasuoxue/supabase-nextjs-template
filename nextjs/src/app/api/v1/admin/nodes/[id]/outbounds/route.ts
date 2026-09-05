@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireNodeAccess } from '@/lib/auth/resourceAccess'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
+import { extractBaseShareLink } from '@/lib/clients/node-client-admin'
+import { compileManagedNodeOutbound, parseManagedNodeShareLink } from '@/lib/outbound/managed-node'
 import {
   assertNonSecretJson,
   OUTBOUND_ENDPOINT_KINDS,
@@ -39,6 +41,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const gate = await requireNodeAccess(id, 'manage')
   if ('error' in gate) return gate.error
   const body = await req.json().catch(() => ({}))
+  const admin = await createServerAdminClient()
+  const vpsId = await targetVps(admin, id)
+  if (!vpsId) return NextResponse.json({ error: 'Node has no VPS runtime' }, { status: 409 })
+
+  if (body.action === 'import_managed_node') {
+    return importManagedNode(admin, gate.user.id, vpsId, body)
+  }
+
   const tag = safeText(body.tag)
   const displayName = safeText(body.display_name)
   const endpointKind = safeText(body.endpoint_kind)
@@ -53,9 +63,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ error: e.message }, { status: 400 })
   }
 
-  const admin = await createServerAdminClient()
-  const vpsId = await targetVps(admin, id)
-  if (!vpsId) return NextResponse.json({ error: 'Node has no VPS runtime' }, { status: 409 })
   const row = {
     target_vps_instance_id: vpsId,
     source_id: body.source_id || null,
@@ -72,4 +79,98 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const { data, error } = await (admin as any).from('node_outbounds').insert(row).select('*').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ outbound: data }, { status: 201 })
+}
+
+async function importManagedNode(admin: any, userId: string, targetVpsId: string, body: any) {
+  const sourceNodeId = safeText(body.source_node_id)
+  const tag = safeText(body.tag)
+  const displayName = safeText(body.display_name)
+  const transportKind = safeText(body.transport_kind || 'direct')
+  if (!sourceNodeId || !validOutboundTag(tag) || !displayName) {
+    return NextResponse.json({ error: 'source_node_id、合法 tag、display_name 必填' }, { status: 400 })
+  }
+  if (!OUTBOUND_TRANSPORT_KINDS.has(transportKind)) {
+    return NextResponse.json({ error: 'transport_kind 无效' }, { status: 400 })
+  }
+
+  const { data: sourceNode } = await admin
+    .from('nodes')
+    .select('id,name,status,public_ip,port,last_deployed_at')
+    .eq('id', sourceNodeId)
+    .maybeSingle()
+  if (!sourceNode || sourceNode.status !== 'active') {
+    return NextResponse.json({ error: '源 managed node 不存在或不是 active' }, { status: 400 })
+  }
+  const { data: deployment } = await admin
+    .from('node_deployments')
+    .select('rendered_config,created_at')
+    .eq('node_id', sourceNodeId)
+    .eq('status', 'success')
+    .not('rendered_config', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const shareLink = extractBaseShareLink(deployment?.rendered_config)
+  if (!shareLink) return NextResponse.json({ error: '源节点没有成功部署的分享链接' }, { status: 409 })
+
+  let descriptor
+  try {
+    descriptor = parseManagedNodeShareLink(shareLink)
+    compileManagedNodeOutbound(shareLink, tag) // validate compile without persisting credentials
+  } catch (e: any) {
+    return NextResponse.json({ error: `源节点暂不兼容: ${e.message}` }, { status: 400 })
+  }
+
+  let { data: source } = await admin
+    .from('outbound_sources')
+    .select('id')
+    .eq('kind', 'managed_node')
+    .eq('managed_node_id', sourceNodeId)
+    .maybeSingle()
+  if (!source) {
+    const inserted = await admin.from('outbound_sources').insert({
+      name: sourceNode.name,
+      kind: 'managed_node',
+      managed_node_id: sourceNodeId,
+      config: { origin: 'console_node' },
+      status: 'active',
+      last_discovered_at: new Date().toISOString(),
+      created_by: userId,
+    }).select('id').single()
+    if (inserted.error) return NextResponse.json({ error: inserted.error.message }, { status: 500 })
+    source = inserted.data
+  }
+
+  const itemInsert = await admin.from('outbound_source_items').upsert({
+    source_id: source.id,
+    external_key: sourceNodeId,
+    display_name: sourceNode.name,
+    protocol: descriptor.protocol,
+    region: null,
+    server_hint: descriptor.address,
+    port_hint: descriptor.port,
+    secret_ref: `secret_ref://managed-node/${sourceNodeId}/latest-share`,
+    metadata: { security: descriptor.security, network: descriptor.network },
+    compatibility: 'supported',
+    status: 'active',
+    observed_at: new Date().toISOString(),
+  }, { onConflict: 'source_id,external_key' }).select('id').single()
+  if (itemInsert.error) return NextResponse.json({ error: itemInsert.error.message }, { status: 500 })
+
+  const { data, error } = await admin.from('node_outbounds').upsert({
+    target_vps_instance_id: targetVpsId,
+    source_id: source.id,
+    source_item_id: itemInsert.data.id,
+    tag,
+    display_name: displayName,
+    endpoint_kind: 'managed_node',
+    transport_kind: transportKind,
+    transport_ref: safeText(body.transport_ref, 500) || null,
+    desired_config: { source: 'managed_node', source_node_id: sourceNodeId },
+    desired_state: 'present',
+    deploy_state: 'draft',
+    created_by: userId,
+  }, { onConflict: 'target_vps_instance_id,tag' }).select('*').single()
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ outbound: data, source_item: { ...descriptor, publicKey: undefined } }, { status: 201 })
 }
