@@ -28,6 +28,7 @@ interface Seat {
   over_action: string | null
   period_started_at: string | null
   used_bytes: number | null
+  outbound_id: string | null
   outbound_tag: string | null
   outbound_config: any | null
   vless_url: string | null
@@ -48,10 +49,14 @@ const LEVEL_BAR: Record<QuotaLevel, string> = {
   over: 'bg-red-500',
 }
 
-const COMMON_OUTBOUND_OPTIONS = [
-  ...Array.from({ length: 18 }, (_, i) => i + 1).filter((n) => n !== 14).map((n) => `sz1-cheap-us${String(n).padStart(2, '0')}`),
-  ...['us1', 'us2', 'us3', 'us4', 'us5', 'us6', 'us7', 'us8', 'sg1'].map((site) => `sz1-land-${site}`),
-]
+interface OutboundOption {
+  id: string
+  tag: string
+  display_name: string
+  endpoint_kind: string
+  transport_kind: string
+  deploy_state: string
+}
 
 function QuotaCell({ used, quota }: { used: number | null; quota: number | null }) {
   if (quota == null || quota <= 0) {
@@ -77,6 +82,7 @@ function QuotaCell({ used, quota }: { used: number | null; quota: number | null 
 export default function NodeClientsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = usePromise(params)
   const [seats, setSeats] = useState<Seat[]>([])
+  const [outbounds, setOutbounds] = useState<OutboundOption[]>([])
   const [loading, setLoading] = useState(true)
   const [count, setCount] = useState(1)
   const [label, setLabel] = useState('')
@@ -103,6 +109,16 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
     }
   }, [id])
 
+  const loadOutbounds = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/v1/admin/nodes/${id}/outbounds`)
+      const j = await r.json()
+      if (r.ok) setOutbounds(j.outbounds ?? [])
+    } catch {
+      /* catalog is additive; legacy tags remain visible if catalog is unavailable */
+    }
+  }, [id])
+
   const loadTraffic = useCallback(async () => {
     try {
       const r = await fetch(`/api/v1/admin/nodes/${id}/traffic?window=7d`)
@@ -113,7 +129,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
     }
   }, [id])
 
-  useEffect(() => { load(); loadTraffic() }, [load, loadTraffic])
+  useEffect(() => { load(); loadOutbounds(); loadTraffic() }, [load, loadOutbounds, loadTraffic])
 
   const createSeats = async () => {
     setCreating(true)
@@ -161,12 +177,21 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
     toast.success(label ? `名称已改为 ${label}` : '已清除名称')
   }
 
-  const outboundOptions = Array.from(new Set([...COMMON_OUTBOUND_OPTIONS, ...seats.map((s) => s.outbound_tag).filter(Boolean) as string[]])).sort()
+  const legacyOutboundTags = Array.from(new Set(seats
+    .filter((s) => s.outbound_tag && !outbounds.some((o) => o.tag === s.outbound_tag))
+    .map((s) => s.outbound_tag as string))).sort()
 
   const setOutbound = async (s: Seat, value: string) => {
-    const outbound_tag = value === '__default__' ? null : value
-    await patchSeat(s.id, { outbound_tag })
-    toast.success(outbound_tag ? `出口已设为 ${outbound_tag}` : '已清除出口绑定')
+    if (value.startsWith('legacy:')) {
+      const outbound_tag = value.slice('legacy:'.length)
+      await patchSeat(s.id, { outbound_tag, outbound_id: null })
+      toast.success(`出口已设为 ${outbound_tag}(待纳入目录)`)
+      return
+    }
+    const outbound_id = value === '__default__' ? null : value
+    const selected = outbounds.find((o) => o.id === outbound_id)
+    await patchSeat(s.id, { outbound_id })
+    toast.success(selected ? `出口已设为 ${selected.display_name}` : '已清除出口绑定')
   }
 
   const editQuota = async (s: Seat) => {
@@ -412,13 +437,18 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
                 </TableCell>
                 <TableCell className="text-xs">
                   <select
-                    value={s.outbound_tag || '__default__'}
+                    value={s.outbound_id || (s.outbound_tag ? `legacy:${s.outbound_tag}` : '__default__')}
                     onChange={(e) => setOutbound(s, e.target.value)}
                     className="w-40 rounded border border-slate-200 bg-white px-2 py-1 font-mono text-[11px]"
                     title="选择该终端的 outbound tag;新增 outbound 能力另按 SDD 规划"
                   >
                     <option value="__default__">默认</option>
-                    {outboundOptions.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
+                    {outbounds.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.display_name} · {o.transport_kind === 'gorelay' ? 'GoRelay' : o.transport_kind} · {o.tag}
+                      </option>
+                    ))}
+                    {legacyOutboundTags.map((tag) => <option key={tag} value={`legacy:${tag}`}>{tag} · 待纳管</option>)}
                   </select>
                 </TableCell>
                 <TableCell className="text-xs font-mono">{formatBytes(trafficByEmail.get(s.email) ?? 0)}</TableCell>

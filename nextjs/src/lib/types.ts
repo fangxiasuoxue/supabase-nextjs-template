@@ -811,6 +811,7 @@ export type Database = {
           last_reconciled_at: string | null
           node_id: string
           outbound_config: Json | null
+          outbound_id: string | null
           outbound_tag: string | null
           over_action: string
           period_started_at: string | null
@@ -835,6 +836,7 @@ export type Database = {
           last_reconciled_at?: string | null
           node_id: string
           outbound_config?: Json | null
+          outbound_id?: string | null
           outbound_tag?: string | null
           over_action?: string
           period_started_at?: string | null
@@ -859,6 +861,7 @@ export type Database = {
           last_reconciled_at?: string | null
           node_id?: string
           outbound_config?: Json | null
+          outbound_id?: string | null
           outbound_tag?: string | null
           over_action?: string
           period_started_at?: string | null
@@ -870,6 +873,13 @@ export type Database = {
           used_bytes?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "node_clients_outbound_id_fkey"
+            columns: ["outbound_id"]
+            isOneToOne: false
+            referencedRelation: "node_outbounds"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "node_clients_node_id_fkey"
             columns: ["node_id"]

@@ -6,7 +6,7 @@ import { requireSeatAccess } from '@/lib/auth/resourceAccess'
 // 权限门:对该 seat 所属 node 有 write(admin/ops 旁路)。硬删见 §11.3(agent RemoveUser)。
 
 // PATCH /api/v1/admin/clients/[id]
-//   body: { enabled?, expires_at?, ip_limit?, label?, outbound_tag?, outbound_config?,
+//   body: { enabled?, expires_at?, ip_limit?, label?, outbound_id?, outbound_tag?, outbound_config?,
 //           quota_bytes?, quota_period?, over_action?, roll_period? }
 // P2e:quota_bytes/quota_period/over_action 为配额期望态(agent /clients/desired 下发,本地账本执行)。
 //   roll_period=true → 滚动周期起点(period_started_at=now)+ 归零 used_bytes 镜像:
@@ -67,11 +67,36 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   }
 
   const admin = await createServerAdminClient()
+
+  // Normalized outbound binding. Validate that the selected outbound belongs to the same VPS
+  // runtime as this client's node, then mirror its tag for backward-compatible agent routing.
+  if (body?.outbound_id !== undefined) {
+    if (body.outbound_id === null || body.outbound_id === '') {
+      patch.outbound_id = null
+      patch.outbound_tag = null
+    } else {
+      const { data: seat } = await admin.from('node_clients').select('node_id').eq('id', id).maybeSingle()
+      const { data: node } = seat
+        ? await admin.from('nodes').select('vps_instance_id').eq('id', (seat as any).node_id).maybeSingle()
+        : { data: null }
+      const { data: outbound } = await (admin as any)
+        .from('node_outbounds')
+        .select('id,tag,target_vps_instance_id,desired_state')
+        .eq('id', String(body.outbound_id))
+        .maybeSingle()
+      if (!node || !outbound || outbound.target_vps_instance_id !== (node as any).vps_instance_id || outbound.desired_state === 'absent') {
+        return NextResponse.json({ error: '所选 outbound 不属于该 client 的 VPS 或已被移除' }, { status: 400 })
+      }
+      patch.outbound_id = outbound.id
+      patch.outbound_tag = outbound.tag
+    }
+  }
+
   const { data, error } = await admin
     .from('node_clients')
     .update(patch as any)
     .eq('id', id)
-    .select('id, email, enabled, expires_at, ip_limit, label, outbound_tag, outbound_config, quota_bytes, quota_period, over_action, period_started_at, used_bytes')
+    .select('id, email, enabled, expires_at, ip_limit, label, outbound_id, outbound_tag, outbound_config, quota_bytes, quota_period, over_action, period_started_at, used_bytes')
     .maybeSingle()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (!data) return NextResponse.json({ error: 'Client not found' }, { status: 404 })

@@ -26,7 +26,7 @@ test('deriveNodeDefaults: us8 全套默认值正确', () => {
   assert.equal(d.site, 'us8')
   assert.equal(d.nodeName, 'US8-reality')
   assert.equal(d.inboundTag, 'jd-land-us8')
-  assert.equal(d.host, 'us8.ibfvps.dpdns.org')
+  assert.equal(d.host, 'us8.3pay.top')
   assert.equal(d.port, 443)
 })
 
