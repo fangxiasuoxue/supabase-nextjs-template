@@ -20,6 +20,7 @@ interface Item {
   port_hint: number | null; compatibility: string; status: string
 }
 interface ManagedNode { id: string; name: string; public_ip: string | null; port: number | null; last_deployed_at: string | null }
+interface CheapIp { id: number; provider: string; remark: string | null; label: string | null; status: string | null; country_code: string | null; expires_at: string | null }
 
 export default function NodeOutboundsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = usePromise(params)
@@ -29,10 +30,16 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
   const [sources, setSources] = useState<Source[]>([])
   const [items, setItems] = useState<Item[]>([])
   const [nodes, setNodes] = useState<ManagedNode[]>([])
+  const [cheapIps, setCheapIps] = useState<CheapIp[]>([])
   const [managedNodeId, setManagedNodeId] = useState('')
   const [managedName, setManagedName] = useState('')
   const [managedTag, setManagedTag] = useState('')
   const [transport, setTransport] = useState('direct')
+  const [cheapIpId, setCheapIpId] = useState('')
+  const [cheapName, setCheapName] = useState('')
+  const [cheapTag, setCheapTag] = useState('')
+  const [cheapTransport, setCheapTransport] = useState('direct')
+  const [cheapLocalPort, setCheapLocalPort] = useState('')
   const [subName, setSubName] = useState('')
   const [subRef, setSubRef] = useState('')
 
@@ -50,6 +57,7 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
       setSources(sj.sources ?? [])
       setItems(sj.items ?? [])
       setNodes(sj.candidates?.managed_nodes ?? [])
+      setCheapIps(sj.candidates?.cheap_ips ?? [])
     } catch (e: any) { toast.error(e.message) } finally { setLoading(false) }
   }, [id])
 
@@ -81,6 +89,30 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || '导入失败')
       toast.success('已登记为 outbound 期望态；应用到 Xray 需走 Apply')
+      await load()
+    } catch (e: any) { toast.error(e.message) } finally { setBusy('') }
+  }
+
+  const chooseCheap = (value: string) => {
+    setCheapIpId(value)
+    const ip = cheapIps.find((x) => String(x.id) === value)
+    if (!ip) return
+    const base = ip.remark || ip.label || `cheap-${ip.id}`
+    setCheapName(base)
+    setCheapTag(`cheap-${base.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`.replace(/-+$/g, '').slice(0, 200))
+  }
+
+  const importCheap = async () => {
+    if (!cheapIpId || !cheapName || !cheapTag) return toast.error('请选择 Cheap IP 并填写名称/tag')
+    setBusy('cheap')
+    try {
+      const r = await fetch(`/api/v1/admin/nodes/${id}/outbounds`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'import_cheap_ip', ip_asset_id: Number(cheapIpId), display_name: cheapName, tag: cheapTag, transport_kind: cheapTransport, local_port: cheapLocalPort || null }),
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j.error || '导入失败')
+      toast.success('Cheap IP 已登记为 outbound 期望态')
       await load()
     } catch (e: any) { toast.error(e.message) } finally { setBusy('') }
   }
@@ -141,6 +173,18 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
           <label className="text-xs">Xray tag<input className="block mt-1 border rounded px-2 py-1 font-mono" value={managedTag} onChange={(e) => setManagedTag(e.target.value)} /></label>
           <label className="text-xs">路径<select className="block mt-1 border rounded px-2 py-1" value={transport} onChange={(e) => setTransport(e.target.value)}><option value="direct">direct</option><option value="gorelay">gorelay</option><option value="self_transit">self_transit</option></select></label>
           <Button onClick={importManaged} disabled={busy === 'managed'}>{busy === 'managed' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}导入</Button>
+        </div>
+      </section>
+
+      <section className="rounded border p-4 space-y-3">
+        <h2 className="font-semibold">从 Cheap IP 创建 Outbound</h2>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="text-xs">IP 资产<select className="block mt-1 border rounded px-2 py-1 min-w-52" value={cheapIpId} onChange={(e) => chooseCheap(e.target.value)}><option value="">请选择 active IP</option>{cheapIps.filter((x) => String(x.status || '').toLowerCase() === 'active').map((x) => <option key={x.id} value={x.id}>{x.remark || x.label || `#${x.id}`} · {x.provider}</option>)}</select></label>
+          <label className="text-xs">显示名称<input className="block mt-1 border rounded px-2 py-1" value={cheapName} onChange={(e) => setCheapName(e.target.value)} /></label>
+          <label className="text-xs">Xray tag<input className="block mt-1 border rounded px-2 py-1 font-mono" value={cheapTag} onChange={(e) => setCheapTag(e.target.value)} /></label>
+          <label className="text-xs">路径<select className="block mt-1 border rounded px-2 py-1" value={cheapTransport} onChange={(e) => setCheapTransport(e.target.value)}><option value="direct">direct</option><option value="gorelay">gorelay</option><option value="self_transit">self_transit</option></select></label>
+          {cheapTransport !== 'direct' && <label className="text-xs">本机端口<input type="number" min={1} max={65535} className="block mt-1 border rounded px-2 py-1 w-28" placeholder="3101" value={cheapLocalPort} onChange={(e) => setCheapLocalPort(e.target.value)} /></label>}
+          <Button onClick={importCheap} disabled={busy === 'cheap'}>{busy === 'cheap' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}导入</Button>
         </div>
       </section>
 
