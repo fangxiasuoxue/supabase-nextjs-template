@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback, use as usePromise } from 'react'
 import { toast } from 'sonner'
-import { Loader2, Plus, Trash2, Copy, ArrowLeft, RotateCcw, Gauge, CalendarClock, Link as LinkIcon, QrCode } from 'lucide-react'
+import { Loader2, Plus, Trash2, Copy, ArrowLeft, RotateCcw, Gauge, CalendarClock, Link as LinkIcon, QrCode, Network } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import Link from 'next/link'
@@ -301,6 +301,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
       <div className="flex items-center gap-3">
         <Link href="/app/admin/nodes"><Button variant="ghost" size="sm"><ArrowLeft className="w-4 h-4 mr-1" />返回节点</Button></Link>
         <h1 className="text-xl font-semibold">节点终端(名额)管理</h1>
+        <Link href={`/app/admin/nodes/${id}/outbounds`}><Button variant="outline" size="sm"><Network className="w-4 h-4 mr-1" />管理 Outbound</Button></Link>
       </div>
 
       {/* 节点流量榜(近 7 天) */}

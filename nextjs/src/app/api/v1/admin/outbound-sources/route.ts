@@ -18,12 +18,33 @@ export async function GET(req: NextRequest) {
   const gate = await requireNodeAccess(nodeId, 'read')
   if ('error' in gate) return gate.error
   const admin = await createServerAdminClient()
-  const { data, error } = await (admin as any)
-    .from('outbound_sources')
-    .select('id,name,kind,provider,secret_ref,ip_asset_id,managed_node_id,config,status,last_discovered_at,last_error,created_at,updated_at')
-    .order('name')
+  const [{ data, error }, { data: items }, { data: nodes }, { data: ips }] = await Promise.all([
+    (admin as any)
+      .from('outbound_sources')
+      .select('id,name,kind,provider,secret_ref,ip_asset_id,managed_node_id,config,status,last_discovered_at,last_error,created_at,updated_at')
+      .order('name'),
+    (admin as any)
+      .from('outbound_source_items')
+      .select('id,source_id,external_key,display_name,protocol,region,server_hint,port_hint,compatibility,status,observed_at')
+      .order('display_name'),
+    admin
+      .from('nodes')
+      .select('id,name,status,public_ip,port,last_deployed_at')
+      .eq('status', 'active')
+      .is('deleted_at', null)
+      .order('name'),
+    admin
+      .from('ip_assets')
+      .select('id,provider,remark,label,status,country_code,expires_at')
+      .is('deleted_at', null)
+      .order('remark'),
+  ])
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ sources: (data ?? []).map(publicSource) })
+  return NextResponse.json({
+    sources: (data ?? []).map(publicSource),
+    items: items ?? [],
+    candidates: { managed_nodes: nodes ?? [], cheap_ips: ips ?? [] },
+  })
 }
 
 export async function POST(req: NextRequest) {
