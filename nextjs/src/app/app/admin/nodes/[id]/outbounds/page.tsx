@@ -70,6 +70,8 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
     for (const item of items) m.set(item.source_id, (m.get(item.source_id) ?? 0) + 1)
     return m
   }, [items])
+  const sourceById = useMemo(() => new Map(sources.map((s) => [s.id, s])), [sources])
+  const importableSubscriptionItems = items.filter((x) => sourceById.get(x.source_id)?.kind === 'subscription' && x.compatibility === 'supported' && x.status === 'active')
 
   const chooseNode = (nodeId: string) => {
     setManagedNodeId(nodeId)
@@ -242,15 +244,15 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
         </div>
         <Table><TableHeader><TableRow>
           <TableHead className="w-10"><Checkbox
-            checked={items.filter((x) => x.compatibility === 'supported' && x.status === 'active').every((x) => selectedItems.has(x.id))}
-            onCheckedChange={(checked) => setSelectedItems(checked ? new Set(items.filter((x) => x.compatibility === 'supported' && x.status === 'active').map((x) => x.id)) : new Set())}
+            checked={importableSubscriptionItems.length > 0 && importableSubscriptionItems.every((x) => selectedItems.has(x.id))}
+            onCheckedChange={(checked) => setSelectedItems(checked ? new Set(importableSubscriptionItems.map((x) => x.id)) : new Set())}
           /></TableHead>
-          <TableHead>名称</TableHead><TableHead>协议</TableHead><TableHead>服务器</TableHead><TableHead>兼容性</TableHead><TableHead>状态</TableHead>
+          <TableHead>名称</TableHead><TableHead>来源</TableHead><TableHead>协议</TableHead><TableHead>服务器</TableHead><TableHead>兼容性</TableHead><TableHead>状态</TableHead>
         </TableRow></TableHeader><TableBody>{items.map((x) => {
-          const selectable = x.compatibility === 'supported' && x.status === 'active'
+          const selectable = sourceById.get(x.source_id)?.kind === 'subscription' && x.compatibility === 'supported' && x.status === 'active'
           return <TableRow key={x.id}>
             <TableCell><Checkbox disabled={!selectable} checked={selectedItems.has(x.id)} onCheckedChange={(checked) => toggleItem(x.id, checked === true)} /></TableCell>
-            <TableCell>{x.display_name}</TableCell><TableCell>{x.protocol}</TableCell>
+            <TableCell>{x.display_name}</TableCell><TableCell>{sourceById.get(x.source_id)?.name || '-'}</TableCell><TableCell>{x.protocol}</TableCell>
             <TableCell className="font-mono text-xs">{x.server_hint || '-'}{x.port_hint ? `:${x.port_hint}` : ''}</TableCell>
             <TableCell className={x.compatibility === 'supported' ? 'text-green-600' : 'text-amber-600'}>{x.compatibility}</TableCell><TableCell>{x.status}</TableCell>
           </TableRow>
