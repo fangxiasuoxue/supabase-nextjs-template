@@ -88,6 +88,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
   const [label, setLabel] = useState('')
   const [batchExpiry, setBatchExpiry] = useState('')
   const [batchQuotaGB, setBatchQuotaGB] = useState('')
+  const [batchOutboundId, setBatchOutboundId] = useState('')
   const [creating, setCreating] = useState(false)
   const [traffic, setTraffic] = useState<TrafficResp | null>(null)
   const [nodeMeta, setNodeMeta] = useState<{ node_quota_bytes: number | null; node_expires_at: string | null } | null>(null)
@@ -140,12 +141,12 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
       const r = await fetch(`/api/v1/admin/nodes/${id}/clients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ count, label: label || null, expires_at, quota_bytes }),
+        body: JSON.stringify({ count, label: label || null, expires_at, quota_bytes, outbound_id: batchOutboundId || null }),
       })
       const j = await r.json()
       if (!r.ok) throw new Error(j?.error || '发名额失败')
       toast.success(`已发 ${j.created?.length ?? 0} 个名额${expires_at ? ' · 同到期' : ''}${quota_bytes ? ' · 同配额' : ''}`)
-      setLabel(''); setCount(1); setBatchExpiry(''); setBatchQuotaGB('')
+      setLabel(''); setCount(1); setBatchExpiry(''); setBatchQuotaGB(''); setBatchOutboundId('')
       load()
     } catch (e: any) {
       toast.error(e.message)
@@ -363,6 +364,13 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
             onChange={(e) => setBatchQuotaGB(e.target.value)}
             className="border rounded px-2 py-1 w-28" />
         </div>
+        <div>
+          <label className="block text-xs text-muted-foreground mb-1">统一出口(可选)</label>
+          <select value={batchOutboundId} onChange={(e) => setBatchOutboundId(e.target.value)} className="border rounded px-2 py-1 w-52 text-xs">
+            <option value="">默认出口</option>
+            {outbounds.map((o) => <option key={o.id} value={o.id}>{o.display_name} · {o.deploy_state}</option>)}
+          </select>
+        </div>
         <Button onClick={createSeats} disabled={creating}>
           {creating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
           发名额
@@ -446,7 +454,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
                     <option value="__default__">默认</option>
                     {outbounds.map((o) => (
                       <option key={o.id} value={o.id}>
-                        {o.display_name} · {o.transport_kind === 'gorelay' ? 'GoRelay' : o.transport_kind} · {o.tag}
+                        {o.display_name} · {o.transport_kind === 'gorelay' ? 'GoRelay' : o.transport_kind} · {o.deploy_state} · {o.tag}
                       </option>
                     ))}
                     {legacyOutboundTags.map((tag) => <option key={tag} value={`legacy:${tag}`}>{tag} · 待纳管</option>)}

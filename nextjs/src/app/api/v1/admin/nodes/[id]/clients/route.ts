@@ -61,8 +61,8 @@ async function fetchNodeBaseLink(admin: any, nodeId: string): Promise<string | n
 }
 
 // POST /api/v1/admin/nodes/[id]/clients — 批量发 N 个名额(默认 1)。
-// body: { count?, label?, expires_at?, ip_limit?, quota_bytes? }
-// 批量时 expires_at/quota_bytes 对本批全部名额施加同一到期与同一配额。
+// body: { count?, label?, expires_at?, ip_limit?, quota_bytes?, outbound_id? }
+// 批量时 expires_at/quota_bytes/outbound 对本批全部名额施加。
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params
   const gate = await requireNodeAccess(id, 'write')
@@ -81,8 +81,19 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const admin = await createServerAdminClient()
 
   // node 存在性 + 取 name/protocol 供 email/协议派生
-  const { data: node } = await admin.from('nodes').select('id, name, protocol').eq('id', id).maybeSingle()
+  const { data: node } = await admin.from('nodes').select('id, name, protocol, vps_instance_id').eq('id', id).maybeSingle()
   if (!node) return NextResponse.json({ error: 'Node not found' }, { status: 404 })
+
+  let outbound: { id: string; tag: string } | null = null
+  if (body?.outbound_id) {
+    const { data } = await (admin as any).from('node_outbounds')
+      .select('id,tag,target_vps_instance_id,desired_state')
+      .eq('id', String(body.outbound_id)).maybeSingle()
+    if (!data || data.target_vps_instance_id !== (node as any).vps_instance_id || data.desired_state === 'absent') {
+      return NextResponse.json({ error: '所选 outbound 不属于该节点 VPS 或已被移除' }, { status: 400 })
+    }
+    outbound = { id: data.id, tag: data.tag }
+  }
 
   // 现有名额数 → 计算下一 seq(避免 email 撞车)
   const { count: existing } = await admin
@@ -104,6 +115,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       expires_at: expiresAt,
       ip_limit: ipLimit,
       quota_bytes: quotaBytes,
+      outbound_id: outbound?.id ?? null,
+      outbound_tag: outbound?.tag ?? null,
       period_started_at: quotaBytes != null ? new Date().toISOString() : null,
       subscribe_token: randomBytes(24).toString('hex'), // 48 hex = 192bit
       created_by: gate.user.id,

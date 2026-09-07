@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, Database, Loader2, Network, Plus, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 interface Outbound {
@@ -29,6 +30,7 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
   const [outbounds, setOutbounds] = useState<Outbound[]>([])
   const [sources, setSources] = useState<Source[]>([])
   const [items, setItems] = useState<Item[]>([])
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
   const [nodes, setNodes] = useState<ManagedNode[]>([])
   const [cheapIps, setCheapIps] = useState<CheapIp[]>([])
   const [managedNodeId, setManagedNodeId] = useState('')
@@ -133,6 +135,30 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
     } catch (e: any) { toast.error(e.message) } finally { setBusy('') }
   }
 
+  const importSubscriptionItems = async () => {
+    if (!selectedItems.size) return toast.error('请先选择可部署的 Endpoint')
+    setBusy('import-items')
+    try {
+      const r = await fetch(`/api/v1/admin/nodes/${id}/outbounds`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'import_subscription_items', source_item_ids: Array.from(selectedItems) }),
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j.error || '导入失败')
+      toast.success(`已导入 ${j.imported?.length ?? 0} 个 Outbound${j.skipped ? `，跳过 ${j.skipped} 个` : ''}`)
+      setSelectedItems(new Set())
+      await load()
+    } catch (e: any) { toast.error(e.message) } finally { setBusy('') }
+  }
+
+  const toggleItem = (itemId: string, checked: boolean) => {
+    setSelectedItems((old) => {
+      const next = new Set(old)
+      if (checked) next.add(itemId); else next.delete(itemId)
+      return next
+    })
+  }
+
   const discover = async (sourceId: string) => {
     setBusy(sourceId)
     try {
@@ -205,7 +231,31 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
         </Table>
       </section>
 
-      {items.length > 0 && <section className="space-y-3"><h2 className="font-semibold">已发现 Endpoint（{items.length}）</h2><Table><TableHeader><TableRow><TableHead>名称</TableHead><TableHead>协议</TableHead><TableHead>服务器</TableHead><TableHead>兼容性</TableHead><TableHead>状态</TableHead></TableRow></TableHeader><TableBody>{items.map((x) => <TableRow key={x.id}><TableCell>{x.display_name}</TableCell><TableCell>{x.protocol}</TableCell><TableCell className="font-mono text-xs">{x.server_hint || '-'}{x.port_hint ? `:${x.port_hint}` : ''}</TableCell><TableCell className={x.compatibility === 'supported' ? 'text-green-600' : 'text-amber-600'}>{x.compatibility}</TableCell><TableCell>{x.status}</TableCell></TableRow>)}</TableBody></Table></section>}
+      {items.length > 0 && <section className="space-y-3">
+        <div className="flex items-center gap-3">
+          <h2 className="font-semibold">已发现 Endpoint（{items.length}）</h2>
+          <Button size="sm" onClick={importSubscriptionItems} disabled={!selectedItems.size || busy === 'import-items'}>
+            {busy === 'import-items' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
+            导入选中到 Outbound（{selectedItems.size}）
+          </Button>
+          <span className="text-xs text-muted-foreground">导入后即可在创建 Client/出口下拉中选择；首次为 draft，需 Apply 后才实际生效。</span>
+        </div>
+        <Table><TableHeader><TableRow>
+          <TableHead className="w-10"><Checkbox
+            checked={items.filter((x) => x.compatibility === 'supported' && x.status === 'active').every((x) => selectedItems.has(x.id))}
+            onCheckedChange={(checked) => setSelectedItems(checked ? new Set(items.filter((x) => x.compatibility === 'supported' && x.status === 'active').map((x) => x.id)) : new Set())}
+          /></TableHead>
+          <TableHead>名称</TableHead><TableHead>协议</TableHead><TableHead>服务器</TableHead><TableHead>兼容性</TableHead><TableHead>状态</TableHead>
+        </TableRow></TableHeader><TableBody>{items.map((x) => {
+          const selectable = x.compatibility === 'supported' && x.status === 'active'
+          return <TableRow key={x.id}>
+            <TableCell><Checkbox disabled={!selectable} checked={selectedItems.has(x.id)} onCheckedChange={(checked) => toggleItem(x.id, checked === true)} /></TableCell>
+            <TableCell>{x.display_name}</TableCell><TableCell>{x.protocol}</TableCell>
+            <TableCell className="font-mono text-xs">{x.server_hint || '-'}{x.port_hint ? `:${x.port_hint}` : ''}</TableCell>
+            <TableCell className={x.compatibility === 'supported' ? 'text-green-600' : 'text-amber-600'}>{x.compatibility}</TableCell><TableCell>{x.status}</TableCell>
+          </TableRow>
+        })}</TableBody></Table>
+      </section>}
     </div>
   )
 }

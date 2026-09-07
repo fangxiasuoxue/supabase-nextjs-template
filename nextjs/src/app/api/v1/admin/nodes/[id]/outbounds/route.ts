@@ -52,6 +52,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if (body.action === 'import_cheap_ip') {
     return importCheapIp(admin, gate.user.id, vpsId, body)
   }
+  if (body.action === 'import_subscription_items') {
+    return importSubscriptionItems(admin, gate.user.id, vpsId, body)
+  }
 
   const tag = safeText(body.tag)
   const displayName = safeText(body.display_name)
@@ -83,6 +86,46 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const { data, error } = await (admin as any).from('node_outbounds').insert(row).select('*').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ outbound: data }, { status: 201 })
+}
+
+function subscriptionTag(protocol: string, name: string, externalKey: string): string {
+  const slug = name.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'node'
+  return `sub-${safeText(protocol, 16).toLowerCase()}-${slug}-${externalKey.slice(0, 8)}`
+}
+
+async function importSubscriptionItems(admin: any, userId: string, targetVpsId: string, body: any) {
+  const ids = Array.from(new Set((Array.isArray(body.source_item_ids) ? body.source_item_ids : []).map((x: unknown) => safeText(x, 64))))
+    .filter(Boolean).slice(0, 100)
+  if (!ids.length) return NextResponse.json({ error: '至少选择一个 Endpoint' }, { status: 400 })
+
+  const { data: items, error: itemError } = await admin.from('outbound_source_items')
+    .select('id,source_id,external_key,display_name,protocol,compatibility,status')
+    .in('id', ids)
+  if (itemError) return NextResponse.json({ error: itemError.message }, { status: 500 })
+  const sourceIds = Array.from(new Set((items ?? []).map((x: any) => x.source_id)))
+  const { data: sources } = await admin.from('outbound_sources').select('id,kind,status').in('id', sourceIds)
+  const validSources = new Set((sources ?? []).filter((x: any) => x.kind === 'subscription' && x.status === 'active').map((x: any) => x.id))
+  const valid = (items ?? []).filter((x: any) => validSources.has(x.source_id) && x.status === 'active' && x.compatibility === 'supported')
+  if (!valid.length) return NextResponse.json({ error: '所选 Endpoint 均不可部署' }, { status: 400 })
+
+  const rows = valid.map((item: any) => ({
+    target_vps_instance_id: targetVpsId,
+    source_id: item.source_id,
+    source_item_id: item.id,
+    tag: subscriptionTag(item.protocol, item.display_name, item.external_key),
+    display_name: item.display_name,
+    endpoint_kind: 'subscription_node',
+    transport_kind: 'direct',
+    desired_config: { source: 'subscription', external_key: item.external_key, protocol: item.protocol },
+    desired_state: 'present',
+    deploy_state: 'draft',
+    created_by: userId,
+  }))
+  const { data, error } = await admin.from('node_outbounds').upsert(rows, {
+    onConflict: 'target_vps_instance_id,tag', ignoreDuplicates: false,
+  }).select('id,tag,display_name,deploy_state')
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ imported: data ?? [], requested: ids.length, skipped: ids.length - valid.length }, { status: 201 })
 }
 
 async function importCheapIp(admin: any, userId: string, targetVpsId: string, body: any) {
