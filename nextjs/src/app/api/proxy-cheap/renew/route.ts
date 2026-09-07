@@ -115,27 +115,70 @@ export async function POST(req: Request) {
 
         const upstreamData = await res.json();
 
-        // Update local database with new expiration date
-        // The response contains 'expiresAt'.
-        if (upstreamData.expiresAt) {
-            const admin = await createServerAdminClient();
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { error: updateError } = await (admin as any)
-                .from('ip_assets')
-                .update({
-                    expires_at: upstreamData.expiresAt,
-                    // Update other fields if needed, e.g. status
-                    status: upstreamData.status?.toLowerCase() ?? undefined
-                })
-                .eq('id', id);
-
-            if (updateError) {
-                console.error('Failed to update local asset after renewal:', updateError);
-                // We still return success because the renewal itself succeeded
+        // 续费/重启成功后立刻从 Proxy-Cheap services/proxies 拉回权威状态。
+        // 实测 reactivate/extend-period 返回体不总是带 expiresAt，若只依赖返回体会导致页面必须手动 SYNC 才刷新。
+        const admin = await createServerAdminClient();
+        let synced = false;
+        try {
+            const syncUrl = 'https://api.proxy-cheap.com/services/proxies?page=1&perPage=100';
+            const syncRes = await fetch(syncUrl, { headers: { Accept: 'application/json', 'X-Api-Key': key, 'X-Api-Secret': secret } });
+            if (syncRes.ok) {
+                const raw = await syncRes.json();
+                const list = Array.isArray(raw) ? raw : (raw.proxies || raw.items || raw.data || raw.results || raw.list || []);
+                const fresh = list.find((p: any) => String(p.id ?? '') === String(pid));
+                if (fresh) {
+                    const conn = fresh.connection || {};
+                    const auth = fresh.authentication || {};
+                    const meta = fresh.metadata || {};
+                    const publicIp = conn.publicIp ?? fresh.publicIp ?? fresh.ip ?? conn.connectIp ?? null;
+                    const updateData = {
+                        label: fresh.note != null && String(fresh.note).trim() !== '' ? String(fresh.note).trim() : undefined,
+                        status: fresh.status ?? null,
+                        network_type: fresh.networkType ?? null,
+                        country_code: fresh.countryCode ?? null,
+                        proxy_type: fresh.proxyType ?? null,
+                        ip_version: conn.ipVersion ?? null,
+                        public_ip: publicIp,
+                        ip: publicIp,
+                        connect_ip: conn.connectIp ?? null,
+                        http_port: conn.httpPort ?? null,
+                        https_port: conn.httpsPort ?? null,
+                        socks5_port: conn.socks5Port ?? null,
+                        auth_username: auth.username ?? null,
+                        auth_password: auth.password ?? null,
+                        isp_name: meta.ispName ?? null,
+                        order_id: meta.orderId ?? null,
+                        bandwidth_total: (fresh.bandwidth && fresh.bandwidth.total) ?? null,
+                        bandwidth_used: (fresh.bandwidth && fresh.bandwidth.used) ?? null,
+                        routes: Array.isArray(fresh.routes) ? fresh.routes : [],
+                        expires_at: fresh.expiresAt ?? upstreamData.expiresAt ?? null,
+                        last_sync_at: new Date().toISOString(),
+                        source_url: syncUrl,
+                        source_raw: fresh,
+                        deleted_at: null,
+                    };
+                    Object.keys(updateData).forEach((k) => (updateData as any)[k] === undefined && delete (updateData as any)[k]);
+                    const { error: updateError } = await (admin as any).from('ip_assets').update(updateData).eq('id', id);
+                    if (updateError) console.error('Failed to sync local asset after renewal:', updateError);
+                    else synced = true;
+                }
+            } else {
+                console.warn('Post-renew sync failed:', syncRes.status, syncRes.statusText);
             }
+        } catch (syncError) {
+            console.warn('Post-renew sync error:', syncError);
         }
 
-        return NextResponse.json({ success: true, data: upstreamData });
+        // 兜底:若列表同步未命中，但返回体含 expiresAt，也立即写本地。
+        if (!synced && upstreamData.expiresAt) {
+            const { error: updateError } = await (admin as any)
+                .from('ip_assets')
+                .update(Object.fromEntries(Object.entries({ expires_at: upstreamData.expiresAt, status: upstreamData.status }).filter(([, v]) => v !== undefined)))
+                .eq('id', id);
+            if (updateError) console.error('Failed to update local asset after renewal:', updateError);
+        }
+
+        return NextResponse.json({ success: true, synced, data: upstreamData });
 
     } catch (error: any) {
         console.error('Renewal error:', error);

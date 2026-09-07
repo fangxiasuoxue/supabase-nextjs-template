@@ -61,6 +61,7 @@ type IpAsset = {
   last_speed_kbps: number | null
   last_tested_at: string | null
   terminate_at_period_end?: boolean | null
+  usage_context?: string | null
   assigned_users?: { id: string, email: string | null, display_name?: string | null, terminate_at_period_end?: boolean | null }[]
   my_allocation?: { id: number, display_name: string | null, notes: string | null, terminate_at_period_end: boolean | null }
 }
@@ -78,6 +79,7 @@ type FormData = {
   auth_password: string
   expires_at: string
   provider: string
+  usage_context: string
 }
 
 export default function IpManagementPage() {
@@ -88,6 +90,7 @@ export default function IpManagementPage() {
   const [searchRemark, setSearchRemark] = useState("")
   const [searchIp, setSearchIp] = useState("")
   const [searchProviderId, setSearchProviderId] = useState("")
+  const [searchAssignee, setSearchAssignee] = useState("")
 
   // 表单状态
   const [formMode, setFormMode] = useState<"create" | "edit">("create")
@@ -105,6 +108,7 @@ export default function IpManagementPage() {
     auth_password: "",
     expires_at: "",
     provider: "Manual",
+    usage_context: "",
   })
 
   const [canManage, setCanManage] = useState(false)
@@ -167,7 +171,7 @@ export default function IpManagementPage() {
 
     return () => clearTimeout(timeoutId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchRemark, searchIp, searchProviderId, renewalOnly])
+  }, [searchRemark, searchIp, searchProviderId, searchAssignee, renewalOnly])
 
   // 格式化流量
   const formatBandwidth = (bytes: number | null) => {
@@ -255,6 +259,28 @@ export default function IpManagementPage() {
         query = query.eq('provider_id', searchProviderId)
       }
 
+      if (searchAssignee && managePerm.allowed) {
+        const needle = searchAssignee.trim().toLowerCase()
+        const [usersRes, allocRes] = await Promise.all([
+          fetch('/api/users/list', { credentials: 'same-origin' }).catch(() => null),
+          client.from('ip_allocations')
+            .select('ip_id, assignee_user_id, display_name, notes, state, released_at')
+            .eq('state', 'allocated')
+            .is('released_at', null)
+        ])
+        const userJson = usersRes?.ok ? await usersRes.json() : { users: [] }
+        const matchedUserIds = new Set<string>((userJson.users || [])
+          .filter((u: any) => `${u.email || ''} ${u.display_name || ''} ${u.name || ''}`.toLowerCase().includes(needle))
+          .map((u: any) => String(u.id)))
+        const matchedIpIds = ((allocRes.data as any[]) || [])
+          .filter((a) => matchedUserIds.has(String(a.assignee_user_id))
+            || String(a.display_name || '').toLowerCase().includes(needle)
+            || String(a.notes || '').toLowerCase().includes(needle))
+          .map((a) => Number(a.ip_id))
+          .filter(Boolean)
+        query = matchedIpIds.length > 0 ? query.in('id', Array.from(new Set(matchedIpIds))) : query.eq('id', -1)
+      }
+
       // 分页和排序:需求 #2 按到期升序(最紧急在前,无到期日排最后)
       query = query
         .order('expires_at', { ascending: true, nullsFirst: false })
@@ -334,6 +360,7 @@ export default function IpManagementPage() {
     setSearchRemark("")
     setSearchIp("")
     setSearchProviderId("")
+    setSearchAssignee("")
     setCurrentPage(1)
   }
 
@@ -353,6 +380,7 @@ export default function IpManagementPage() {
       auth_password: "",
       expires_at: "",
       provider: "Manual",
+      usage_context: "",
     })
   }
 
@@ -394,6 +422,7 @@ export default function IpManagementPage() {
       auth_password: asset.auth_password || "",
       expires_at: asset.expires_at ? new Date(asset.expires_at).toISOString().slice(0, 16) : "",
       provider: asset.provider || "Manual",
+      usage_context: asset.usage_context || "",
     })
     // 滚动到表单区域
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -415,6 +444,7 @@ export default function IpManagementPage() {
       auth_password: "",
       expires_at: "",
       provider: "Manual",
+      usage_context: "",
     })
   }
 
@@ -444,6 +474,7 @@ export default function IpManagementPage() {
         auth_password: formData.auth_password.trim() || null,
         expires_at: formData.expires_at ? new Date(formData.expires_at).toISOString() : null,
         provider: formData.provider.trim() || "Manual",
+        usage_context: formData.usage_context.trim() || null,
       }
 
       // 处理协议和端口
@@ -535,15 +566,10 @@ export default function IpManagementPage() {
         return
       }
 
-      // 软删除：设置 deleted_at
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const client = supabase.getSupabaseClient() as any
-      const { error } = await client
-        .from('ip_assets')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', deletingId)
-
-      if (error) throw error
+      // 软删除走服务端 service-role，避免前端 anon/SSR 受 ip_assets RLS 拦截。
+      const res = await fetch(`/api/ip/assets/${deletingId}`, { method: 'DELETE', credentials: 'same-origin' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || '删除失败')
 
       setShowDeleteDialog(false)
       setDeletingId(null)
@@ -669,14 +695,15 @@ export default function IpManagementPage() {
     try {
       setTerminatingIds(prev => new Set(prev).add(asset.id))
       setError("")
-      if (canWrite || canManage) {
-        const supabase = await createSPASassClient()
-        const client = supabase.getSupabaseClient() as any
-        const { error } = await client
-          .from('ip_assets')
-          .update({ terminate_at_period_end: checked })
-          .eq('id', asset.id)
-        if (error) throw error
+      if (canManage) {
+        const res = await fetch(`/api/ip/assets/${asset.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ terminate_at_period_end: checked })
+        })
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || '更新失败')
         setIpAssets(prev => prev.map(r => r.id === asset.id ? { ...r, terminate_at_period_end: checked } : r))
       } else {
         const res = await fetch('/api/ip/allocate', {
@@ -715,12 +742,12 @@ export default function IpManagementPage() {
   })
 
   const displayNameFor = (asset: IpAsset) => (
-    asset.my_allocation?.display_name || asset.my_allocation?.notes || asset.remark || asset.label || (asset.provider_id ? `#${asset.provider_id}` : asset.ip)
+    asset.my_allocation?.display_name || asset.my_allocation?.notes || asset.remark || asset.label || asset.ip
   )
-  const terminateFor = (asset: IpAsset) => canWrite || canManage ? !!asset.terminate_at_period_end : !!asset.my_allocation?.terminate_at_period_end
+  const terminateFor = (asset: IpAsset) => canManage ? !!asset.terminate_at_period_end : !!asset.my_allocation?.terminate_at_period_end
   const shouldShowAssetIdentity = canWrite || canManage
   const shouldShowRemarkAssignees = canWrite || canManage
-  const tableColumnCount = (shouldShowAssetIdentity ? 1 : 0) + 1 + (shouldShowRemarkAssignees ? 1 : 0) + 3
+  const tableColumnCount = (shouldShowAssetIdentity ? 1 : 0) + 1 + (shouldShowRemarkAssignees ? 1 : 0) + 4
 
   // 统计卡真实聚合(基于当前已加载的资产) — Bug #6
   const testedLatencies = ipAssets
@@ -818,16 +845,16 @@ export default function IpManagementPage() {
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] uppercase tracking-[0.3em] font-black text-cyan-600">Edge Network Console</span>
-                <span className="text-[8px] text-muted-foreground uppercase tracking-widest -mt-0.5">Proxy Asset Management v4.2</span>
+                <span className="text-[8px] text-muted-foreground uppercase tracking-widest -mt-0.5">Network Asset Management v4.2</span>
               </div>
             </div>
             <h1 className="text-5xl font-black tracking-tighter text-foreground leading-none">
               IP 资产管理 <span className="text-cyan-600">.</span>
             </h1>
             <p className="text-muted-foreground/80 mt-4 max-w-2xl text-sm font-medium leading-relaxed">
-              管理全球分布式代理 IP 资源，实时监控延迟指标、流量配额与资产状态。
+              管理已分配网络资源，实时监控延迟指标、流量配额与资产状态。
               <br className="hidden md:block" />
-              集成 Proxy-Cheap API，支持自动化同步与续期。
+              管理侧支持自动化同步、续期与使用登记。
             </p>
           </div>
           
@@ -920,15 +947,28 @@ export default function IpManagementPage() {
                     className="bg-white border-slate-300 rounded-2xl h-12 focus:ring-cyan-600/20 focus:border-cyan-600 transition-all tech-mono text-sm"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] uppercase font-black text-muted-foreground/60 ml-1 tracking-widest">订单 ID / PROVIDER ID</Label>
-                  <Input
-                    placeholder="Search source ID..."
-                    value={searchProviderId}
-                    onChange={(e) => setSearchProviderId(e.target.value)}
-                    className="bg-white border-slate-300 rounded-2xl h-12 focus:ring-cyan-600/20 focus:border-cyan-600 transition-all tech-mono text-sm"
-                  />
-                </div>
+                {canManage && (
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase font-black text-muted-foreground/60 ml-1 tracking-widest">订单 ID / PROVIDER ID</Label>
+                    <Input
+                      placeholder="Search source ID..."
+                      value={searchProviderId}
+                      onChange={(e) => setSearchProviderId(e.target.value)}
+                      className="bg-white border-slate-300 rounded-2xl h-12 focus:ring-cyan-600/20 focus:border-cyan-600 transition-all tech-mono text-sm"
+                    />
+                  </div>
+                )}
+                {canManage && (
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase font-black text-muted-foreground/60 ml-1 tracking-widest">分配用户 / ASSIGNEE</Label>
+                    <Input
+                      placeholder="按邮箱、姓名、显示名快速查分配关系..."
+                      value={searchAssignee}
+                      onChange={(e) => setSearchAssignee(e.target.value)}
+                      className="bg-white border-slate-300 rounded-2xl h-12 focus:ring-cyan-600/20 focus:border-cyan-600 transition-all text-sm"
+                    />
+                  </div>
+                )}
                 <Button onClick={handleClearSearch} variant="secondary" className="w-full text-[10px] font-black uppercase tracking-[0.2em] bg-slate-50 hover:bg-slate-100 border-slate-200 rounded-2xl h-12">
                   RESET FILTERS
                 </Button>
@@ -1057,6 +1097,18 @@ export default function IpManagementPage() {
                   </div>
                 </div>
 
+                {canManage && (
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase font-black text-muted-foreground/60 ml-1 tracking-widest">使用登记(仅管理可见)</Label>
+                    <Input
+                      placeholder="例如: AdsPower 4002/9202 已投入使用"
+                      value={formData.usage_context}
+                      onChange={(e) => setFormData({ ...formData, usage_context: e.target.value })}
+                      className="bg-white border-slate-300 rounded-2xl h-12"
+                    />
+                  </div>
+                )}
+
                 <div className="pt-6 flex gap-4">
                   <Button onClick={handleSave} disabled={loading} className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded-2xl h-14 font-black uppercase tracking-widest shadow-sm transition-all active:scale-[0.98]">
                     {loading ? 'EXECUTING...' : 'COMMIT CHANGES'}
@@ -1179,6 +1231,11 @@ export default function IpManagementPage() {
                                 <div className="text-xs font-bold text-slate-700 break-words">
                                   {asset.remark || <span className="text-muted-foreground/40">未填写备注</span>}
                                 </div>
+                                {asset.usage_context && (
+                                  <div className="w-fit rounded-md border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[9px] font-black text-emerald-700">
+                                    使用登记: {asset.usage_context}
+                                  </div>
+                                )}
                                 <div className="flex flex-wrap gap-1">
                                   {(asset.assigned_users || []).length > 0 ? (asset.assigned_users || []).slice(0, 3).map((u) => (
                                     <span key={u.id} className={`px-2 py-0.5 rounded-md border text-[9px] font-black max-w-[180px] truncate ${u.terminate_at_period_end ? 'bg-red-50 border-red-100 text-red-700' : 'bg-blue-50 border-blue-100 text-blue-700'}`}>

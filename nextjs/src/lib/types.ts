@@ -607,6 +607,7 @@ export type Database = {
           status: string | null
           terminate_at_period_end: boolean
           type: string | null
+          usage_context: string | null
         }
         Insert: {
           asn?: string | null
@@ -649,6 +650,7 @@ export type Database = {
           status?: string | null
           terminate_at_period_end?: boolean
           type?: string | null
+          usage_context?: string | null
         }
         Update: {
           asn?: string | null
@@ -691,6 +693,7 @@ export type Database = {
           status?: string | null
           terminate_at_period_end?: boolean
           type?: string | null
+          usage_context?: string | null
         }
         Relationships: []
       }
