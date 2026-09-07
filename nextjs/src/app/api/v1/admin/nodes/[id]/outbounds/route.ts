@@ -1,7 +1,8 @@
+import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { requireModuleAccess, requireNodeAccess } from '@/lib/auth/resourceAccess'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
-import { extractBaseShareLink } from '@/lib/clients/node-client-admin'
+import { extractBaseShareLink, swapVlessUuid } from '@/lib/clients/node-client-admin'
 import { compileManagedNodeOutbound, parseManagedNodeShareLink } from '@/lib/outbound/managed-node'
 import { compileCheapIpOutbound } from '@/lib/outbound/cheap-ip'
 import {
@@ -207,11 +208,14 @@ async function importManagedNode(admin: any, userId: string, targetVpsId: string
 
   const { data: sourceNode } = await admin
     .from('nodes')
-    .select('id,name,status,public_ip,port,last_deployed_at')
+    .select('id,name,status,protocol,public_ip,port,last_deployed_at')
     .eq('id', sourceNodeId)
     .maybeSingle()
   if (!sourceNode || sourceNode.status !== 'active') {
     return NextResponse.json({ error: '源 managed node 不存在或不是 active' }, { status: 400 })
+  }
+  if (String(sourceNode.protocol).toLowerCase() !== 'vless' || Number(sourceNode.port) !== 443) {
+    return NextResponse.json({ error: '自建落地只允许选择 VLESS :443 节点，其他入口端口不与出口落地共用' }, { status: 400 })
   }
   const { data: deployment } = await admin
     .from('node_deployments')
@@ -225,10 +229,32 @@ async function importManagedNode(admin: any, userId: string, targetVpsId: string
   const shareLink = extractBaseShareLink(deployment?.rendered_config)
   if (!shareLink) return NextResponse.json({ error: '源节点没有成功部署的分享链接' }, { status: 409 })
 
+  let { data: landingClient } = await admin.from('node_clients')
+    .select('id,cred_ref')
+    .eq('node_id', sourceNodeId)
+    .eq('purpose', 'outbound_landing')
+    .maybeSingle()
+  if (!landingClient) {
+    const insertedClient = await admin.from('node_clients').insert({
+      node_id: sourceNodeId,
+      email: 'outbound-landing@node',
+      cred_ref: randomUUID(),
+      protocol: 'vless',
+      label: '内部专用 · 出口落地 443',
+      purpose: 'outbound_landing',
+      enabled: true,
+      subscribe_token: null,
+      created_by: userId,
+    } as any).select('id,cred_ref').single()
+    if (insertedClient.error) return NextResponse.json({ error: insertedClient.error.message }, { status: 500 })
+    landingClient = insertedClient.data
+  }
+
   let descriptor
   try {
-    descriptor = parseManagedNodeShareLink(shareLink)
-    compileManagedNodeOutbound(shareLink, tag) // validate compile without persisting credentials
+    const dedicatedShareLink = swapVlessUuid(shareLink, (landingClient as any).cred_ref, `${sourceNode.name} · outbound-landing`)
+    descriptor = parseManagedNodeShareLink(dedicatedShareLink)
+    compileManagedNodeOutbound(dedicatedShareLink, tag) // validate dedicated client without persisting credentials
   } catch (e: any) {
     return NextResponse.json({ error: `源节点暂不兼容: ${e.message}` }, { status: 400 })
   }
@@ -261,7 +287,7 @@ async function importManagedNode(admin: any, userId: string, targetVpsId: string
     region: null,
     server_hint: descriptor.address,
     port_hint: descriptor.port,
-    secret_ref: `secret_ref://managed-node/${sourceNodeId}/latest-share`,
+    secret_ref: `secret_ref://node-clients/${(landingClient as any).id}/share`,
     metadata: { security: descriptor.security, network: descriptor.network },
     compatibility: 'supported',
     status: 'active',
@@ -278,7 +304,7 @@ async function importManagedNode(admin: any, userId: string, targetVpsId: string
     endpoint_kind: 'managed_node',
     transport_kind: transportKind,
     transport_ref: safeText(body.transport_ref, 500) || null,
-    desired_config: { source: 'managed_node', source_node_id: sourceNodeId },
+    desired_config: { source: 'managed_node', source_node_id: sourceNodeId, source_client_id: (landingClient as any).id },
     desired_state: 'present',
     deploy_state: 'draft',
     created_by: userId,

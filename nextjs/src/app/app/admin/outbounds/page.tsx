@@ -45,13 +45,13 @@ export default function OutboundIndexPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
         <Network className="w-5 h-5" />
-        <h1 className="text-xl font-semibold">Outbound 管理</h1>
+        <h1 className="text-xl font-semibold">出口管理</h1>
         <Button variant="outline" size="sm" onClick={load} disabled={loading}><RefreshCw className="w-4 h-4 mr-1" />刷新</Button>
       </div>
-      <p className="text-sm text-muted-foreground">Outbound 按 VPS Xray runtime 管理。选择一个入口节点，进入资产、路径和 Endpoint 工作台。</p>
+      <p className="text-sm text-muted-foreground">第三方订阅只在出口目录登记；自建 Node 作为受控入口。选择入口节点后配置出口端点与加速路径。</p>
       {loading ? <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />加载中…</div> : (
         <Table>
-          <TableHeader><TableRow><TableHead>入口节点</TableHead><TableHead>状态</TableHead><TableHead>协议</TableHead><TableHead>地址</TableHead><TableHead>Outbound 数</TableHead><TableHead>操作</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>入口节点</TableHead><TableHead>状态</TableHead><TableHead>协议</TableHead><TableHead>地址</TableHead><TableHead>出口数</TableHead><TableHead>操作</TableHead></TableRow></TableHeader>
           <TableBody>
             {rows.map((node) => <TableRow key={node.id}>
               <TableCell className="font-medium">{node.name}</TableCell>

@@ -16,6 +16,7 @@ interface Seat {
   id: string
   email: string
   protocol: string
+  purpose: 'user' | 'outbound_landing'
   label: string | null
   enabled: boolean
   expires_at: string | null
@@ -178,6 +179,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
     toast.success(label ? `名称已改为 ${label}` : '已清除名称')
   }
 
+  const activeOutbounds = outbounds.filter((o) => o.deploy_state === 'active')
   const legacyOutboundTags = Array.from(new Set(seats
     .filter((s) => s.outbound_tag && !outbounds.some((o) => o.tag === s.outbound_tag))
     .map((s) => s.outbound_tag as string))).sort()
@@ -368,7 +370,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
           <label className="block text-xs text-muted-foreground mb-1">统一出口(可选)</label>
           <select value={batchOutboundId} onChange={(e) => setBatchOutboundId(e.target.value)} className="border rounded px-2 py-1 w-52 text-xs">
             <option value="">默认出口</option>
-            {outbounds.map((o) => <option key={o.id} value={o.id}>{o.display_name} · {o.deploy_state}</option>)}
+            {activeOutbounds.map((o) => <option key={o.id} value={o.id}>{o.display_name} · {o.tag}</option>)}
           </select>
         </div>
         <Button onClick={createSeats} disabled={creating}>
@@ -411,6 +413,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
                   >
                     {s.label || <span className="text-muted-foreground">未命名</span>}
                   </button>
+                  {s.purpose === 'outbound_landing' && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">内部出口专用</span>}
                 </TableCell>
                 <TableCell>
                   <Button variant={s.enabled ? 'default' : 'secondary'} size="sm"
@@ -452,7 +455,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
                     title="选择该终端的 outbound tag;新增 outbound 能力另按 SDD 规划"
                   >
                     <option value="__default__">默认</option>
-                    {outbounds.map((o) => (
+                    {activeOutbounds.map((o) => (
                       <option key={o.id} value={o.id}>
                         {o.display_name} · {o.transport_kind === 'gorelay' ? 'GoRelay' : o.transport_kind} · {o.deploy_state} · {o.tag}
                       </option>
@@ -486,7 +489,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center">
-                    <AssignButton resourceType="node_client" resourceId={s.id} title={`授权终端 ${s.email} 给用户`} compact />
+                    {s.purpose !== 'outbound_landing' && <AssignButton resourceType="node_client" resourceId={s.id} title={`授权终端 ${s.email} 给用户`} compact />}
                     {s.quota_bytes != null && (
                       <Button variant="ghost" size="sm" title="重置配额周期(used 归零)" onClick={() => rollPeriod(s)}>
                         <RotateCcw className="w-4 h-4 text-blue-500" />

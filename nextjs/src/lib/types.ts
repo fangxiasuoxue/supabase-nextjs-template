@@ -593,6 +593,7 @@ export type Database = {
           metadata: Json | null
           network_type: string | null
           order_id: string | null
+          origin_kind: string | null
           owner: string | null
           owner_id: string | null
           provider: string
@@ -608,6 +609,7 @@ export type Database = {
           terminate_at_period_end: boolean
           type: string | null
           usage_context: string | null
+          vps_instance_id: string | null
         }
         Insert: {
           asn?: string | null
@@ -636,6 +638,7 @@ export type Database = {
           metadata?: Json | null
           network_type?: string | null
           order_id?: string | null
+          origin_kind?: string | null
           owner?: string | null
           owner_id?: string | null
           provider: string
@@ -651,6 +654,7 @@ export type Database = {
           terminate_at_period_end?: boolean
           type?: string | null
           usage_context?: string | null
+          vps_instance_id?: string | null
         }
         Update: {
           asn?: string | null
@@ -679,6 +683,7 @@ export type Database = {
           metadata?: Json | null
           network_type?: string | null
           order_id?: string | null
+          origin_kind?: string | null
           owner?: string | null
           owner_id?: string | null
           provider?: string
@@ -694,8 +699,17 @@ export type Database = {
           terminate_at_period_end?: boolean
           type?: string | null
           usage_context?: string | null
+          vps_instance_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ip_assets_vps_instance_id_fkey"
+            columns: ["vps_instance_id"]
+            isOneToOne: false
+            referencedRelation: "vps_instances"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ip_latency_matrix: {
         Row: {
@@ -819,6 +833,7 @@ export type Database = {
           over_action: string
           period_started_at: string | null
           protocol: string
+          purpose: string
           quota_bytes: number | null
           quota_period: string
           subscribe_token: string | null
@@ -844,6 +859,7 @@ export type Database = {
           over_action?: string
           period_started_at?: string | null
           protocol?: string
+          purpose?: string
           quota_bytes?: number | null
           quota_period?: string
           subscribe_token?: string | null
@@ -869,6 +885,7 @@ export type Database = {
           over_action?: string
           period_started_at?: string | null
           protocol?: string
+          purpose?: string
           quota_bytes?: number | null
           quota_period?: string
           subscribe_token?: string | null

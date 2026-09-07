@@ -81,11 +81,11 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
         : { data: null }
       const { data: outbound } = await (admin as any)
         .from('node_outbounds')
-        .select('id,tag,target_vps_instance_id,desired_state')
+        .select('id,tag,target_vps_instance_id,desired_state,deploy_state')
         .eq('id', String(body.outbound_id))
         .maybeSingle()
-      if (!node || !outbound || outbound.target_vps_instance_id !== (node as any).vps_instance_id || outbound.desired_state === 'absent') {
-        return NextResponse.json({ error: '所选 outbound 不属于该 client 的 VPS 或已被移除' }, { status: 400 })
+      if (!node || !outbound || outbound.target_vps_instance_id !== (node as any).vps_instance_id || outbound.desired_state === 'absent' || outbound.deploy_state !== 'active') {
+        return NextResponse.json({ error: '所选出口不属于该 Client VPS、已移除或尚未 Apply 生效' }, { status: 400 })
       }
       patch.outbound_id = outbound.id
       patch.outbound_tag = outbound.tag

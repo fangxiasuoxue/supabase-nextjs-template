@@ -33,7 +33,8 @@ import {
   Database,
   ArrowRightLeft,
   Plus,
-  QrCode
+  QrCode,
+  Server
 } from "lucide-react";
 
 type IpAsset = {
@@ -62,8 +63,22 @@ type IpAsset = {
   last_tested_at: string | null
   terminate_at_period_end?: boolean | null
   usage_context?: string | null
+  origin_kind?: string | null
+  vps_instance_id?: string | null
   assigned_users?: { id: string, email: string | null, display_name?: string | null, terminate_at_period_end?: boolean | null }[]
   my_allocation?: { id: number, display_name: string | null, notes: string | null, terminate_at_period_end: boolean | null }
+}
+
+type VpsCandidate = {
+  id: string
+  name: string | null
+  instance_id: string | null
+  gcp_instance_name: string | null
+  provider: string | null
+  region: string | null
+  zone: string | null
+  status: string | null
+  public_ip: string | null
 }
 
 type FormData = {
@@ -114,6 +129,13 @@ export default function IpManagementPage() {
   const [canManage, setCanManage] = useState(false)
   const [canWrite, setCanWrite] = useState(false)
   const [balance, setBalance] = useState<number | null>(null)
+  const [vpsCandidates, setVpsCandidates] = useState<VpsCandidate[]>([])
+  const [selectedVpsId, setSelectedVpsId] = useState('')
+  const [vpsAssetLabel, setVpsAssetLabel] = useState('')
+  const [vpsProxyType, setVpsProxyType] = useState<'none' | 'socks5' | 'http' | 'https'>('none')
+  const [vpsProxyPort, setVpsProxyPort] = useState('')
+  const [vpsUsageContext, setVpsUsageContext] = useState('')
+  const [importingVps, setImportingVps] = useState(false)
 
   // 列表状态
   const [ipAssets, setIpAssets] = useState<IpAsset[]>([])
@@ -159,6 +181,14 @@ export default function IpManagementPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, currentPage])
+
+  useEffect(() => {
+    if (!canManage) return
+    fetch('/api/ip/import-vps')
+      .then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.error || '加载 VPS 失败'); return j })
+      .then((j) => setVpsCandidates(j.vps || []))
+      .catch((e) => setError(e.message))
+  }, [canManage])
 
   // 防抖查询 - 当查询条件变化时延迟查询
   useEffect(() => {
@@ -232,9 +262,12 @@ export default function IpManagementPage() {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const client = supabase.getSupabaseClient() as any
+      const assetColumns = managePerm.allowed
+        ? '*'
+        : 'id,ip,remark,label,country_code,isp_name,proxy_type,http_port,https_port,socks5_port,auth_username,auth_password,expires_at,bandwidth_used,bandwidth_total,status,created_at,deleted_at,last_latency_ms,last_speed_kbps,last_tested_at,terminate_at_period_end'
       let query = client
         .from('ip_assets')
-        .select('*', { count: 'exact' })
+        .select(assetColumns, { count: 'exact' })
 
       // 应用查询条件 - 只查询未删除的记录
       query = query.is('deleted_at', null)
@@ -354,6 +387,35 @@ export default function IpManagementPage() {
     } catch (e) {
       console.error('Failed to fetch balance', e)
     }
+  }
+
+  const importVpsAsset = async () => {
+    if (!selectedVpsId) return setError('请选择 VPS')
+    if (vpsProxyType !== 'none' && !vpsProxyPort) return setError('选择协议后必须填写端口')
+    setImportingVps(true)
+    setError('')
+    try {
+      const r = await fetch('/api/ip/import-vps', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vps_id: selectedVpsId,
+          label: vpsAssetLabel,
+          proxy_type: vpsProxyType === 'none' ? null : vpsProxyType,
+          port: vpsProxyType === 'none' ? null : Number(vpsProxyPort),
+          usage_context: vpsUsageContext,
+        }),
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j.error || '导入 VPS 失败')
+      setSelectedVpsId(''); setVpsAssetLabel(''); setVpsProxyType('none'); setVpsProxyPort(''); setVpsUsageContext('')
+      await fetchIpAssets()
+    } catch (e: any) { setError(e.message || '导入 VPS 失败') } finally { setImportingVps(false) }
+  }
+
+  const chooseVpsCandidate = (vpsId: string) => {
+    setSelectedVpsId(vpsId)
+    const vps = vpsCandidates.find((x) => x.id === vpsId)
+    if (vps) setVpsAssetLabel(vps.name || vps.instance_id || vps.gcp_instance_name || '')
   }
 
   const handleClearSearch = () => {
@@ -990,6 +1052,23 @@ export default function IpManagementPage() {
               </div>
             </div>
 
+            {canManage && <div className="glass-card-premium p-5 rounded-2xl space-y-5">
+              <div className="flex items-center gap-4">
+                <div className="p-2.5 bg-cyan-50 rounded-xl border border-cyan-100"><Server className="h-4 w-4 text-cyan-600" /></div>
+                <div><h3 className="text-sm font-black uppercase tracking-[0.1em]">从 VPS 导入</h3><span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Managed VPS → IP Asset</span></div>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2"><Label>VPS</Label><Select value={selectedVpsId} onValueChange={chooseVpsCandidate}><SelectTrigger><SelectValue placeholder="选择一台有公网 IP 的 VPS" /></SelectTrigger><SelectContent>{vpsCandidates.filter(v => v.public_ip).map(v => <SelectItem key={v.id} value={v.id}>{v.name || v.instance_id || v.gcp_instance_name} · {v.public_ip} · {v.status}</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-2"><Label>资产显示名</Label><Input value={vpsAssetLabel} onChange={e => setVpsAssetLabel(e.target.value)} placeholder="如 US4 自建出口" /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2"><Label>协议（可选）</Label><Select value={vpsProxyType} onValueChange={(v: 'none' | 'socks5' | 'http' | 'https') => setVpsProxyType(v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">只登记 IP</SelectItem><SelectItem value="socks5">SOCKS5</SelectItem><SelectItem value="http">HTTP</SelectItem><SelectItem value="https">HTTPS</SelectItem></SelectContent></Select></div>
+                  <div className="space-y-2"><Label>端口</Label><Input type="number" min={1} max={65535} disabled={vpsProxyType === 'none'} value={vpsProxyPort} onChange={e => setVpsProxyPort(e.target.value)} placeholder="4002" /></div>
+                </div>
+                <div className="space-y-2"><Label>使用登记（仅管理可见）</Label><Input value={vpsUsageContext} onChange={e => setVpsUsageContext(e.target.value)} placeholder="如 AdsPower 4002/9202" /></div>
+                <Button className="w-full" onClick={importVpsAsset} disabled={importingVps || !selectedVpsId}>{importingVps ? '导入中…' : '导入/更新到 IP 列表'}</Button>
+              </div>
+            </div>}
+
             {/* Asset Entry Card (Create/Edit) */}
             <div className="glass-card-premium p-5 rounded-2xl relative overflow-hidden group/entry">
               <div className="absolute top-0 right-0 p-5 opacity-[0.02] group-hover/entry:opacity-10 transition-opacity rotate-12">
@@ -1203,7 +1282,7 @@ export default function IpManagementPage() {
                                     {asset.country_code || "XZ"}
                                   </span>
                                   <span className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-tight truncate max-w-[140px]">
-                                    {asset.isp_name || "Shadow Network"}
+                                    {asset.origin_kind === 'managed_vps' ? `自建 VPS · ${asset.isp_name || 'managed'}` : (asset.isp_name || "Shadow Network")}
                                   </span>
                                 </div>
                                 {/* 需求 #2:到期色标(黄=3天内到期 / 红=已过期 / 绿=正常) */}

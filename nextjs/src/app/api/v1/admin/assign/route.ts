@@ -22,17 +22,21 @@ async function requireAssignAuthority(
   const { data: { user }, error } = await authClient.auth.getUser()
   if (!user || error) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   const { data: role } = await authClient.from('user_roles').select('role').eq('user_id', user.id).single()
-  if ((role as any)?.role === 'admin') return { user }
-
-  // 非 admin:仅 node_client 子授权可放开,且须对该 seat 所属 node 有 write+。
+  const admin = await createServerAdminClient()
   if (resourceType === 'node_client') {
-    const admin = await createServerAdminClient()
     const { data: seat } = await (admin as any)
-      .from('node_clients').select('node_id').eq('id', resourceId).maybeSingle()
+      .from('node_clients').select('node_id,purpose').eq('id', resourceId).maybeSingle()
+    if ((seat as { purpose?: string } | null)?.purpose === 'outbound_landing') {
+      return { error: NextResponse.json({ error: '内部出口专用 Client 禁止授权给用户' }, { status: 409 }) }
+    }
+    if ((role as any)?.role === 'admin') return { user }
+
+    // 非 admin:仅普通 node_client 子授权可放开,且须对其父 node 有 write+。
     const nodeId = (seat as { node_id?: string } | null)?.node_id
     if (nodeId && (await hasResourceAccess(user.id, 'node', nodeId, 'write'))) return { user }
     return { error: NextResponse.json({ error: 'Forbidden(需对该终端所属节点有 write 权限)' }, { status: 403 }) }
   }
+  if ((role as any)?.role === 'admin') return { user }
   return { error: NextResponse.json({ error: 'Forbidden(node/vps 级授权仅 admin)' }, { status: 403 }) }
 }
 

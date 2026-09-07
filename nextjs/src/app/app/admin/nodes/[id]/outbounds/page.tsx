@@ -20,7 +20,7 @@ interface Item {
   id: string; source_id: string; display_name: string; protocol: string; server_hint: string | null
   port_hint: number | null; compatibility: string; status: string
 }
-interface ManagedNode { id: string; name: string; public_ip: string | null; port: number | null; last_deployed_at: string | null }
+interface ManagedNode { id: string; name: string; protocol: string | null; public_ip: string | null; port: number | null; last_deployed_at: string | null }
 interface CheapIp { id: number; provider: string; remark: string | null; label: string | null; status: string | null; country_code: string | null; expires_at: string | null }
 
 export default function NodeOutboundsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -206,7 +206,7 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
         <Link href={`/app/admin/nodes/${id}/clients`}><Button variant="ghost" size="sm"><ArrowLeft className="w-4 h-4 mr-1" />返回 Clients</Button></Link>
-        <h1 className="text-xl font-semibold">Outbound 资产与路径</h1>
+        <h1 className="text-xl font-semibold">出口资产与路径</h1>
         <Button variant="outline" size="sm" onClick={load} disabled={loading}><RefreshCw className="w-4 h-4 mr-1" />刷新</Button>
       </div>
 
@@ -215,16 +215,17 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
       </div>
 
       <section className="space-y-3">
-        <h2 className="font-semibold flex items-center gap-2"><Network className="w-4 h-4" />当前 VPS Outbounds（{outbounds.length}）</h2>
+        <h2 className="font-semibold flex items-center gap-2"><Network className="w-4 h-4" />当前 VPS 出口（{outbounds.length}）</h2>
         <Table><TableHeader><TableRow><TableHead>名称</TableHead><TableHead>tag</TableHead><TableHead>Endpoint</TableHead><TableHead>路径</TableHead><TableHead>状态</TableHead></TableRow></TableHeader>
           <TableBody>{outbounds.map((o) => <TableRow key={o.id}><TableCell>{o.display_name}</TableCell><TableCell className="font-mono text-xs">{o.tag}</TableCell><TableCell>{o.endpoint_kind}</TableCell><TableCell>{o.transport_kind}</TableCell><TableCell title={o.last_error || ''}>{o.deploy_state}</TableCell></TableRow>)}</TableBody>
         </Table>
       </section>
 
       <section className="rounded border p-4 space-y-3">
-        <h2 className="font-semibold">从自建标准节点创建 Outbound</h2>
+        <h2 className="font-semibold">从自建 VLESS :443 节点创建出口</h2>
+        <p className="text-xs text-muted-foreground">仅使用专门的“内部专用 · 出口落地 443”Client；不会复用 1433 等业务入口或普通用户 Client。</p>
         <div className="flex flex-wrap items-end gap-3">
-          <label className="text-xs">源节点<select className="block mt-1 border rounded px-2 py-1 min-w-48" value={managedNodeId} onChange={(e) => chooseNode(e.target.value)}><option value="">请选择</option>{nodes.map((n) => <option key={n.id} value={n.id}>{n.name} · {n.public_ip || '无域名'}</option>)}</select></label>
+          <label className="text-xs">源节点<select className="block mt-1 border rounded px-2 py-1 min-w-48" value={managedNodeId} onChange={(e) => chooseNode(e.target.value)}><option value="">请选择</option>{nodes.filter((n) => n.protocol?.toLowerCase() === 'vless' && Number(n.port) === 443).map((n) => <option key={n.id} value={n.id}>{n.name} · {n.public_ip || '无域名'}:443</option>)}</select></label>
           <label className="text-xs">显示名称<input className="block mt-1 border rounded px-2 py-1" value={managedName} onChange={(e) => setManagedName(e.target.value)} /></label>
           <label className="text-xs">Xray tag<input className="block mt-1 border rounded px-2 py-1 font-mono" value={managedTag} onChange={(e) => setManagedTag(e.target.value)} /></label>
           <label className="text-xs">路径<select className="block mt-1 border rounded px-2 py-1" value={transport} onChange={(e) => setTransport(e.target.value)}><option value="direct">direct</option><option value="gorelay">gorelay</option><option value="self_transit">self_transit</option></select></label>
@@ -255,7 +256,7 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-semibold">Source 目录（{sources.length}）</h2>
+        <h2 className="font-semibold">订阅源（{sources.length}）</h2>
         <Table><TableHeader><TableRow><TableHead>名称</TableHead><TableHead>类型</TableHead><TableHead>密管</TableHead><TableHead>发现项</TableHead><TableHead>状态</TableHead><TableHead>操作</TableHead></TableRow></TableHeader>
           <TableBody>{sources.map((s) => <TableRow key={s.id}><TableCell>{s.name}</TableCell><TableCell>{s.kind}</TableCell><TableCell>{s.has_secret ? `${s.secret_ref_scheme}://***` : '-'}</TableCell><TableCell>{itemCount.get(s.id) ?? 0}</TableCell><TableCell title={s.last_error || ''}>{s.status}</TableCell><TableCell><div className="flex gap-2">{s.kind === 'subscription' && <Button variant="outline" size="sm" disabled={busy === s.id} onClick={() => discover(s.id)}>{busy === s.id && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}Discover</Button>}<Button variant="destructive" size="sm" disabled={busy === `delete-source-${s.id}`} onClick={() => deleteSource(s)}>{busy === `delete-source-${s.id}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}<span className="ml-1">删除</span></Button></div></TableCell></TableRow>)}</TableBody>
         </Table>
@@ -263,10 +264,10 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
 
       {items.length > 0 && <section className="space-y-3">
         <div className="flex items-center gap-3">
-          <h2 className="font-semibold">已发现 Endpoint（{items.length}）</h2>
+          <h2 className="font-semibold">出口端点（{items.length}）</h2>
           <Button size="sm" onClick={importSubscriptionItems} disabled={!selectedItems.size || busy === 'import-items'}>
             {busy === 'import-items' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
-            导入选中到 Outbound（{selectedItems.size}）
+            导入选中到出口（{selectedItems.size}）
           </Button>
           <span className="text-xs text-muted-foreground">导入后即可在创建 Client/出口下拉中选择；首次为 draft，需 Apply 后才实际生效。</span>
         </div>

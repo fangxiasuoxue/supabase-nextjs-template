@@ -18,7 +18,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   const admin = await createServerAdminClient()
   const { data, error } = await admin
     .from('node_clients')
-    .select('id, node_id, email, protocol, label, enabled, expires_at, ip_limit, subscribe_token, last_reconciled_at, last_reconcile_error, quota_bytes, quota_period, over_action, period_started_at, used_bytes, outbound_id, outbound_tag, outbound_config, cred_ref, created_at')
+    .select('id, node_id, email, protocol, purpose, label, enabled, expires_at, ip_limit, subscribe_token, last_reconciled_at, last_reconcile_error, quota_bytes, quota_period, over_action, period_started_at, used_bytes, outbound_id, outbound_tag, outbound_config, cred_ref, created_at')
     .eq('node_id', id)
     .order('created_at', { ascending: true })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -87,10 +87,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   let outbound: { id: string; tag: string } | null = null
   if (body?.outbound_id) {
     const { data } = await (admin as any).from('node_outbounds')
-      .select('id,tag,target_vps_instance_id,desired_state')
+      .select('id,tag,target_vps_instance_id,desired_state,deploy_state')
       .eq('id', String(body.outbound_id)).maybeSingle()
-    if (!data || data.target_vps_instance_id !== (node as any).vps_instance_id || data.desired_state === 'absent') {
-      return NextResponse.json({ error: '所选 outbound 不属于该节点 VPS 或已被移除' }, { status: 400 })
+    if (!data || data.target_vps_instance_id !== (node as any).vps_instance_id || data.desired_state === 'absent' || data.deploy_state !== 'active') {
+      return NextResponse.json({ error: '所选出口不属于该节点 VPS、已移除或尚未 Apply 生效' }, { status: 400 })
     }
     outbound = { id: data.id, tag: data.tag }
   }
@@ -110,6 +110,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       email: buildSeatEmail(slug, seq),
       cred_ref: randomUUID(), // P1:直接存 vless uuid(DB 运行态,非 git)
       protocol,
+      purpose: 'user',
       label,
       enabled: true,
       expires_at: expiresAt,

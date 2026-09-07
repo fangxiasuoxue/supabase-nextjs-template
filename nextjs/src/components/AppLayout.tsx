@@ -125,7 +125,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
 
         if (hasOutboundPermission) {
-            baseNav.push({ name: 'Outbound 管理', href: '/app/admin/outbounds', icon: Network });
+            baseNav.push({ name: '出口管理', href: '/app/admin/outbounds', icon: Network });
         }
 
         if (hasDomainPermission) {

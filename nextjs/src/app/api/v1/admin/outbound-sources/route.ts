@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       .order('display_name'),
     admin
       .from('nodes')
-      .select('id,name,status,public_ip,port,last_deployed_at')
+      .select('id,name,status,protocol,public_ip,port,last_deployed_at')
       .eq('status', 'active')
       .is('deleted_at', null)
       .order('name'),
