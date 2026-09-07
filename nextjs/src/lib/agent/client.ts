@@ -10,12 +10,8 @@ export async function callAgent(vpsId: string, path: string, options: RequestIni
   if (vpsErr || !vps) throw new Error(`VPS not found: ${vpsId}`)
 
   const instanceName = (vps as any).instance_id || (vps as any).gcp_instance_name || vpsId
-  let token = process.env[agentEnvKey(instanceName)] || process.env.JIEDIAN_AGENT_CONTROL_TOKEN || ''
-  if (!token) {
-    const { data: tokenRow } = await admin.from('agent_tokens')
-      .select('token_hash').eq('instance_id', vpsId).eq('status', 'active').maybeSingle()
-    token = (tokenRow as any)?.token_hash || ''
-  }
+  const token = process.env[agentEnvKey(instanceName)] || process.env.JIEDIAN_AGENT_CONTROL_TOKEN || ''
+  // agent_tokens.token_hash is intentionally irreversible and must never be sent as a bearer token.
   if (!token) throw new Error(`Agent control secret is not configured for ${instanceName}`)
 
   const controller = new AbortController()
