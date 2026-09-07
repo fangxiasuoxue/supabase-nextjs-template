@@ -20,6 +20,7 @@ import { createSSRClient } from '@/lib/supabase/server'
 
 export type ResourceType = 'node' | 'node_client' | 'vps'
 export type GrantLevel = 'read' | 'write' | 'manage'
+export type ModuleAccessLevel = 'menu' | 'read' | 'write' | 'manage'
 
 const ORDER: Record<GrantLevel, number> = { read: 1, write: 2, manage: 3 }
 
@@ -82,6 +83,29 @@ export async function hasResourceAccess(
 // 否则要求登录用户对该 node 有 ≥ minLevel 的 access_grants(node)。per-node 判定。
 // 用法:const gate = await requireNodeAccess(nodeId, 'write'); if ('error' in gate) return gate.error
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+/** 模块级路由门：admin/ops 旁路；其余用户必须在 module_permissions 持有对应能力。 */
+export async function requireModuleAccess(
+  module: string,
+  minLevel: ModuleAccessLevel,
+): Promise<{ user: { id: string } } | { error: NextResponse }> {
+  const authClient = await createSSRClient()
+  const { data: { user }, error } = await authClient.auth.getUser()
+  if (!user || error) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+
+  const admin = await createServerAdminClient()
+  if (await isGlobalOperator(admin, user.id)) return { user: { id: user.id } }
+  const { data } = await admin.from('module_permissions')
+    .select('can_menu,can_read,can_write,can_manage')
+    .eq('user_id', user.id).eq('module', module).maybeSingle()
+  const permission = data as { can_menu?: boolean; can_read?: boolean; can_write?: boolean; can_manage?: boolean } | null
+  const allowed = minLevel === 'menu' ? !!permission?.can_menu
+    : minLevel === 'read' ? !!(permission?.can_read || permission?.can_write || permission?.can_manage)
+      : minLevel === 'write' ? !!(permission?.can_write || permission?.can_manage)
+        : !!permission?.can_manage
+  if (allowed) return { user: { id: user.id } }
+  return { error: NextResponse.json({ error: `Forbidden(需 ${module}.${minLevel} 权限)` }, { status: 403 }) }
+}
+
 export async function requireNodeAccess(
   nodeId: string,
   minLevel: GrantLevel,

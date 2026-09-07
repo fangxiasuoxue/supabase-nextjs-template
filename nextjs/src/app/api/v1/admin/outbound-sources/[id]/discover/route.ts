@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireNodeAccess } from '@/lib/auth/resourceAccess'
+import { requireModuleAccess, requireNodeAccess } from '@/lib/auth/resourceAccess'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { describeXraySubscription } from '@/lib/outbound/subscription'
 import { fetchSubscriptionSecret, resolveEnvSecretRef } from '@/lib/outbound/subscription-fetch'
@@ -10,6 +10,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const { id } = await ctx.params
   const body = await req.json().catch(() => ({}))
   const nodeId = String(body.node_id || '')
+  const moduleGate = await requireModuleAccess('outbound', 'manage')
+  if ('error' in moduleGate) return moduleGate.error
   const gate = await requireNodeAccess(nodeId, 'manage')
   if ('error' in gate) return gate.error
 

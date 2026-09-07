@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireNodeAccess } from '@/lib/auth/resourceAccess'
+import { requireModuleAccess, requireNodeAccess } from '@/lib/auth/resourceAccess'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { assertNonSecretJson, OUTBOUND_SOURCE_KINDS, safeText, validSecretRef } from '@/lib/outbound/catalog'
 
@@ -15,6 +15,8 @@ function publicSource(row: any) {
 // Source catalog is global, but callers must identify a node they can manage/read.
 export async function GET(req: NextRequest) {
   const nodeId = req.nextUrl.searchParams.get('node_id') || ''
+  const moduleGate = await requireModuleAccess('outbound', 'read')
+  if ('error' in moduleGate) return moduleGate.error
   const gate = await requireNodeAccess(nodeId, 'read')
   if ('error' in gate) return gate.error
   const admin = await createServerAdminClient()
@@ -50,6 +52,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const nodeId = safeText(body.node_id)
+  const moduleGate = await requireModuleAccess('outbound', 'manage')
+  if ('error' in moduleGate) return moduleGate.error
   const gate = await requireNodeAccess(nodeId, 'manage')
   if ('error' in gate) return gate.error
 

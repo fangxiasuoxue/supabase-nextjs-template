@@ -101,6 +101,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         const hasIpPermission = isAdmin || permissions.some(p => p.module === 'ip' && p.can_menu);
         const hasVpsPermission = isAdmin || permissions.some(p => p.module === 'vps' && p.can_menu);
         const hasNodesPermission = isAdmin || permissions.some(p => p.module === 'nodes' && p.can_menu);
+        const hasOutboundPermission = isAdmin || permissions.some(p => p.module === 'outbound' && p.can_menu);
         const hasMessagesPermission = isAdmin || permissions.some(p => p.module === 'messages' && p.can_menu);
         // SDD 54:域名管理(与 node 同 RBAC 套路;'domain' 模块权限,admin 直通,分域授权留 P4)
         const hasDomainPermission = isAdmin || permissions.some(p => p.module === 'domain' && p.can_menu);
@@ -121,6 +122,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         if (hasNodesPermission) {
             baseNav.push({ name: '节点管理', href: '/app/admin/nodes', icon: Server });
+        }
+
+        if (hasOutboundPermission) {
             baseNav.push({ name: 'Outbound 管理', href: '/app/admin/outbounds', icon: Network });
         }
 

@@ -2,7 +2,7 @@
 
 import { use as usePromise, useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Database, Loader2, Network, Plus, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Database, Loader2, Network, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -174,6 +174,34 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
     } catch (e: any) { toast.error(e.message) } finally { setBusy('') }
   }
 
+  const deleteSource = async (source: Source) => {
+    if (!window.confirm(`确定删除 Source“${source.name}”及其未被引用的 Endpoint？此操作不可恢复。`)) return
+    const busyKey = `delete-source-${source.id}`
+    setBusy(busyKey)
+    try {
+      const r = await fetch(`/api/v1/admin/outbound-sources/${source.id}?node_id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j.error || '删除 Source 失败')
+      toast.success('Source 已删除')
+      setSelectedItems(new Set())
+      await load()
+    } catch (e: any) { toast.error(e.message) } finally { setBusy('') }
+  }
+
+  const deleteEndpoint = async (item: Item) => {
+    if (!window.confirm(`确定删除 Endpoint“${item.display_name}”？此操作不可恢复。`)) return
+    const busyKey = `delete-item-${item.id}`
+    setBusy(busyKey)
+    try {
+      const r = await fetch(`/api/v1/admin/outbound-source-items/${item.id}?node_id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j.error || '删除 Endpoint 失败')
+      toast.success('Endpoint 已删除')
+      setSelectedItems((old) => { const next = new Set(old); next.delete(item.id); return next })
+      await load()
+    } catch (e: any) { toast.error(e.message) } finally { setBusy('') }
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
@@ -229,7 +257,7 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
       <section className="space-y-3">
         <h2 className="font-semibold">Source 目录（{sources.length}）</h2>
         <Table><TableHeader><TableRow><TableHead>名称</TableHead><TableHead>类型</TableHead><TableHead>密管</TableHead><TableHead>发现项</TableHead><TableHead>状态</TableHead><TableHead>操作</TableHead></TableRow></TableHeader>
-          <TableBody>{sources.map((s) => <TableRow key={s.id}><TableCell>{s.name}</TableCell><TableCell>{s.kind}</TableCell><TableCell>{s.has_secret ? `${s.secret_ref_scheme}://***` : '-'}</TableCell><TableCell>{itemCount.get(s.id) ?? 0}</TableCell><TableCell title={s.last_error || ''}>{s.status}</TableCell><TableCell>{s.kind === 'subscription' && <Button variant="outline" size="sm" disabled={busy === s.id} onClick={() => discover(s.id)}>{busy === s.id && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}Discover</Button>}</TableCell></TableRow>)}</TableBody>
+          <TableBody>{sources.map((s) => <TableRow key={s.id}><TableCell>{s.name}</TableCell><TableCell>{s.kind}</TableCell><TableCell>{s.has_secret ? `${s.secret_ref_scheme}://***` : '-'}</TableCell><TableCell>{itemCount.get(s.id) ?? 0}</TableCell><TableCell title={s.last_error || ''}>{s.status}</TableCell><TableCell><div className="flex gap-2">{s.kind === 'subscription' && <Button variant="outline" size="sm" disabled={busy === s.id} onClick={() => discover(s.id)}>{busy === s.id && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}Discover</Button>}<Button variant="destructive" size="sm" disabled={busy === `delete-source-${s.id}`} onClick={() => deleteSource(s)}>{busy === `delete-source-${s.id}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}<span className="ml-1">删除</span></Button></div></TableCell></TableRow>)}</TableBody>
         </Table>
       </section>
 
@@ -247,7 +275,7 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
             checked={importableSubscriptionItems.length > 0 && importableSubscriptionItems.every((x) => selectedItems.has(x.id))}
             onCheckedChange={(checked) => setSelectedItems(checked ? new Set(importableSubscriptionItems.map((x) => x.id)) : new Set())}
           /></TableHead>
-          <TableHead>名称</TableHead><TableHead>来源</TableHead><TableHead>协议</TableHead><TableHead>服务器</TableHead><TableHead>兼容性</TableHead><TableHead>状态</TableHead>
+          <TableHead>名称</TableHead><TableHead>来源</TableHead><TableHead>协议</TableHead><TableHead>服务器</TableHead><TableHead>兼容性</TableHead><TableHead>状态</TableHead><TableHead>操作</TableHead>
         </TableRow></TableHeader><TableBody>{items.map((x) => {
           const selectable = sourceById.get(x.source_id)?.kind === 'subscription' && x.compatibility === 'supported' && x.status === 'active'
           return <TableRow key={x.id}>
@@ -255,6 +283,7 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
             <TableCell>{x.display_name}</TableCell><TableCell>{sourceById.get(x.source_id)?.name || '-'}</TableCell><TableCell>{x.protocol}</TableCell>
             <TableCell className="font-mono text-xs">{x.server_hint || '-'}{x.port_hint ? `:${x.port_hint}` : ''}</TableCell>
             <TableCell className={x.compatibility === 'supported' ? 'text-green-600' : 'text-amber-600'}>{x.compatibility}</TableCell><TableCell>{x.status}</TableCell>
+            <TableCell><Button variant="destructive" size="sm" disabled={busy === `delete-item-${x.id}`} onClick={() => deleteEndpoint(x)}>{busy === `delete-item-${x.id}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}<span className="ml-1">删除</span></Button></TableCell>
           </TableRow>
         })}</TableBody></Table>
       </section>}

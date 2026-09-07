@@ -88,7 +88,7 @@ export async function getUsersAction(page: number = 1, limit: number = 10, searc
 
       const userPerms: UserWithDetails['permissions'] = {}
       // Initialize default modules
-      const modules = ['vps', 'nodes', 'ip', 'orders']
+      const modules = ['vps', 'nodes', 'ip', 'orders', 'messages', 'domain', 'transit', 'outbound']
       modules.forEach(m => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const p = (permissions as any)?.find((perm: any) => perm.user_id === u.id && perm.module === m)

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireNodeAccess } from '@/lib/auth/resourceAccess'
+import { requireModuleAccess, requireNodeAccess } from '@/lib/auth/resourceAccess'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { extractBaseShareLink } from '@/lib/clients/node-client-admin'
 import { compileManagedNodeOutbound, parseManagedNodeShareLink } from '@/lib/outbound/managed-node'
@@ -20,6 +20,8 @@ async function targetVps(admin: any, nodeId: string): Promise<string | null> {
 // Safe selectable catalog for all Xray nodes sharing this VPS runtime.
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params
+  const moduleGate = await requireModuleAccess('outbound', 'read')
+  if ('error' in moduleGate) return moduleGate.error
   const gate = await requireNodeAccess(id, 'read')
   if ('error' in gate) return gate.error
   const admin = await createServerAdminClient()
@@ -39,6 +41,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 // Register desired outbound metadata. Applying it to Xray is deliberately a separate audited action.
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params
+  const moduleGate = await requireModuleAccess('outbound', 'manage')
+  if ('error' in moduleGate) return moduleGate.error
   const gate = await requireNodeAccess(id, 'manage')
   if ('error' in gate) return gate.error
   const body = await req.json().catch(() => ({}))

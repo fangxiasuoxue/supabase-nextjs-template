@@ -14,7 +14,7 @@ interface PermissionModalProps {
     onUpdate: () => void
 }
 
-const MODULES = ['vps', 'nodes', 'ip', 'orders', 'messages']
+const MODULES = ['vps', 'nodes', 'ip', 'orders', 'messages', 'domain', 'transit', 'outbound']
 const PERMISSIONS = [
     { key: 'menu', label: 'Menu', description: 'Can see menu item and access routes' },
     { key: 'read', label: 'Read', description: 'Can view all data in this module' },
