@@ -806,6 +806,15 @@ export default function IpManagementPage() {
   const displayNameFor = (asset: IpAsset) => (
     asset.my_allocation?.display_name || asset.my_allocation?.notes || asset.remark || asset.label || asset.ip
   )
+  const ispNameFor = (asset: IpAsset) => {
+    const raw = String(asset.isp_name || '').trim()
+    if (!raw) return '未知运营商'
+    const lower = raw.toLowerCase()
+    if (['gcp', 'google', 'google-cloud', 'google cloud'].includes(lower)) return 'GCP'
+    if (['aliyun', 'ali', 'alicloud', 'alibaba cloud'].includes(lower)) return 'Aliyun'
+    if (['aws', 'amazon', 'amazon web services'].includes(lower)) return 'AWS'
+    return raw
+  }
   const terminateFor = (asset: IpAsset) => canManage ? !!asset.terminate_at_period_end : !!asset.my_allocation?.terminate_at_period_end
   const shouldShowAssetIdentity = canWrite || canManage
   const shouldShowRemarkAssignees = canWrite || canManage
@@ -1282,7 +1291,7 @@ export default function IpManagementPage() {
                                     {asset.country_code || "XZ"}
                                   </span>
                                   <span className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-tight truncate max-w-[140px]">
-                                    {asset.origin_kind === 'managed_vps' ? `自建 VPS · ${asset.isp_name || 'managed'}` : (asset.isp_name || "Shadow Network")}
+                                    {asset.origin_kind === 'managed_vps' ? `自建 VPS · ${ispNameFor(asset)}` : ispNameFor(asset)}
                                   </span>
                                 </div>
                                 {/* 需求 #2:到期色标(黄=3天内到期 / 红=已过期 / 绿=正常) */}
@@ -1297,10 +1306,15 @@ export default function IpManagementPage() {
                             <div className="flex flex-col gap-1.5">
                               <span className="text-sm font-black text-foreground group-hover/row:text-cyan-700 transition-colors tracking-tight break-words">{displayNameFor(asset)}</span>
                               {!shouldShowAssetIdentity && (
-                                <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-widest ${EXPIRY_TONE_CLASS[ipExpiryStatus(asset.expires_at).tone]}`}>
-                                  <Clock className="h-2.5 w-2.5" />
-                                  {ipExpiryStatus(asset.expires_at).label}
-                                </span>
+                                <>
+                                  <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-md border border-cyan-100 bg-cyan-50 text-[9px] font-black text-cyan-700 tracking-widest">
+                                    ISP: {ispNameFor(asset)}
+                                  </span>
+                                  <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-widest ${EXPIRY_TONE_CLASS[ipExpiryStatus(asset.expires_at).tone]}`}>
+                                    <Clock className="h-2.5 w-2.5" />
+                                    {ipExpiryStatus(asset.expires_at).label}
+                                  </span>
+                                </>
                               )}
                             </div>
                           </TableCell>

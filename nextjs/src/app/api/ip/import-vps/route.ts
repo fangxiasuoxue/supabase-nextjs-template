@@ -18,6 +18,16 @@ async function requireIpManage() {
   return { user: { id: user.id }, admin }
 }
 
+function normalizeVpsIsp(provider: unknown) {
+  const p = String(provider || '').trim().toLowerCase()
+  if (!p) return 'Cloud VPS'
+  if (['gcp', 'google', 'google-cloud', 'google cloud'].includes(p)) return 'GCP'
+  if (['aliyun', 'ali', 'alicloud', 'alibaba cloud'].includes(p)) return 'Aliyun'
+  if (['aws', 'amazon', 'amazon web services'].includes(p)) return 'AWS'
+  if (p === 'azure' || p === 'microsoft azure') return 'Azure'
+  return String(provider).trim()
+}
+
 export async function GET() {
   const gate = await requireIpManage()
   if ('error' in gate) return gate.error
@@ -60,7 +70,7 @@ export async function POST(req: NextRequest) {
   const row: any = {
     provider: 'managed-vps', provider_id: vpsId, origin_kind: 'managed_vps', vps_instance_id: vpsId,
     ip: publicIp, public_ip: publicIp, connect_ip: publicIp,
-    remark: name, label: name, isp_name: (vps as any).provider || null,
+    remark: name, label: name, isp_name: normalizeVpsIsp((vps as any).provider),
     status: String((vps as any).status || '').toUpperCase() === 'RUNNING' ? 'active' : 'inactive',
     ip_version: publicIp.includes(':') ? 'ipv6' : 'ipv4', usage_context: usageContext || null,
     proxy_type: proxyType,
