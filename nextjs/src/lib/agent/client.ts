@@ -1,48 +1,33 @@
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
+import { agentEnvKey, buildAgentBaseUrl } from './target'
 
-/**
- * 向指定 VPS 的 jiedian-agent 发送请求。
- * 控制面永远不直接持有 agent 地址，统一通过此函数查询 vps_instances + agent_tokens。
- */
-export async function callAgent(
-  vpsId: string,
-  path: string,
-  options: RequestInit = {}
-): Promise<Response> {
-  const adminClient = await createServerAdminClient()
+/** Call one VPS agent without ever returning/logging its control credential. */
+export async function callAgent(vpsId: string, path: string, options: RequestInit = {}): Promise<Response> {
+  const admin = await createServerAdminClient()
+  const { data: vps, error: vpsErr } = await admin.from('vps_instances')
+    .select('id,instance_id,gcp_instance_name,public_ip,external_ip')
+    .eq('id', vpsId).single()
+  if (vpsErr || !vps) throw new Error(`VPS not found: ${vpsId}`)
 
-  // 查询有效的 agent token
-  const { data: tokenRow, error: tokenErr } = await adminClient
-    .from('agent_tokens')
-    .select('token_hash, instance_id')
-    .eq('instance_id', vpsId)
-    .eq('status', 'active')
-    .single()
-
-  if (tokenErr || !tokenRow) {
-    throw new Error(`No active agent token for VPS ${vpsId}: ${tokenErr?.message}`)
+  const instanceName = (vps as any).instance_id || (vps as any).gcp_instance_name || vpsId
+  let token = process.env[agentEnvKey(instanceName)] || process.env.JIEDIAN_AGENT_CONTROL_TOKEN || ''
+  if (!token) {
+    const { data: tokenRow } = await admin.from('agent_tokens')
+      .select('token_hash').eq('instance_id', vpsId).eq('status', 'active').maybeSingle()
+    token = (tokenRow as any)?.token_hash || ''
   }
+  if (!token) throw new Error(`Agent control secret is not configured for ${instanceName}`)
 
-  // 查询 VPS 公网 IP
-  const { data: vps, error: vpsErr } = await adminClient
-    .from('vps_instances')
-    .select('public_ip')
-    .eq('id', vpsId)
-    .single()
-
-  if (vpsErr || !vps) {
-    throw new Error(`VPS not found: ${vpsId}: ${vpsErr?.message}`)
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), Number(process.env.JIEDIAN_AGENT_TIMEOUT_MS || 15000))
+  try {
+    return await fetch(`${buildAgentBaseUrl(vps as any)}${path}`, {
+      ...options,
+      signal: options.signal || controller.signal,
+      headers: { 'Content-Type': 'application/json', ...options.headers, 'X-Auth-Token': token },
+      cache: 'no-store',
+    })
+  } finally {
+    clearTimeout(timer)
   }
-
-  // jiedian-agent httpAddr = :4948(install-jiedian-node.sh 部署基线;现网全在 4948,非 8080)。
-  const url = `http://${(vps as any).public_ip}:4948${path}`
-
-  return fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-      'X-Auth-Token': (tokenRow as any).token_hash,
-    },
-  })
 }

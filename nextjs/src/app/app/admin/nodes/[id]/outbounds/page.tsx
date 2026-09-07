@@ -31,6 +31,9 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
   const [sources, setSources] = useState<Source[]>([])
   const [items, setItems] = useState<Item[]>([])
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
+  const [selectedOutbounds, setSelectedOutbounds] = useState<Set<string>>(new Set())
+  const [planRunId, setPlanRunId] = useState('')
+  const [applyRunId, setApplyRunId] = useState('')
   const [nodes, setNodes] = useState<ManagedNode[]>([])
   const [cheapIps, setCheapIps] = useState<CheapIp[]>([])
   const [managedNodeId, setManagedNodeId] = useState('')
@@ -161,6 +164,26 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
     })
   }
 
+  const runLifecycle = async (mode: 'plan' | 'apply' | 'verify' | 'rollback') => {
+    if (mode !== 'rollback' && !selectedOutbounds.size) return toast.error('请先选择出口')
+    if (mode === 'apply' && !planRunId) return toast.error('请先执行 Plan')
+    if (mode === 'rollback' && !applyRunId) return toast.error('没有可回滚的 Apply')
+    setBusy(`lifecycle-${mode}`)
+    try {
+      const r = await fetch(`/api/v1/admin/nodes/${id}/outbounds/apply`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode, outbound_ids: Array.from(selectedOutbounds), plan_run_id: planRunId, apply_run_id: applyRunId }),
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j.error || `${mode} 失败`)
+      if (mode === 'plan') { setPlanRunId(j.run_id); setApplyRunId(''); j.warning ? toast.warning(j.warning) : toast.success(`Plan 完成：${j.actions?.filter((x: any) => x.kind === 'create').length || 0} 个新增`) }
+      if (mode === 'apply') { setApplyRunId(j.run_id); toast.success('Apply 与结构验证成功，出口已激活') }
+      if (mode === 'verify') toast.success('Verify 成功：运行态配置与 Client routing 一致')
+      if (mode === 'rollback') { setApplyRunId(''); setPlanRunId(''); toast.success('已回滚本次新增出口') }
+      await load()
+    } catch (e: any) { toast.error(e.message) } finally { setBusy('') }
+  }
+
   const discover = async (sourceId: string) => {
     setBusy(sourceId)
     try {
@@ -215,9 +238,17 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
       </div>
 
       <section className="space-y-3">
-        <h2 className="font-semibold flex items-center gap-2"><Network className="w-4 h-4" />当前 VPS 出口（{outbounds.length}）</h2>
-        <Table><TableHeader><TableRow><TableHead>名称</TableHead><TableHead>tag</TableHead><TableHead>Endpoint</TableHead><TableHead>路径</TableHead><TableHead>状态</TableHead></TableRow></TableHeader>
-          <TableBody>{outbounds.map((o) => <TableRow key={o.id}><TableCell>{o.display_name}</TableCell><TableCell className="font-mono text-xs">{o.tag}</TableCell><TableCell>{o.endpoint_kind}</TableCell><TableCell>{o.transport_kind}</TableCell><TableCell title={o.last_error || ''}>{o.deploy_state}</TableCell></TableRow>)}</TableBody>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="font-semibold flex items-center gap-2"><Network className="w-4 h-4" />当前 VPS 出口（{outbounds.length}）</h2>
+          <Button size="sm" variant="outline" disabled={!selectedOutbounds.size || busy.startsWith('lifecycle-')} onClick={() => runLifecycle('plan')}>Plan</Button>
+          <Button size="sm" disabled={!planRunId || busy.startsWith('lifecycle-')} onClick={() => runLifecycle('apply')}>Apply</Button>
+          <Button size="sm" variant="outline" disabled={!selectedOutbounds.size || busy.startsWith('lifecycle-')} onClick={() => runLifecycle('verify')}>Verify</Button>
+          <Button size="sm" variant="destructive" disabled={!applyRunId || busy.startsWith('lifecycle-')} onClick={() => runLifecycle('rollback')}>Rollback</Button>
+          {busy.startsWith('lifecycle-') && <Loader2 className="w-4 h-4 animate-spin" />}
+          <span className="text-xs text-muted-foreground">Apply 必须引用当前 Plan；首版只新增、不覆盖同名不同配置。</span>
+        </div>
+        <Table><TableHeader><TableRow><TableHead className="w-10"><Checkbox checked={outbounds.length > 0 && outbounds.every(o => selectedOutbounds.has(o.id))} onCheckedChange={(checked) => setSelectedOutbounds(checked ? new Set(outbounds.map(o => o.id)) : new Set())} /></TableHead><TableHead>名称</TableHead><TableHead>tag</TableHead><TableHead>Endpoint</TableHead><TableHead>路径</TableHead><TableHead>状态</TableHead></TableRow></TableHeader>
+          <TableBody>{outbounds.map((o) => <TableRow key={o.id}><TableCell><Checkbox checked={selectedOutbounds.has(o.id)} onCheckedChange={(checked) => setSelectedOutbounds(old => { const next = new Set(old); checked ? next.add(o.id) : next.delete(o.id); return next })} /></TableCell><TableCell>{o.display_name}</TableCell><TableCell className="font-mono text-xs">{o.tag}</TableCell><TableCell>{o.endpoint_kind}</TableCell><TableCell>{o.transport_kind}</TableCell><TableCell title={o.last_error || ''}>{o.deploy_state}</TableCell></TableRow>)}</TableBody>
         </Table>
       </section>
 
