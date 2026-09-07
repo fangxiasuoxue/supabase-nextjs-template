@@ -27,7 +27,7 @@ export async function POST() {
     // null 时保留旧值,避免 upsert 用 null 覆盖掉过期前的 IP(否则续费时看不到是哪个)。
     const { data: existingRows } = await admin
       .from('ip_assets')
-      .select('provider_id, ip, public_ip, connect_ip, label')
+      .select('provider_id, ip, public_ip, connect_ip, label, deleted_at, terminate_at_period_end')
       .eq('provider', providerLabel)
     const existingById = new Map<string, any>()
     for (const r of (existingRows as any[]) ?? []) existingById.set(String(r.provider_id), r)
@@ -46,6 +46,8 @@ export async function POST() {
       const label = (p.note != null && String(p.note).trim() !== '')
         ? String(p.note).trim()
         : (prev?.label ?? null)
+      const statusUpper = String(p.status ?? '').toUpperCase()
+      const keepTombstoned = statusUpper === 'EXPIRED' && (prev?.deleted_at || prev?.terminate_at_period_end)
       return {
         provider: providerLabel,
         provider_id: String(p.id ?? ''),
@@ -73,9 +75,9 @@ export async function POST() {
         last_sync_at: now,
         source_url: sourceUrl,
         source_raw: p,
-        // Bug #4 修复:供应商 API 里仍存在的 IP = 活的。upsert 命中软删行时显式复活,
-        // 否则记录复活却仍带旧 deleted_at,列表 is('deleted_at', null) 会将其过滤成「僵尸行」。
-        deleted_at: null,
+        // ACTIVE 可复活(续费/重启后立即显示);但已明确弃用/软删的 EXPIRED tombstone 不得被同步复活。
+        // 典型:US14/VN01 已弃用,Proxy-Cheap services/proxies 仍返回 EXPIRED,若一律 deleted_at=null 会反复出现在列表。
+        deleted_at: keepTombstoned ? prev.deleted_at : null,
       }
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
