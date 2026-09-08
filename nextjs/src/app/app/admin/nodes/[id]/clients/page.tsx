@@ -146,7 +146,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
       })
       const j = await r.json()
       if (!r.ok) throw new Error(j?.error || '发名额失败')
-      toast.success(`已发 ${j.created?.length ?? 0} 个名额${expires_at ? ' · 同到期' : ''}${quota_bytes ? ' · 同配额' : ''}`)
+      toast.success(`已发 ${j.created?.length ?? 0} 个名额${expires_at ? ' · 同到期' : ''}${quota_bytes ? ' · 同配额' : ''}${batchOutboundId ? '；出口为期望态，请到出口工作台执行 Plan → Apply' : ''}`)
       setLabel(''); setCount(1); setBatchExpiry(''); setBatchQuotaGB(''); setBatchOutboundId('')
       load()
     } catch (e: any) {
@@ -193,7 +193,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
     }
     const outbound_id = value === '__default__' ? null : value
     const selected = outbounds.find((o) => o.id === outbound_id)
-    if (await patchSeat(s.id, { outbound_id })) toast.success(selected ? `出口已设为 ${selected.display_name}` : '已清除出口绑定')
+    if (await patchSeat(s.id, { outbound_id })) toast.success(selected ? `出口期望态已保存为 ${selected.display_name}；请到出口工作台重新 Plan → Apply 发布 routing` : '已清除出口绑定；运行态 routing 请通过出口工作台 Apply 更新')
   }
 
   const editQuota = async (s: Seat) => {
