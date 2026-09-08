@@ -62,10 +62,6 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     patch.used_bytes = 0 // 镜像归零;真正执行看 agent 见新 period 后开新账本
   }
 
-  if (Object.keys(patch).length === 0) {
-    return NextResponse.json({ error: 'No updatable fields' }, { status: 400 })
-  }
-
   const admin = await createServerAdminClient()
 
   // Normalized outbound binding. Validate that the selected outbound belongs to the same VPS
@@ -90,6 +86,12 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       patch.outbound_id = outbound.id
       patch.outbound_tag = outbound.tag
     }
+  }
+
+  // outbound_id is validated above and only then materialized into the DB patch, so this guard
+  // must run after outbound handling (otherwise outbound-only PATCH requests are falsely empty).
+  if (Object.keys(patch).length === 0) {
+    return NextResponse.json({ error: 'No updatable fields' }, { status: 400 })
   }
 
   const { data, error } = await admin

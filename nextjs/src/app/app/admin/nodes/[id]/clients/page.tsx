@@ -156,7 +156,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
     }
   }
 
-  const patchSeat = async (seatId: string, patch: Record<string, any>) => {
+  const patchSeat = async (seatId: string, patch: Record<string, any>): Promise<boolean> => {
     try {
       const r = await fetch(`/api/v1/admin/clients/${seatId}`, {
         method: 'PATCH',
@@ -165,9 +165,11 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
       })
       const j = await r.json()
       if (!r.ok) throw new Error(j?.error || '更新失败')
-      load()
+      await load()
+      return true
     } catch (e: any) {
       toast.error(e.message)
+      return false
     }
   }
 
@@ -175,8 +177,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
     const input = prompt(`修改 ${s.email} 的显示名称/备注(会作为客户订阅里的名称;留空=清除)`, s.label || '')
     if (input === null) return
     const label = input.trim() || null
-    await patchSeat(s.id, { label })
-    toast.success(label ? `名称已改为 ${label}` : '已清除名称')
+    if (await patchSeat(s.id, { label })) toast.success(label ? `名称已改为 ${label}` : '已清除名称')
   }
 
   const activeOutbounds = outbounds.filter((o) => o.deploy_state === 'active')
@@ -187,14 +188,12 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
   const setOutbound = async (s: Seat, value: string) => {
     if (value.startsWith('legacy:')) {
       const outbound_tag = value.slice('legacy:'.length)
-      await patchSeat(s.id, { outbound_tag, outbound_id: null })
-      toast.success(`出口已设为 ${outbound_tag}(待纳入目录)`)
+      if (await patchSeat(s.id, { outbound_tag, outbound_id: null })) toast.success(`出口已设为 ${outbound_tag}(待纳入目录)`) 
       return
     }
     const outbound_id = value === '__default__' ? null : value
     const selected = outbounds.find((o) => o.id === outbound_id)
-    await patchSeat(s.id, { outbound_id })
-    toast.success(selected ? `出口已设为 ${selected.display_name}` : '已清除出口绑定')
+    if (await patchSeat(s.id, { outbound_id })) toast.success(selected ? `出口已设为 ${selected.display_name}` : '已清除出口绑定')
   }
 
   const editQuota = async (s: Seat) => {
@@ -203,14 +202,12 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
     if (input === null) return
     const gb = parseFloat(input.trim())
     const quota_bytes = !input.trim() || !Number.isFinite(gb) || gb <= 0 ? null : Math.trunc(gb * 1024 * 1024 * 1024)
-    await patchSeat(s.id, { quota_bytes, quota_period: 'monthly' })
-    toast.success(quota_bytes == null ? '已设为不限' : `配额 ${input.trim()} GB`)
+    if (await patchSeat(s.id, { quota_bytes, quota_period: 'monthly' })) toast.success(quota_bytes == null ? '已设为不限' : `配额 ${input.trim()} GB`)
   }
 
   const rollPeriod = async (s: Seat) => {
     if (!confirm(`重置 ${s.email} 的配额周期?used 归零,被配额停用的终端下轮 poll 恢复。`)) return
-    await patchSeat(s.id, { roll_period: true })
-    toast.success('已滚动周期,used 归零')
+    if (await patchSeat(s.id, { roll_period: true })) toast.success('已滚动周期,used 归零')
   }
 
   const editExpiry = async (s: Seat) => {
@@ -231,8 +228,7 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
       if (Number.isNaN(d.getTime())) return toast.error('日期格式无法识别(用 YYYY-MM-DD 或 +天数)')
       expires_at = d.toISOString()
     }
-    await patchSeat(s.id, { expires_at })
-    toast.success(expires_at ? `到期设为 ${new Date(expires_at).toLocaleString()}` : '已设为不过期')
+    if (await patchSeat(s.id, { expires_at })) toast.success(expires_at ? `到期设为 ${new Date(expires_at).toLocaleString()}` : '已设为不过期')
   }
 
   const patchNode = async (patch: Record<string, any>) => {
