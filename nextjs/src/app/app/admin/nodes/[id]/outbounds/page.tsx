@@ -74,7 +74,9 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
     return m
   }, [items])
   const sourceById = useMemo(() => new Map(sources.map((s) => [s.id, s])), [sources])
-  const importableSubscriptionItems = items.filter((x) => sourceById.get(x.source_id)?.kind === 'subscription' && x.compatibility === 'supported' && x.status === 'active')
+  const subscriptionItems = items.filter((x) => sourceById.get(x.source_id)?.kind === 'subscription')
+  const importableSubscriptionItems = subscriptionItems.filter((x) => x.compatibility === 'supported' && x.status === 'active')
+  const selectedImportableItems = importableSubscriptionItems.filter((x) => selectedItems.has(x.id))
 
   const chooseNode = (nodeId: string) => {
     setManagedNodeId(nodeId)
@@ -141,12 +143,12 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
   }
 
   const importSubscriptionItems = async () => {
-    if (!selectedItems.size) return toast.error('请先选择可部署的 Endpoint')
+    if (!selectedImportableItems.length) return toast.error('选中项中没有可部署的 Endpoint')
     setBusy('import-items')
     try {
       const r = await fetch(`/api/v1/admin/nodes/${id}/outbounds`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'import_subscription_items', source_item_ids: Array.from(selectedItems) }),
+        body: JSON.stringify({ action: 'import_subscription_items', source_item_ids: selectedImportableItems.map((item) => item.id) }),
       })
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || '导入失败')
@@ -225,6 +227,24 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
     } catch (e: any) { toast.error(e.message) } finally { setBusy('') }
   }
 
+  const bulkDeleteEndpoints = async () => {
+    const ids = subscriptionItems.filter((item) => selectedItems.has(item.id)).map((item) => item.id)
+    if (!ids.length) return toast.error('请先选择订阅 Endpoint')
+    if (!window.confirm(`确定批量删除选中的 ${ids.length} 个订阅 Endpoint？未生效且未绑定 Client 的 draft/error 出口也会一并清理；运行中或已绑定的出口将阻止整批操作。`)) return
+    setBusy('bulk-delete-items')
+    try {
+      const r = await fetch('/api/v1/admin/outbound-source-items/bulk-delete', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ node_id: id, ids }),
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j.error || '批量删除失败')
+      toast.success(`已删除 ${j.deleted_items} 个 Endpoint${j.deleted_draft_outbounds ? `，并清理 ${j.deleted_draft_outbounds} 个未生效出口` : ''}`)
+      setSelectedItems(new Set())
+      await load()
+    } catch (e: any) { toast.error(e.message) } finally { setBusy('') }
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
@@ -296,20 +316,24 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
       {items.length > 0 && <section className="space-y-3">
         <div className="flex items-center gap-3">
           <h2 className="font-semibold">出口端点（{items.length}）</h2>
-          <Button size="sm" onClick={importSubscriptionItems} disabled={!selectedItems.size || busy === 'import-items'}>
+          <Button size="sm" onClick={importSubscriptionItems} disabled={!selectedImportableItems.length || busy === 'import-items' || busy === 'bulk-delete-items'}>
             {busy === 'import-items' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
-            导入选中到出口（{selectedItems.size}）
+            导入可部署项（{selectedImportableItems.length}）
           </Button>
-          <span className="text-xs text-muted-foreground">导入后即可在创建 Client/出口下拉中选择；首次为 draft，需 Apply 后才实际生效。</span>
+          <Button size="sm" variant="destructive" onClick={bulkDeleteEndpoints} disabled={!subscriptionItems.some((x) => selectedItems.has(x.id)) || busy === 'bulk-delete-items' || busy === 'import-items'}>
+            {busy === 'bulk-delete-items' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Trash2 className="w-4 h-4 mr-1" />}
+            批量删除（{subscriptionItems.filter((x) => selectedItems.has(x.id)).length}）
+          </Button>
+          <span className="text-xs text-muted-foreground">全选覆盖订阅源的 supported/unsupported 项；托管节点 Endpoint 不参与批量清理。</span>
         </div>
         <Table><TableHeader><TableRow>
           <TableHead className="w-10"><Checkbox
-            checked={importableSubscriptionItems.length > 0 && importableSubscriptionItems.every((x) => selectedItems.has(x.id))}
-            onCheckedChange={(checked) => setSelectedItems(checked ? new Set(importableSubscriptionItems.map((x) => x.id)) : new Set())}
+            checked={subscriptionItems.length > 0 && subscriptionItems.every((x) => selectedItems.has(x.id))}
+            onCheckedChange={(checked) => setSelectedItems(checked ? new Set(subscriptionItems.map((x) => x.id)) : new Set())}
           /></TableHead>
           <TableHead>名称</TableHead><TableHead>来源</TableHead><TableHead>协议</TableHead><TableHead>服务器</TableHead><TableHead>兼容性</TableHead><TableHead>状态</TableHead><TableHead>操作</TableHead>
         </TableRow></TableHeader><TableBody>{items.map((x) => {
-          const selectable = sourceById.get(x.source_id)?.kind === 'subscription' && x.compatibility === 'supported' && x.status === 'active'
+          const selectable = sourceById.get(x.source_id)?.kind === 'subscription'
           return <TableRow key={x.id}>
             <TableCell><Checkbox disabled={!selectable} checked={selectedItems.has(x.id)} onCheckedChange={(checked) => toggleItem(x.id, checked === true)} /></TableCell>
             <TableCell>{x.display_name}</TableCell><TableCell>{sourceById.get(x.source_id)?.name || '-'}</TableCell><TableCell>{x.protocol}</TableCell>

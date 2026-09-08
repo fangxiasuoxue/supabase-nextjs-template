@@ -38,6 +38,20 @@ export function assertNonSecretJson(value: unknown, path = 'config'): void {
   }
 }
 
+export type EndpointOutboundReference = { id: string; tag: string; deploy_state: string }
+
+/** Active/applying or Client-bound outbounds must never be cascaded by catalog cleanup. */
+export function assessEndpointBulkDelete(refs: EndpointOutboundReference[], boundIds: Set<string>) {
+  const blockers: string[] = []
+  const deletableOutboundIds: string[] = []
+  for (const ref of refs) {
+    if (boundIds.has(ref.id)) blockers.push(`${ref.tag}(client-bound)`)
+    else if (!['draft', 'error', 'removed'].includes(ref.deploy_state)) blockers.push(`${ref.tag}(${ref.deploy_state})`)
+    else deletableOutboundIds.push(ref.id)
+  }
+  return blockers.length ? { deletableOutboundIds: [], blockers } : { deletableOutboundIds, blockers }
+}
+
 export function safeText(value: unknown, max = 200): string {
   return String(value ?? '').trim().slice(0, max)
 }
