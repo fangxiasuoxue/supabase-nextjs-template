@@ -58,10 +58,10 @@ test('compiles SIP002 Shadowsocks and Trojan TLS endpoints', () => {
   assert.equal(trOut.streamSettings.grpcSettings.serviceName, 'tunnel')
 })
 
-test('marks legacy Shadowsocks stream ciphers unsupported and rejects them before Apply', () => {
+test('preserves legacy Shadowsocks as adapter-pending and rejects direct Xray Apply', () => {
   const legacy = `ss://${Buffer.from('aes-256-cfb:legacy-password').toString('base64url')}@legacy.example.test:8388#Legacy`
   const item = describeSubscriptionLink(legacy)
-  assert.equal(item.compatibility, 'unsupported')
+  assert.equal(item.compatibility, 'unknown')
   assert.throws(() => compileSubscriptionOutbound(legacy, item.external_key, 'legacy-ss'), /cipher.*不受 Xray 支持/)
 })
 

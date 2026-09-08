@@ -56,6 +56,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({
       discovered: rows.length,
       supported: rows.filter((x) => x.compatibility === 'supported').length,
+      adapter_pending: rows.filter((x) => x.compatibility === 'unknown').length,
       unsupported: rows.filter((x) => x.compatibility === 'unsupported').length,
       items: rows.map(({ secret_ref: _secret, ...safe }) => safe),
     })

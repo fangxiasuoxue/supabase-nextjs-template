@@ -8,7 +8,7 @@ export interface SafeSubscriptionItem {
   protocol: SubscriptionProtocol
   server_hint: string | null
   port_hint: number | null
-  compatibility: 'supported' | 'unsupported'
+  compatibility: 'supported' | 'unsupported' | 'unknown'
 }
 
 const SCHEMES = new Set<SubscriptionProtocol>(['vless', 'vmess', 'ss', 'trojan', 'hysteria2', 'hy2', 'tuic'])
@@ -67,8 +67,11 @@ export function describeSubscriptionLink(link: string): SafeSubscriptionItem {
   // Stable without leaking the credential-bearing URI into DB/logs.
   const external_key = createHash('sha256').update(link).digest('hex')
   const protocolSupported = XRAY_SUPPORTED.has(protocol)
-  const cipherSupported = protocol !== 'ss' || XRAY_SS_METHODS.has(parseShadowsocks(link).method.toLowerCase())
-  return { ...safe, external_key, compatibility: protocolSupported && cipherSupported ? 'supported' : 'unsupported' }
+  const requiresAdapter = protocol === 'ss' && !XRAY_SS_METHODS.has(parseShadowsocks(link).method.toLowerCase())
+  // Legacy SS is a valid endpoint, but not directly loadable by this Xray runtime. Keep it as
+  // unknown (adapter pending), rather than incorrectly declaring the protocol unsupported.
+  const compatibility = !protocolSupported ? 'unsupported' : requiresAdapter ? 'unknown' : 'supported'
+  return { ...safe, external_key, compatibility }
 }
 
 export function describeXraySubscription(input: string): SafeSubscriptionItem[] {

@@ -194,7 +194,7 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
       })
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || '发现失败')
-      toast.success(`发现 ${j.discovered} 个节点，可部署 ${j.supported} 个`)
+      toast.success(`发现 ${j.discovered} 个节点，可直连部署 ${j.supported} 个${j.adapter_pending ? `，待兼容适配 ${j.adapter_pending} 个` : ''}`)
       await load()
     } catch (e: any) { toast.error(e.message) } finally { setBusy('') }
   }
@@ -338,7 +338,7 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
             <TableCell><Checkbox disabled={!selectable} checked={selectedItems.has(x.id)} onCheckedChange={(checked) => toggleItem(x.id, checked === true)} /></TableCell>
             <TableCell>{x.display_name}</TableCell><TableCell>{sourceById.get(x.source_id)?.name || '-'}</TableCell><TableCell>{x.protocol}</TableCell>
             <TableCell className="font-mono text-xs">{x.server_hint || '-'}{x.port_hint ? `:${x.port_hint}` : ''}</TableCell>
-            <TableCell className={x.compatibility === 'supported' ? 'text-green-600' : 'text-amber-600'}>{x.compatibility}</TableCell><TableCell>{x.status}</TableCell>
+            <TableCell className={x.compatibility === 'supported' ? 'text-green-600' : 'text-amber-600'}>{x.compatibility === 'supported' ? 'Xray 可直连' : x.compatibility === 'unknown' ? '待 SS 兼容适配' : '协议未支持'}</TableCell><TableCell>{x.status}</TableCell>
             <TableCell><Button variant="destructive" size="sm" disabled={busy === `delete-item-${x.id}`} onClick={() => deleteEndpoint(x)}>{busy === `delete-item-${x.id}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}<span className="ml-1">删除</span></Button></TableCell>
           </TableRow>
         })}</TableBody></Table>
