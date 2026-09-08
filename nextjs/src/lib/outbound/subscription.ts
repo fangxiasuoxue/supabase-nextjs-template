@@ -13,6 +13,12 @@ export interface SafeSubscriptionItem {
 
 const SCHEMES = new Set<SubscriptionProtocol>(['vless', 'vmess', 'ss', 'trojan', 'hysteria2', 'hy2', 'tuic'])
 const XRAY_SUPPORTED = new Set<SubscriptionProtocol>(['vless', 'vmess', 'ss', 'trojan'])
+// Xray 26.x only supports AEAD/2022 Shadowsocks methods; legacy stream ciphers such as
+// aes-256-cfb are intentionally rejected instead of being sent to the agent to fail at runtime.
+const XRAY_SS_METHODS = new Set([
+  'aes-128-gcm', 'aes-256-gcm', 'chacha20-poly1305', 'xchacha20-poly1305',
+  '2022-blake3-aes-128-gcm', '2022-blake3-aes-256-gcm', '2022-blake3-chacha20-poly1305',
+])
 
 function decodeBase64(value: string): string {
   const clean = value.trim().replace(/-/g, '+').replace(/_/g, '/')
@@ -60,7 +66,9 @@ export function describeSubscriptionLink(link: string): SafeSubscriptionItem {
   }
   // Stable without leaking the credential-bearing URI into DB/logs.
   const external_key = createHash('sha256').update(link).digest('hex')
-  return { ...safe, external_key, compatibility: XRAY_SUPPORTED.has(protocol) ? 'supported' : 'unsupported' }
+  const protocolSupported = XRAY_SUPPORTED.has(protocol)
+  const cipherSupported = protocol !== 'ss' || XRAY_SS_METHODS.has(parseShadowsocks(link).method.toLowerCase())
+  return { ...safe, external_key, compatibility: protocolSupported && cipherSupported ? 'supported' : 'unsupported' }
 }
 
 export function describeXraySubscription(input: string): SafeSubscriptionItem[] {
@@ -138,7 +146,7 @@ function compileVmess(link: string, tag: string) {
   }
 }
 
-function compileShadowsocks(link: string, tag: string) {
+function parseShadowsocks(link: string) {
   const body = link.replace(/^ss:\/\//i, '').split('#', 1)[0].split('?', 1)[0]
   let methodPassword: string
   let hostPort: string
@@ -159,7 +167,13 @@ function compileShadowsocks(link: string, tag: string) {
   const password = methodPassword.slice(colon + 1)
   const parsed = new URL(`ss://${hostPort}`)
   if (!parsed.hostname || !password) throw new Error('Shadowsocks Endpoint 参数不完整')
-  return { tag, protocol: 'shadowsocks', settings: { servers: [{ address: parsed.hostname, port: validPort(parsed.port), method, password }] } }
+  return { method, password, address: parsed.hostname, port: validPort(parsed.port) }
+}
+
+function compileShadowsocks(link: string, tag: string) {
+  const server = parseShadowsocks(link)
+  if (!XRAY_SS_METHODS.has(server.method.toLowerCase())) throw new Error(`Shadowsocks cipher ${server.method} 不受 Xray 支持`)
+  return { tag, protocol: 'shadowsocks', settings: { servers: [server] } }
 }
 
 /** Resolve one stable catalog item from a freshly fetched subscription and compile it in memory. */
