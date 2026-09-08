@@ -1,13 +1,9 @@
-import { createHash } from 'crypto'
 import { extractBaseShareLink, swapVlessUuid } from '@/lib/clients/node-client-admin'
 import { compileCheapIpOutbound } from './cheap-ip'
 import { compileManagedNodeOutbound } from './managed-node'
 import { compileSubscriptionOutbound } from './subscription'
 import { fetchSubscriptionSecret, resolveEnvSecretRef } from './subscription-fetch'
-
-export function runtimeHash(value: unknown): string {
-  return createHash('sha256').update(JSON.stringify(value)).digest('hex')
-}
+export { runtimeHash } from './runtime-hash'
 
 function localPort(ref: string | null): number | undefined {
   const match = String(ref || '').match(/^local-port:(\d+)$/)
