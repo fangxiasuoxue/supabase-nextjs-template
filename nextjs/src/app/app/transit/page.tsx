@@ -29,6 +29,7 @@ export default function TransitOverviewPage() {
   const [aggPoints, setAggPoints] = useState<TransitAggPoint[]>([])
   const [tunnels, setTunnels] = useState<TransitTunnel[]>([])
   const [bindings, setBindings] = useState<TransitBinding[]>([])
+  const [outbounds, setOutbounds] = useState<any[]>([])
   const [reconcile, setReconcile] = useState<ReconcileResult | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
 
@@ -38,16 +39,18 @@ export default function TransitOverviewPage() {
       setIsAdmin(admin)
       if (!admin) return
       const c = (await createSPASassClientAuthenticated()).getSupabaseClient() as any
-      const [ch, ap, tn, bd] = await Promise.all([
+      const [ch, ap, tn, bd, ob] = await Promise.all([
         c.from('transit_channel').select('*').order('created_at', { ascending: false }),
         c.from('transit_agg_point').select('*').order('region'),
         c.from('transit_tunnel').select('*').order('listen_port'),
         c.from('transit_binding').select('*').order('gw').order('consume_port'),
+        fetch('/api/v1/admin/transit/outbounds').then((r) => r.ok ? r.json() : { data: [] }),
       ])
       setChannels(ch.data ?? [])
       setAggPoints(ap.data ?? [])
       setTunnels(tn.data ?? [])
       setBindings(bd.data ?? [])
+      setOutbounds(ob.data ?? [])
     } catch (e: any) {
       toast.error('加载失败: ' + e.message)
     } finally {
@@ -174,6 +177,30 @@ export default function TransitOverviewPage() {
               </TableRow>
             ))}
             {!tunnels.length && <TableRow><TableCell colSpan={6} className="text-gray-400">暂无隧道</TableCell></TableRow>}
+          </TableBody>
+        </Table>
+      </section>
+
+      {/* GoRelay 节点出站 */}
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-medium">GoRelay 节点出站</h2>
+          <a href="/app/admin/outbounds" className="text-sm text-sky-600 hover:underline">管理全部出站 →</a>
+        </div>
+        <Table>
+          <TableHeader><TableRow><TableHead>目标节点</TableHead><TableHead>名称</TableHead><TableHead>标签</TableHead><TableHead>传输</TableHead><TableHead>部署</TableHead><TableHead>更新时间</TableHead></TableRow></TableHeader>
+          <TableBody>
+            {outbounds.map((o) => (
+              <TableRow key={o.id}>
+                <TableCell className="font-mono text-xs">{o.target_name ?? o.target_vps_instance_id.slice(0, 8)}</TableCell>
+                <TableCell>{o.display_name}</TableCell>
+                <TableCell className="font-mono text-xs">{o.tag}</TableCell>
+                <TableCell>{o.transport_kind}{o.transport_ref ? ` · ${o.transport_ref}` : ''}</TableCell>
+                <TableCell>{o.deploy_state}</TableCell>
+                <TableCell className="text-xs text-gray-500">{o.updated_at ? new Date(o.updated_at).toLocaleString() : '—'}</TableCell>
+              </TableRow>
+            ))}
+            {!outbounds.length && <TableRow><TableCell colSpan={6} className="text-gray-400">暂无 GoRelay 出站</TableCell></TableRow>}
           </TableBody>
         </Table>
       </section>
