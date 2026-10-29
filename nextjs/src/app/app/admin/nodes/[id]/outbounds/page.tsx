@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 interface Outbound {
   id: string; tag: string; display_name: string; endpoint_kind: string; transport_kind: string
   deploy_state: string; last_observed_at: string | null; last_error: string | null
+  transport_ref?: string | null; desired_config?: Record<string, any> | null
 }
 interface Source {
   id: string; name: string; kind: string; provider: string | null; status: string
@@ -45,6 +46,8 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
   const [cheapTag, setCheapTag] = useState('')
   const [cheapTransport, setCheapTransport] = useState('direct')
   const [cheapLocalPort, setCheapLocalPort] = useState('')
+  const [replaceOutboundId, setReplaceOutboundId] = useState('')
+  const [replaceCheapIpId, setReplaceCheapIpId] = useState('')
   const [subName, setSubName] = useState('')
   const [subRef, setSubRef] = useState('')
 
@@ -122,6 +125,25 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || '导入失败')
       toast.success('Cheap IP 已登记为 outbound 期望态')
+      await load()
+    } catch (e: any) { toast.error(e.message) } finally { setBusy('') }
+  }
+
+  const replaceCheap = async () => {
+    const old = outbounds.find((x) => x.id === replaceOutboundId)
+    if (!old || !replaceCheapIpId) return toast.error('请选择要更换的出口和新的 Cheap IP')
+    const ip = cheapIps.find((x) => String(x.id) === replaceCheapIpId)
+    if (!ip) return toast.error('新的 Cheap IP 不存在')
+    setBusy('replace-cheap')
+    try {
+      const r = await fetch(`/api/v1/admin/nodes/${id}/outbounds`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'import_cheap_ip', ip_asset_id: Number(replaceCheapIpId), display_name: old.display_name, tag: old.tag, transport_kind: old.transport_kind, local_port: old.transport_kind === 'direct' ? null : (old.desired_config?.local_port ?? null) }),
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j.error || '更换失败')
+      toast.success(`已将 ${old.display_name} 的期望 Cheap IP 更换为新资产；请重新 Plan → Apply`)
+      setReplaceOutboundId(''); setReplaceCheapIpId('')
       await load()
     } catch (e: any) { toast.error(e.message) } finally { setBusy('') }
   }
@@ -265,10 +287,19 @@ export default function NodeOutboundsPage({ params }: { params: Promise<{ id: st
           <Button size="sm" variant="outline" disabled={!selectedOutbounds.size || busy.startsWith('lifecycle-')} onClick={() => runLifecycle('verify')}>Verify</Button>
           <Button size="sm" variant="destructive" disabled={!applyRunId || busy.startsWith('lifecycle-')} onClick={() => runLifecycle('rollback')}>Rollback</Button>
           {busy.startsWith('lifecycle-') && <Loader2 className="w-4 h-4 animate-spin" />}
-          <span className="text-xs text-muted-foreground">Apply 必须引用当前 Plan；首版只新增、不覆盖同名不同配置。</span>
+          <span className="text-xs text-muted-foreground">Apply 必须引用当前 Plan；既有出口发生变化时会原子更新并保留失败回滚。</span>
         </div>
-        <Table><TableHeader><TableRow><TableHead className="w-10"><Checkbox checked={outbounds.length > 0 && outbounds.every(o => selectedOutbounds.has(o.id))} onCheckedChange={(checked) => setSelectedOutbounds(checked ? new Set(outbounds.map(o => o.id)) : new Set())} /></TableHead><TableHead>名称</TableHead><TableHead>tag</TableHead><TableHead>Endpoint</TableHead><TableHead>路径</TableHead><TableHead>状态</TableHead></TableRow></TableHeader>
-          <TableBody>{outbounds.map((o) => <TableRow key={o.id}><TableCell><Checkbox checked={selectedOutbounds.has(o.id)} onCheckedChange={(checked) => setSelectedOutbounds(old => { const next = new Set(old); checked ? next.add(o.id) : next.delete(o.id); return next })} /></TableCell><TableCell>{o.display_name}</TableCell><TableCell className="font-mono text-xs">{o.tag}</TableCell><TableCell>{o.endpoint_kind}</TableCell><TableCell>{o.transport_kind}</TableCell><TableCell title={o.last_error || ''}>{o.deploy_state}</TableCell></TableRow>)}</TableBody>
+        {replaceOutboundId && <div className="rounded border border-blue-200 bg-blue-50 p-3 flex flex-wrap items-end gap-3 text-sm">
+          <span>更换当前出口为新的 Cheap IP：</span>
+          <select className="border rounded px-2 py-1" value={replaceCheapIpId} onChange={(e) => setReplaceCheapIpId(e.target.value)}>
+            <option value="">请选择 active IP</option>
+            {cheapIps.filter((x) => String(x.status || '').toLowerCase() === 'active').map((x) => <option key={x.id} value={x.id}>{x.remark || x.label || `#${x.id}`} · {x.provider}</option>)}
+          </select>
+          <Button size="sm" onClick={replaceCheap} disabled={busy === 'replace-cheap'}>{busy === 'replace-cheap' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}确认更换</Button>
+          <Button size="sm" variant="ghost" onClick={() => { setReplaceOutboundId(''); setReplaceCheapIpId('') }}>取消</Button>
+        </div>}
+        <Table><TableHeader><TableRow><TableHead className="w-10"><Checkbox checked={outbounds.length > 0 && outbounds.every(o => selectedOutbounds.has(o.id))} onCheckedChange={(checked) => setSelectedOutbounds(checked ? new Set(outbounds.map(o => o.id)) : new Set())} /></TableHead><TableHead>名称</TableHead><TableHead>tag</TableHead><TableHead>Endpoint</TableHead><TableHead>路径</TableHead><TableHead>状态</TableHead><TableHead>操作</TableHead></TableRow></TableHeader>
+          <TableBody>{outbounds.map((o) => <TableRow key={o.id}><TableCell><Checkbox checked={selectedOutbounds.has(o.id)} onCheckedChange={(checked) => setSelectedOutbounds(old => { const next = new Set(old); checked ? next.add(o.id) : next.delete(o.id); return next })} /></TableCell><TableCell>{o.display_name}</TableCell><TableCell className="font-mono text-xs">{o.tag}</TableCell><TableCell>{o.endpoint_kind}</TableCell><TableCell>{o.transport_kind}</TableCell><TableCell title={o.last_error || ''}>{o.deploy_state}</TableCell><TableCell>{o.endpoint_kind === 'cheap_ip' && <Button size="sm" variant="outline" onClick={() => setReplaceOutboundId(o.id)}>更换 Cheap IP</Button>}</TableCell></TableRow>)}</TableBody>
         </Table>
       </section>
 

@@ -69,9 +69,13 @@ async function plan(admin: any, userId: string, nodeId: string, ids: string[]) {
   for (const row of rows) {
     const compiled = await compileCatalogOutbound(admin, row)
     const hash = runtimeHash(compiled)
+    const action = result.actions.find((x) => x.id === row.id)
+    const current = observed.find((x: any) => x.tag === row.tag)
+    if (action && current && runtimeHash(current) !== hash) action.kind = 'update'
     await admin.from('node_outbounds').update({ desired_hash: hash, last_error: null }).eq('id', row.id)
     previews.push({ id: row.id, hash, ...safeOutboundSummary(compiled) })
   }
+  result.mutatesRuntime = result.actions.some((x) => x.kind !== 'noop')
   const { data: clients } = await admin.from('node_clients').select('id,email,outbound_id').in('outbound_id', ids).eq('enabled', true)
   const routes = (clients ?? []).map((c: any) => buildClientRoute(c.id, node.inbound_tag, c.email, rows.find((x: any) => x.id === c.outbound_id)!.tag))
   const summary = { node_id: nodeId, outbound_ids: ids, actions: result.actions, previews, routes, observed_available: !observedWarning, warning: observedWarning }
@@ -91,6 +95,7 @@ async function apply(admin: any, userId: string, nodeId: string, ids: string[], 
   if (inserted.error) throw new Error(inserted.error.message)
   const runId = inserted.data.id
   const created: string[] = []
+  const updated: Array<{ tag: string; previous: any }> = []
   try {
     const observed = await agentJson(node.vps_instance_id, '/xray/outbounds')
     const byTag = new Map((Array.isArray(observed) ? observed : []).map((x: any) => [x.tag, x]))
@@ -99,7 +104,10 @@ async function apply(admin: any, userId: string, nodeId: string, ids: string[], 
       if (runtimeHash(compiled) !== row.desired_hash) throw new Error(`${row.tag} 自 Plan 后已变化，请重新 Plan`)
       const existing = byTag.get(row.tag)
       if (existing) {
-        if (runtimeHash(existing) !== row.desired_hash) throw new Error(`${row.tag} 已存在不同配置；首版禁止覆盖，请先人工处理`)
+        if (runtimeHash(existing) !== row.desired_hash) {
+          await agentJson(node.vps_instance_id, `/xray/outbounds/${encodeURIComponent(row.tag)}`, { method: 'PATCH', body: JSON.stringify(compiled) })
+          updated.push({ tag: row.tag, previous: existing })
+        }
       } else {
         await agentJson(node.vps_instance_id, '/xray/outbounds', { method: 'POST', body: JSON.stringify(compiled) })
         created.push(row.tag)
@@ -118,6 +126,7 @@ async function apply(admin: any, userId: string, nodeId: string, ids: string[], 
     await admin.from('outbound_apply_runs').update({ status: 'succeeded', summary: { plan_run_id: planRunId, outbound_ids: ids, created_tags: created }, finished_at: now }).eq('id', runId)
     return NextResponse.json({ run_id: runId, status: 'succeeded', created_tags: created })
   } catch (e: any) {
+    for (const item of updated.reverse()) { try { await agentJson(node.vps_instance_id, `/xray/outbounds/${encodeURIComponent(item.tag)}`, { method: 'PATCH', body: JSON.stringify(item.previous) }) } catch { /* best effort compensation */ } }
     for (const tag of created.reverse()) { try { await agentJson(node.vps_instance_id, `/xray/outbounds/${encodeURIComponent(tag)}`, { method: 'DELETE' }) } catch { /* best effort compensation */ } }
     const message = String(e?.message || 'Apply failed').slice(0, 500)
     await admin.from('node_outbounds').update({ deploy_state: 'error', last_error: message }).in('id', ids)

@@ -9,7 +9,7 @@ export interface OutboundPlanAction {
   id: string
   tag: string
   display_name: string
-  kind: 'create' | 'noop'
+  kind: 'create' | 'update' | 'noop'
 }
 
 export function buildOutboundPlan(desired: DesiredOutboundForPlan[], observedTags: Set<string>) {

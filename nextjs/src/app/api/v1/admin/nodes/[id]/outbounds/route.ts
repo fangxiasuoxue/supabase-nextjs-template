@@ -31,7 +31,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 
   const { data, error } = await (admin as any)
     .from('node_outbounds')
-    .select('id,tag,display_name,endpoint_kind,transport_kind,transport_ref,desired_state,deploy_state,last_applied_at,last_observed_at,last_error,source_id,source_item_id')
+    .select('id,tag,display_name,endpoint_kind,transport_kind,transport_ref,desired_config,desired_state,deploy_state,last_applied_at,last_observed_at,last_error,source_id,source_item_id')
     .eq('target_vps_instance_id', vpsId)
     .neq('desired_state', 'absent')
     .order('display_name')
