@@ -17,7 +17,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
-import { swapVlessUuid, extractBaseShareLink } from '@/lib/clients/node-client-admin'
+import { buildSeatShareLink, isShadowsocksProtocol } from '@/lib/clients/node-client-admin'
+import { loadSeatLinkNode } from '@/lib/clients/seat-link-context'
 import { subscriptionResponse } from '@/lib/subscription/clientResponse'
 
 export async function GET(
@@ -44,20 +45,14 @@ export async function GET(
     return new NextResponse('Not Found', { status: 404 })
   }
 
-  // 2) 取该 node 最新一次带 rendered_config 的部署快照(base share link 来源)
-  const { data: deployment } = await admin
-    .from('node_deployments')
-    .select('rendered_config, status, created_at')
-    .eq('node_id', node.id)
-    .not('rendered_config', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  // 2) 节点链接上下文:协议 / 公网地址 / 端口 / SS method / vless base 链接(最新带 rendered_config 的部署)
+  const linkNode = await loadSeatLinkNode(admin, node.id)
+  const base = linkNode?.base_link ?? null
+  const isSs = isShadowsocksProtocol(linkNode?.protocol)
 
-  // 3) 节点级订阅 = 该 node 全部启用终端(seat)的合集(每个换自己的 uuid,复用节点 reality 参数)。
+  // 3) 节点级订阅 = 该 node 全部启用终端(seat)的合集(vless 换自己的 uuid、复用节点 reality 参数;SS 拼 SIP002)。
   //    含所有 user 用户 → 一个节点订阅地址导入即得该节点下全部名额。见 docs/current/51 §11.4。
-  const base = extractBaseShareLink(deployment?.rendered_config)
-  if (base) {
+  if (base || isSs) {
     const { data: clients } = await admin
       .from('node_clients')
       .select('email, cred_ref, label, enabled')
@@ -67,21 +62,25 @@ export async function GET(
 
     const links: string[] = []
     for (const c of (clients ?? []) as any[]) {
-      if (!c.cred_ref) continue
-      try {
-        links.push(swapVlessUuid(base, c.cred_ref, c.label || c.email))
-      } catch {
-        /* 跳过无法生成的 */
-      }
+      const link = buildSeatShareLink(linkNode, { cred_ref: c.cred_ref, label: c.label, email: c.email })
+      if (link) links.push(link)
     }
-    // 无终端时退化为节点自身 base 链接(匿名),使订阅不为空
-    if (links.length === 0) links.push(base)
+    // 无终端时退化为节点自身 base 链接(匿名),使订阅不为空(SS 无 base,则走下方降级)
+    if (links.length === 0 && base) links.push(base)
 
     // SDD 61:Clash 类客户端 → sublink-worker 转 clash yaml;其它 → base64。失败回落 base64。
-    return subscriptionResponse(request, links)
+    if (links.length > 0) return subscriptionResponse(request, links)
   }
 
   // 4) base link 取不到 → 回退到 rendered_config 原始订阅正文(保守提取)。
+  const { data: deployment } = await admin
+    .from('node_deployments')
+    .select('rendered_config, status, created_at')
+    .eq('node_id', node.id)
+    .not('rendered_config', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
   const subscriptionBody = extractSubscription(deployment?.rendered_config)
 
   if (subscriptionBody != null && subscriptionBody.length > 0) {

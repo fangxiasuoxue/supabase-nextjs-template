@@ -5,12 +5,13 @@
 //   代理客户端带不了登录态)。⚠️ 路由鉴权审计器需把 /sub/u/[token] 加入公开端点 allowlist。
 //
 // 内容:token→user_id(user_sub_tokens)→该 user 被授权的 node_clients(enabled)→
-//   每 seat 取其 node 最新 rendered_config 的 base share link,换成本 seat 的 uuid(cred_ref)→ 汇总。
+//   每 seat 按其 node 协议生成链接(vless:base share link 换 uuid;SS:由节点字段拼 SIP002,R-010)→ 汇总。
 // 动态解析:撤销某 seat 授权后,合订阅下次拉取即自动少一条(不缓存作用域)。无内容优雅降级 200 空。
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
-import { swapVlessUuid, extractBaseShareLink } from '@/lib/clients/node-client-admin'
+import { buildSeatShareLink } from '@/lib/clients/node-client-admin'
+import { loadSeatLinkNodes } from '@/lib/clients/seat-link-context'
 import { subscriptionResponse } from '@/lib/subscription/clientResponse'
 import { listGrantedResourceIds } from '@/lib/auth/resourceAccess'
 
@@ -45,29 +46,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
   const liveSeats = (seats ?? []).filter((s: any) => s.enabled && s.node_id && s.cred_ref)
   if (liveSeats.length === 0) return empty()
 
-  // 3) 每 node 取最新 rendered_config(一次查,按 node 去重取首条)
-  const nodeIds = Array.from(new Set(liveSeats.map((s: any) => s.node_id)))
-  const { data: deployments } = await (admin as any)
-    .from('node_deployments')
-    .select('node_id, rendered_config, created_at')
-    .in('node_id', nodeIds)
-    .not('rendered_config', 'is', null)
-    .order('created_at', { ascending: false })
-  const baseByNode = new Map<string, string>()
-  for (const d of deployments ?? []) {
-    if (baseByNode.has(d.node_id)) continue
-    const base = extractBaseShareLink(d.rendered_config)
-    if (base) baseByNode.set(d.node_id, base)
-  }
+  // 3) 每 node 装配链接上下文(协议 / 公网地址 / 端口 / SS method / vless base 链接),一次查
+  const nodeIds = Array.from(new Set(liveSeats.map((s: any) => s.node_id))) as string[]
+  const linkNodes = await loadSeatLinkNodes(admin as any, nodeIds)
 
-  // 4) 每 seat 换 uuid,remark 用 label/email;汇总去重
+  // 4) 每 seat 按协议生成链接,remark 用 label/email;生成不了的跳过;汇总去重
   const links: string[] = []
   for (const s of liveSeats) {
-    const base = baseByNode.get(s.node_id)
-    if (!base) continue
-    try {
-      links.push(swapVlessUuid(base, s.cred_ref, s.label || s.email || 'seat'))
-    } catch { /* 跳过该 seat,不整体失败 */ }
+    const link = buildSeatShareLink(linkNodes.get(s.node_id), { cred_ref: s.cred_ref, label: s.label, email: s.email })
+    if (link) links.push(link)
   }
   const unique = Array.from(new Set(links.filter(Boolean)))
   if (unique.length === 0) return empty()

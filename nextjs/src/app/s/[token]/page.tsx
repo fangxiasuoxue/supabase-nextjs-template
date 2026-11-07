@@ -8,7 +8,8 @@ import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import QRCode from 'qrcode'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
-import { swapVlessUuid, extractBaseShareLink } from '@/lib/clients/node-client-admin'
+import { buildSeatShareLink } from '@/lib/clients/node-client-admin'
+import { loadSeatLinkNode } from '@/lib/clients/seat-link-context'
 import CopyRow from './copy-row'
 
 export const dynamic = 'force-dynamic'
@@ -26,24 +27,9 @@ export default async function SeatPage({ params }: { params: Promise<{ token: st
   if (!client) notFound()
   const c = client as any
 
-  // node base 链接 → 换本终端 uuid 得 vless 直连链接
-  const { data: dep } = await admin
-    .from('node_deployments')
-    .select('rendered_config, created_at')
-    .eq('node_id', c.node_id)
-    .not('rendered_config', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  const base = extractBaseShareLink((dep as any)?.rendered_config)
-  let vless: string | null = null
-  if (base && c.cred_ref) {
-    try {
-      vless = swapVlessUuid(base, c.cred_ref, c.label || c.email)
-    } catch {
-      vless = null
-    }
-  }
+  // 按节点协议得本终端直连链接:vless = node base 链接换本终端 uuid;SS = 节点字段 + 本终端密码拼 SIP002(R-010)
+  const linkNode = await loadSeatLinkNode(admin, c.node_id)
+  const quick: string | null = buildSeatShareLink(linkNode, { cred_ref: c.cred_ref, label: c.label, email: c.email })
 
   // 配置 URL(绝对地址)
   const h = await headers()
@@ -52,7 +38,7 @@ export default async function SeatPage({ params }: { params: Promise<{ token: st
   const subUrl = host ? `${proto}://${host}/sub/client/${token}` : `/sub/client/${token}`
 
   // 二维码:优先快速接入配置,否则配置 URL
-  const qrTarget = vless || subUrl
+  const qrTarget = quick || subUrl
   const qrDataUrl = await QRCode.toDataURL(qrTarget, { width: 260, margin: 1 })
 
   // 语言:此页无 LanguageContext(服务端组件),按 Accept-Language 头选择,默认中文
@@ -113,7 +99,7 @@ export default async function SeatPage({ params }: { params: Promise<{ token: st
         <p className="mb-4 text-center text-xs text-gray-400">{L.scanHint}</p>
 
         <div className="space-y-3">
-          {vless ? <CopyRow label={L.quick} value={vless} copyLabel={L.copy} copiedLabel={L.copied} /> : (
+          {quick ? <CopyRow label={L.quick} value={quick} copyLabel={L.copy} copiedLabel={L.copied} /> : (
             <div className="rounded-lg border border-dashed p-3 text-xs text-gray-400">{L.quickPending}</div>
           )}
           <CopyRow label={L.configLink} value={subUrl} copyLabel={L.copy} copiedLabel={L.copied} />

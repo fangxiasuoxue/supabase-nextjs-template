@@ -1,7 +1,7 @@
 // Node Share-Link Builder
 // 参数 → 代理分享 URL(vless-reality),及订阅内容(base64)构建。
 // 与 node-url-parser.ts(解析)互补:此文件负责【生成】。
-// 范围:仅 vless-reality(SDD 36 方案 A)。hysteria/mixed 属 B 阶段。
+// 范围:vless-reality(SDD 36 方案 A)+ shadowsocks SIP002(R-010,2026-11-07)。hysteria/mixed 属 B 阶段。
 
 export interface VlessRealityShareParams {
   uuid: string
@@ -51,4 +51,31 @@ export function buildRenderedConfig(shareLinks: string[]): {
   subscription: string
 } {
   return { share_links: shareLinks, subscription: buildSubscription(shareLinks) }
+}
+
+export interface ShadowsocksShareParams {
+  method: string // 加密方法,如 aes-128-gcm(取自节点 profile 模板 config_template.method)
+  password: string // 席位密码(node_clients.cred_ref)
+  host: string // 节点公网域名/IP(nodes.public_ip)
+  port: number // 节点端口(nodes.port)
+  remark?: string // #备注,缺省用 host
+}
+
+/** SIP002 userinfo 编码:websafe-base64(method:password),不带 padding。isomorphic。 */
+function base64UrlNoPad(s: string): string {
+  if (typeof Buffer !== 'undefined') return Buffer.from(s, 'utf-8').toString('base64url')
+  return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+/**
+ * 构建 Shadowsocks 分享 URL(SIP002):ss://base64url(method:password)@host:port#remark。
+ * 纯函数,无副作用;不依赖节点 rendered_config(SS 入站没有 base 链接,直接由节点字段拼出)。
+ */
+export function buildShadowsocksShareUrl(p: ShadowsocksShareParams): string {
+  if (!p.method || !p.password || !p.host || !p.port) {
+    throw new Error('buildShadowsocksShareUrl: 缺必填参数(method/password/host/port)')
+  }
+  const userinfo = base64UrlNoPad(`${p.method}:${p.password}`)
+  const remark = encodeURIComponent(p.remark ?? p.host)
+  return `ss://${userinfo}@${p.host}:${p.port}#${remark}`
 }

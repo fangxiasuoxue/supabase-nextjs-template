@@ -33,6 +33,8 @@ interface Seat {
   outbound_tag: string | null
   outbound_config: any | null
   vless_url: string | null
+  ss_url: string | null
+  share_url: string | null // 按节点协议:vless_url 或 ss_url
   created_at: string
 }
 
@@ -289,10 +291,11 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
     toast.success('订阅链接已复制')
   }
 
-  const copyVless = (url: string | null) => {
-    if (!url) return toast.error('无 vless 链接(节点 base 配置未就绪)')
+  const linkKind = (protocol: string) => (protocol === 'ss' || protocol === 'shadowsocks' ? 'ss' : 'vless')
+  const copyShareLink = (url: string | null, protocol: string) => {
+    if (!url) return toast.error(linkKind(protocol) === 'ss' ? '无 ss 链接(SS 节点缺公网地址/端口)' : '无 vless 链接(节点 base 配置未就绪)')
     navigator.clipboard.writeText(url)
-    toast.success('vless 链接已复制')
+    toast.success(`${linkKind(protocol)} 链接已复制`)
   }
 
   return (
@@ -472,9 +475,10 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
                     <Button variant="ghost" size="sm" className="h-6 justify-start" onClick={() => copySubUrl(s.subscribe_token)}>
                       <Copy className="w-3 h-3 mr-1" />订阅
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-6 justify-start" disabled={!s.vless_url}
-                      title={s.vless_url ?? '节点 base 配置未就绪'} onClick={() => copyVless(s.vless_url)}>
-                      <LinkIcon className="w-3 h-3 mr-1" />vless
+                    <Button variant="ghost" size="sm" className="h-6 justify-start" disabled={!s.share_url}
+                      title={s.share_url ?? (linkKind(s.protocol) === 'ss' ? 'SS 节点缺公网地址/端口' : '节点 base 配置未就绪')}
+                      onClick={() => copyShareLink(s.share_url, s.protocol)}>
+                      <LinkIcon className="w-3 h-3 mr-1" />{linkKind(s.protocol)}
                     </Button>
                     <Button variant="ghost" size="sm" className="h-6 justify-start" disabled={!s.subscribe_token}
                       title="打开客户二维码页(可发给客户)"

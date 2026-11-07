@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { randomBytes, randomUUID } from 'crypto'
+import { randomBytes } from 'crypto'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { requireNodeAccess } from '@/lib/auth/resourceAccess'
-import { nodeSlug, buildSeatEmail, swapVlessUuid, extractBaseShareLink } from '@/lib/clients/node-client-admin'
+import { nodeSlug, buildSeatEmail, buildSeatShareLink, toSeatProtocol, generateSeatCredential } from '@/lib/clients/node-client-admin'
+import { loadSeatLinkNode } from '@/lib/clients/seat-link-context'
 
 // 终端(seat)管理:某 node 下的名额列表 / 批量发名额。
 // 设计依据:docs/current/51 §11.4 · SDD 55 P2b。
 // 权限门:GET=对该 node 有 read;POST(发名额)=对该 node 有 write。admin/ops 旁路。
 
 // GET /api/v1/admin/nodes/[id]/clients — 列出该 node 的终端。
-// 返回每终端的 vless_url(直接连接链接;admin 管理需要,uuid 本就是 vless 链接必含的凭据)。
-// cred_ref 仅服务端用于拼 vless_url,不作为独立字段返回。
+// 返回每终端的直连链接:share_url(按节点协议:vless 换 uuid / SS 由节点字段拼 SIP002),
+// 并保留 vless_url(仅 vless)与新增 ss_url(仅 SS)两个协议专用字段。
+// cred_ref 仅服务端用于拼链接,不作为独立字段返回(SS 密码只以链接形式出现)。
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params
   const gate = await requireNodeAccess(id, 'read')
@@ -30,34 +32,16 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     .eq('id', id)
     .maybeSingle()
 
-  // 取该 node 最新 rendered_config 的 base vless 链接,给每终端换 uuid 生成 vless_url。
-  const base = await fetchNodeBaseLink(admin, id)
+  // 节点上下文(协议 / 公网地址 / 端口 / SS method / vless base 链接)→ 每终端按协议生成直连链接。
+  const linkNode = await loadSeatLinkNode(admin, id)
   const clients = (data ?? []).map((c: any) => {
     const { cred_ref, ...rest } = c
-    let vless_url: string | null = null
-    if (base && cred_ref) {
-      try {
-        vless_url = swapVlessUuid(base, cred_ref, c.label || c.email)
-      } catch {
-        vless_url = null
-      }
-    }
-    return { ...rest, vless_url }
+    const share_url = buildSeatShareLink(linkNode, { cred_ref, label: c.label, email: c.email })
+    const vless_url = share_url && share_url.startsWith('vless://') ? share_url : null
+    const ss_url = share_url && share_url.startsWith('ss://') ? share_url : null
+    return { ...rest, share_url, vless_url, ss_url }
   })
   return NextResponse.json({ clients, node: nodeMeta ?? null })
-}
-
-// 取某 node 最新带 rendered_config 部署里的 base vless 链接(容错;取不到返回 null)。
-async function fetchNodeBaseLink(admin: any, nodeId: string): Promise<string | null> {
-  const { data } = await admin
-    .from('node_deployments')
-    .select('rendered_config, created_at')
-    .eq('node_id', nodeId)
-    .not('rendered_config', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  return extractBaseShareLink(data?.rendered_config)
 }
 
 // POST /api/v1/admin/nodes/[id]/clients — 批量发 N 个名额(默认 1)。
@@ -101,14 +85,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     .select('id', { count: 'exact', head: true })
     .eq('node_id', id)
   const slug = nodeSlug((node as any).name)
-  const protocol = (node as any).protocol || 'vless'
+  // 席位协议 = DB 词表('ss' 而非节点的 'shadowsocks'),否则触发 node_clients_protocol_check 插入失败(R-010 (a))。
+  const protocol = toSeatProtocol((node as any).protocol)
 
   const rows = Array.from({ length: count }, (_, i) => {
     const seq = (existing ?? 0) + i + 1
     return {
       node_id: id,
       email: buildSeatEmail(slug, seq),
-      cred_ref: randomUUID(), // P1:直接存 vless uuid(DB 运行态,非 git)
+      cred_ref: generateSeatCredential(protocol), // P1:直接存凭据(vless uuid / SS 随机密码;DB 运行态,非 git)
       protocol,
       purpose: 'user',
       label,

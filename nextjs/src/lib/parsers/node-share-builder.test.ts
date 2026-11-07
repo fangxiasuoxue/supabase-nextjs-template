@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildVlessRealityShareUrl, buildSubscription, buildRenderedConfig } from './node-share-builder.ts'
+import { buildVlessRealityShareUrl, buildShadowsocksShareUrl, buildSubscription, buildRenderedConfig } from './node-share-builder.ts'
 
 // 全部为虚构测试值,勿用真实凭据
 const base = {
@@ -52,4 +52,21 @@ test('buildRenderedConfig: 结构含 share_links + subscription', () => {
   const rc = buildRenderedConfig(links)
   assert.deepEqual(rc.share_links, links)
   assert.equal(rc.subscription, buildSubscription(links))
+})
+
+test('buildShadowsocksShareUrl: SIP002 结构,userinfo 为 base64url(method:password) 无 padding', () => {
+  const url = buildShadowsocksShareUrl({
+    method: 'aes-128-gcm', password: 'TEST_ONLY_pw_0123456789', host: 'hk4.example.test', port: 2433, remark: 'hk4-ss-user01',
+  })
+  const m = url.match(/^ss:\/\/([A-Za-z0-9_-]+)@hk4\.example\.test:2433#hk4-ss-user01$/)
+  assert.ok(m, url)
+  assert.equal(Buffer.from(m![1], 'base64url').toString('utf-8'), 'aes-128-gcm:TEST_ONLY_pw_0123456789')
+  assert.ok(!url.includes('='))
+})
+
+test('buildShadowsocksShareUrl: remark 缺省用 host;缺必填抛错', () => {
+  const url = buildShadowsocksShareUrl({ method: 'aes-128-gcm', password: 'p', host: 'h.test', port: 1 })
+  assert.ok(url.endsWith('#h.test'))
+  assert.throws(() => buildShadowsocksShareUrl({ method: '', password: 'p', host: 'h', port: 1 }))
+  assert.throws(() => buildShadowsocksShareUrl({ method: 'm', password: 'p', host: 'h', port: 0 }))
 })
