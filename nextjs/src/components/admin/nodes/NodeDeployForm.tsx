@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import { Loader2, Rocket } from 'lucide-react'
 import { createSPASassClientAuthenticated } from '@/lib/supabase/client'
 import { deriveNodeDefaults } from '@/lib/parsers/node-deploy-defaults'
+import { nodeProtocolFromProfile, profileListen, isLoopbackListen } from '@/lib/nodes/node-protocol'
 
 export function NodeDeployForm() {
   const router = useRouter()
@@ -47,7 +48,7 @@ export function NodeDeployForm() {
 
         const [{ data: vps }, { data: prof }] = await Promise.all([
           client.from('vps_instances').select('id, name, gcp_instance_name, public_ip, heartbeat_status').eq('heartbeat_status', 'online'),
-          client.from('node_profiles').select('id, name, transport_protocol, engine').eq('enabled', true),
+          client.from('node_profiles').select('id, name, transport_protocol, engine, inbound_port, config_template').eq('enabled', true),
         ])
         setVpsList(vps || [])
         setProfiles(prof || [])
@@ -81,7 +82,8 @@ export function NodeDeployForm() {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || '创建失败')
-      toast.success('部署任务已创建')
+      toast.success(`部署任务已创建(协议 ${json?.data?.protocol ?? '?'})`)
+      for (const w of (json?.data?.warnings ?? []) as string[]) toast.warning(w, { duration: 10000 })
       router.push('/app/admin/nodes/deployments')
     } catch (e: any) {
       toast.error(e.message)
@@ -150,7 +152,12 @@ export function NodeDeployForm() {
 
       <div className="space-y-2">
         <Label className="text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest">协议模板 *</Label>
-        <Select value={profileId} onValueChange={setProfileId}>
+        <Select value={profileId} onValueChange={(v) => {
+          setProfileId(v)
+          // 端口未改过(仍是默认 443)时,跟随模板的 inbound_port(SS 模板 2433 等),避免 SS 落到 443。
+          const p = profiles.find((x) => x.id === v)
+          if (p?.inbound_port && (port === '' || port === '443')) setPort(String(p.inbound_port))
+        }}>
           <SelectTrigger className="bg-white border-slate-300 rounded-2xl h-12">
             <SelectValue placeholder="选择协议模板" />
           </SelectTrigger>
@@ -161,11 +168,22 @@ export function NodeDeployForm() {
             {profiles.map((p) => (
               <SelectItem key={p.id} value={p.id}>
                 <span className="font-bold">{p.name}</span>
-                <span className="ml-2 text-[9px] text-muted-foreground uppercase">{p.transport_protocol} · {p.engine}</span>
+                <span className="ml-2 text-[9px] text-muted-foreground uppercase">{p.transport_protocol} · {p.engine}{isLoopbackListen(profileListen(p)) ? ' · 仅本机回环' : ''}</span>
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+        {profileId && (() => {
+          const p = profiles.find((x) => x.id === profileId)
+          const listen = profileListen(p)
+          const loop = isLoopbackListen(listen)
+          return (
+            <p className={`text-[9px] ${loop ? 'text-red-600 font-bold' : 'text-muted-foreground'}`}>
+              节点协议将记为 <b>{nodeProtocolFromProfile(p)}</b>(席位凭据随协议生成);监听 {listen ?? '0.0.0.0'}
+              {loop ? ' —— 只有机器本机能连,不能作公网落地,请换 listen=0.0.0.0 的模板' : ''}
+            </p>
+          )
+        })()}
       </div>
 
       <div className="grid grid-cols-2 gap-4">

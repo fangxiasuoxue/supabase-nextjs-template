@@ -4,6 +4,7 @@ import { createSSRClient } from '@/lib/supabase/server'
 import { createNodeWithDeployment, type NodeStore } from '@/lib/nodes/create-node-with-deployment'
 import { deriveNodeDefaults } from '@/lib/parsers/node-deploy-defaults'
 import { normalizeDeployMode, findNodeConflict } from '@/lib/nodes/node-lifecycle'
+import { nodeProtocolFromProfile, deployWarningsForProfile } from '@/lib/nodes/node-protocol'
 import { hasVpsAccess, grantNodeAccess } from '@/lib/auth/resourceAccess'
 
 // POST /api/v1/admin/nodes/deploy — 创建节点部署任务(node + node_deployment)
@@ -49,12 +50,28 @@ export async function POST(request: NextRequest) {
     .single()
   const defaults = deriveNodeDefaults((vps as any) ?? {})
 
-  // 表单值优先;缺省用服务端派生默认值(绝不落 gcp8)。
+  // 模板是节点协议的唯一来源(R-010 (e) 事故 2026-11-08:曾硬编码 'vless',SS 模板建出 vless 节点 →
+  // 列表显示 vless、席位按 vless 生成 uuid、agent 向 SS 入站加客户端被拒,下发列全红)。
+  const { data: profile } = await adminClient
+    .from('node_profiles')
+    .select('id, name, transport_protocol, config_template, inbound_port, enabled')
+    .eq('id', profile_id)
+    .maybeSingle()
+  if (!profile) {
+    return NextResponse.json({ error: `协议模板不存在:${profile_id}` }, { status: 404 })
+  }
+  if ((profile as any).enabled === false) {
+    return NextResponse.json({ error: `协议模板「${(profile as any).name}」已停用` }, { status: 400 })
+  }
+  const nodeProtocol = nodeProtocolFromProfile(profile as any)
+  const warnings = deployWarningsForProfile(profile as any)
+
+  // 表单值优先;缺省用服务端派生默认值(绝不落 gcp8);端口缺省先取模板 inbound_port。
   const nodeName = (node_name && String(node_name).trim()) || defaults.nodeName ||
     `node-${String(vps_id).slice(0, 8)}-${Date.now()}`
   const finalTag = (inbound_tag && String(inbound_tag).trim()) || defaults.inboundTag
   const finalHost = (public_ip && String(public_ip).trim()) || defaults.host
-  const finalPort = Number(port) || defaults.port || 443
+  const finalPort = Number(port) || Number((profile as any).inbound_port) || defaults.port || 443
 
   // 冲突检测:同 VPS 若已有 active 节点用相同 tag/端口,直接建会顶掉/冲突第一个。
   // 拒绝并提示改 tag/端口(多落地需各自唯一)。
@@ -74,7 +91,7 @@ export async function POST(request: NextRequest) {
   const nodeInsert: Record<string, unknown> = {
     name: nodeName,
     port: finalPort,
-    protocol: 'vless',
+    protocol: nodeProtocol, // 来自模板(vless / shadowsocks / socks …),不再硬编码
     vps_instance_id: vps_id, // 表单的 vps_id 实为 vps_instances.id
     profile_id,
     status: 'provisioning',
@@ -124,7 +141,7 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json(
-    { data: { node_id: result.nodeId, deployment_id: result.deploymentId } },
+    { data: { node_id: result.nodeId, deployment_id: result.deploymentId, protocol: nodeProtocol, warnings } },
     { status: 201 },
   )
 }
