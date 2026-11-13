@@ -3,7 +3,7 @@ import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { createSSRClient } from '@/lib/supabase/server'
 import { createNodeWithDeployment, type NodeStore } from '@/lib/nodes/create-node-with-deployment'
 import { deriveNodeDefaults } from '@/lib/parsers/node-deploy-defaults'
-import { normalizeDeployMode, findNodeConflict } from '@/lib/nodes/node-lifecycle'
+import { normalizeDeployMode, findNodeConflict, nextFreePort } from '@/lib/nodes/node-lifecycle'
 import { nodeProtocolFromProfile, deployWarningsForProfile } from '@/lib/nodes/node-protocol'
 import { hasVpsAccess, grantNodeAccess } from '@/lib/auth/resourceAccess'
 

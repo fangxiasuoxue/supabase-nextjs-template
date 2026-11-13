@@ -99,3 +99,19 @@ test('resolveNodeStatusAfterDeploy: 任何失败 → error', () => {
   assert.equal(resolveNodeStatusAfterDeploy('delete', 'fail'), 'error')
   assert.equal(resolveNodeStatusAfterDeploy('create', 'fail'), 'error')
 })
+
+// ---- R-012 端口自动顺延(用户裁决:默认 2080 开始 +1)----
+import { nextFreePort } from './node-lifecycle.ts'
+
+test('nextFreePort: 跳过同机已占(非 deleted)端口,从 start 起找第一个空口', () => {
+  const ex = [
+    { name: 'a', port: 2080, status: 'active' },
+    { name: 'b', port: 2081, status: 'provisioning' },
+    { name: 'c', port: 2082, status: 'deleted' }, // 已拆,不算占用
+  ]
+  assert.equal(nextFreePort(ex, 2081), 2082)
+  assert.equal(nextFreePort(ex, 2080), 2082)
+  assert.equal(nextFreePort([], 2080), 2080)
+  assert.equal(nextFreePort(ex, 65535, 65535), 65535)
+  assert.equal(nextFreePort([{ name: 'x', port: 65535, status: 'active' }], 65535, 65535), null)
+})

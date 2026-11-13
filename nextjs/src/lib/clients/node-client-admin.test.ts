@@ -49,14 +49,15 @@ test('extractBaseShareLink: 从 share_links / 字符串 / 兜底', () => {
   assert.equal(extractBaseShareLink(null), null)
 })
 
-test('toSeatProtocol: 节点协议 → DB 词表(shadowsocks→ss,其余保守落 vless)', () => {
+test('toSeatProtocol: 节点协议 → DB 词表(shadowsocks→ss,socks→socks(R-012),其余保守落 vless)', () => {
   assert.equal(toSeatProtocol('shadowsocks'), 'ss')
   assert.equal(toSeatProtocol('ss'), 'ss')
   assert.equal(toSeatProtocol('Shadowsocks '), 'ss')
   assert.equal(toSeatProtocol('vless'), 'vless')
   assert.equal(toSeatProtocol('vmess'), 'vmess')
   assert.equal(toSeatProtocol('trojan'), 'trojan')
-  assert.equal(toSeatProtocol('socks'), 'vless')
+  assert.equal(toSeatProtocol('socks'), 'socks')
+  assert.equal(toSeatProtocol('http'), 'vless')
   assert.equal(toSeatProtocol(null), 'vless')
 })
 
@@ -91,4 +92,44 @@ test('buildSeatShareLink: vless 节点沿用 base 换 uuid;无 base 返回 null'
   assert.ok(link!.endsWith('#us8-user01%40node')) // remark 经 encodeURIComponent,与 swapVlessUuid 既有行为一致
   assert.equal(buildSeatShareLink({ ...node, base_link: null }, { cred_ref: 'u' }), null)
   assert.equal(buildSeatShareLink(null, { cred_ref: 'u' }), null)
+})
+
+// ---- R-012 socks5 席位(2026-11-13)----
+import { isSocksProtocol, splitSocksCredential, generateSocksUsername } from './node-client-admin.ts'
+
+test('toSeatProtocol: socks/socks5 → socks;isSocksProtocol', () => {
+  assert.equal(toSeatProtocol('socks'), 'socks')
+  assert.equal(toSeatProtocol('SOCKS5'), 'socks')
+  assert.equal(isSocksProtocol('socks'), true)
+  assert.equal(isSocksProtocol('shadowsocks'), false)
+  assert.equal(isSocksProtocol('vless'), false)
+})
+
+test('generateSeatCredential(socks): "user:pass",10 位小写字母数字用户名 + 24 字符 base64url 密码,两次不同', () => {
+  const c1 = generateSeatCredential('socks')
+  const c2 = generateSeatCredential('socks')
+  const a = splitSocksCredential(c1)!
+  assert.ok(a)
+  assert.match(a.user, /^[a-z0-9]{10}$/)
+  assert.match(a.pass, /^[A-Za-z0-9_-]{24}$/)
+  assert.notEqual(c1, c2)
+  assert.match(generateSocksUsername(8), /^[a-z0-9]{8}$/)
+})
+
+test('splitSocksCredential: 只按第一个冒号切;非法返回 null', () => {
+  assert.deepEqual(splitSocksCredential('u1:p:with:colons'), { user: 'u1', pass: 'p:with:colons' })
+  assert.equal(splitSocksCredential('nocolon'), null)
+  assert.equal(splitSocksCredential(':p'), null)
+  assert.equal(splitSocksCredential('u:'), null)
+  assert.equal(splitSocksCredential(null), null)
+})
+
+test('buildSeatShareLink: socks 节点由节点字段 + "user:pass" 拼 socks:// 链接,不需要 base', () => {
+  const node = { protocol: 'socks', public_ip: 'hk5.3pay.top', port: 2080, base_link: null }
+  const link = buildSeatShareLink(node, { cred_ref: 'alice:s3cret', label: 'HK5-u01' })
+  assert.ok(link)
+  assert.equal(link, `socks://${Buffer.from('alice:s3cret').toString('base64')}@hk5.3pay.top:2080#HK5-u01`)
+  // 缺端口 / 凭据非法 → null 不抛
+  assert.equal(buildSeatShareLink({ ...node, port: null }, { cred_ref: 'alice:s3cret' }), null)
+  assert.equal(buildSeatShareLink(node, { cred_ref: 'nocolon' }), null)
 })

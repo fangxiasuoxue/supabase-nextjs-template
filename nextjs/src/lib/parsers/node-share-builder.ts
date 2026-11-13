@@ -79,3 +79,29 @@ export function buildShadowsocksShareUrl(p: ShadowsocksShareParams): string {
   const remark = encodeURIComponent(p.remark ?? p.host)
   return `ss://${userinfo}@${p.host}:${p.port}#${remark}`
 }
+
+export interface SocksShareParams {
+  user: string // socks5 用户名(席位 cred_ref 的 "user:pass" 前半)
+  pass: string // socks5 密码
+  host: string // 节点公网域名/IP
+  port: number // 节点端口
+  remark?: string
+}
+
+/** 标准 base64(带 padding)。socks:// 链接的 userinfo 用标准 base64(v2rayN / NekoBox 形态),与 agent buildSocksLink 同一编码。 */
+function base64Std(s: string): string {
+  if (typeof Buffer !== 'undefined') return Buffer.from(s, 'utf-8').toString('base64')
+  return btoa(unescape(encodeURIComponent(s)))
+}
+
+/**
+ * 构建 SOCKS5 分享 URL:socks://base64(user:pass)@host:port#remark(console-v2 R-012)。
+ * 纯函数;不依赖 rendered_config(账号在节点字段 + 席位凭据里)。
+ */
+export function buildSocksShareUrl(p: SocksShareParams): string {
+  if (!p.user || !p.pass || !p.host || !p.port) {
+    throw new Error('buildSocksShareUrl: 缺必填参数(user/pass/host/port)')
+  }
+  const remark = encodeURIComponent(p.remark ?? p.host)
+  return `socks://${base64Std(`${p.user}:${p.pass}`)}@${p.host}:${p.port}#${remark}`
+}

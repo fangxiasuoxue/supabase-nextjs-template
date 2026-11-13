@@ -34,7 +34,9 @@ interface Seat {
   outbound_config: any | null
   vless_url: string | null
   ss_url: string | null
-  share_url: string | null // 按节点协议:vless_url 或 ss_url
+  socks_url: string | null
+  socks_account: { user: string; pass: string } | null // 仅 socks 席位(R-012):随机账密明文,供直接复制
+  share_url: string | null // 按节点协议:vless_url / ss_url / socks_url
   created_at: string
 }
 
@@ -291,9 +293,15 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
     toast.success('订阅链接已复制')
   }
 
-  const linkKind = (protocol: string) => (protocol === 'ss' || protocol === 'shadowsocks' ? 'ss' : 'vless')
+  const linkKind = (protocol: string) =>
+    protocol === 'ss' || protocol === 'shadowsocks' ? 'ss' : protocol === 'socks' || protocol === 'socks5' ? 'socks' : 'vless'
+  const copyText = (text: string, what: string) => {
+    navigator.clipboard.writeText(text)
+    toast.success(`${what}已复制`)
+  }
   const copyShareLink = (url: string | null, protocol: string) => {
-    if (!url) return toast.error(linkKind(protocol) === 'ss' ? '无 ss 链接(SS 节点缺公网地址/端口)' : '无 vless 链接(节点 base 配置未就绪)')
+    const kind = linkKind(protocol)
+    if (!url) return toast.error(kind === 'vless' ? '无 vless 链接(节点 base 配置未就绪)' : `无 ${kind} 链接(节点缺公网地址/端口)`)
     navigator.clipboard.writeText(url)
     toast.success(`${linkKind(protocol)} 链接已复制`)
   }
@@ -476,10 +484,18 @@ export default function NodeClientsPage({ params }: { params: Promise<{ id: stri
                       <Copy className="w-3 h-3 mr-1" />订阅
                     </Button>
                     <Button variant="ghost" size="sm" className="h-6 justify-start" disabled={!s.share_url}
-                      title={s.share_url ?? (linkKind(s.protocol) === 'ss' ? 'SS 节点缺公网地址/端口' : '节点 base 配置未就绪')}
+                      title={s.share_url ?? (linkKind(s.protocol) === 'vless' ? '节点 base 配置未就绪' : '节点缺公网地址/端口')}
                       onClick={() => copyShareLink(s.share_url, s.protocol)}>
                       <LinkIcon className="w-3 h-3 mr-1" />{linkKind(s.protocol)}
                     </Button>
+                    {s.socks_account && (
+                      <div className="flex flex-col gap-0.5 pl-1" title="socks5 账密(点击复制)">
+                        <button type="button" className="tech-mono text-[9px] text-left text-slate-700 hover:underline"
+                          onClick={() => copyText(s.socks_account!.user, '用户名')}>user: {s.socks_account.user}</button>
+                        <button type="button" className="tech-mono text-[9px] text-left text-slate-700 hover:underline"
+                          onClick={() => copyText(s.socks_account!.pass, '密码')}>pass: {s.socks_account.pass}</button>
+                      </div>
+                    )}
                     <Button variant="ghost" size="sm" className="h-6 justify-start" disabled={!s.subscribe_token}
                       title="打开客户二维码页(可发给客户)"
                       onClick={() => s.subscribe_token && window.open(`/s/${s.subscribe_token}`, '_blank')}>

@@ -17,7 +17,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
-import { buildSeatShareLink, isShadowsocksProtocol } from '@/lib/clients/node-client-admin'
+import { buildSeatShareLink, isShadowsocksProtocol, isSocksProtocol } from '@/lib/clients/node-client-admin'
 import { loadSeatLinkNode } from '@/lib/clients/seat-link-context'
 import { subscriptionResponse } from '@/lib/subscription/clientResponse'
 
@@ -49,10 +49,11 @@ export async function GET(
   const linkNode = await loadSeatLinkNode(admin, node.id)
   const base = linkNode?.base_link ?? null
   const isSs = isShadowsocksProtocol(linkNode?.protocol)
+  const isSocks = isSocksProtocol(linkNode?.protocol) // R-012:socks 席位同 SS,由节点字段 + 凭据拼链接,无需 base
 
   // 3) 节点级订阅 = 该 node 全部启用终端(seat)的合集(vless 换自己的 uuid、复用节点 reality 参数;SS 拼 SIP002)。
   //    含所有 user 用户 → 一个节点订阅地址导入即得该节点下全部名额。见 docs/current/51 §11.4。
-  if (base || isSs) {
+  if (base || isSs || isSocks) {
     const { data: clients } = await admin
       .from('node_clients')
       .select('email, cred_ref, label, enabled')

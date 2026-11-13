@@ -1,10 +1,10 @@
 // P1 · 终端(seat)管理纯逻辑 —— 供 admin CRUD 端点与 /sub/* 复用。
 // 设计依据:docs/current/51 §11.4;SS 席位(PRD console-v2 R-010,2026-11-07):
-//   协议词表以 DB 约束 node_clients_protocol_check('vless','vmess','trojan','ss')为准,
+//   协议词表以 DB 约束 node_clients_protocol_check('vless','vmess','trojan','ss','socks')为准(socks:R-012,migration 20261113000001),
 //   console 节点协议 'shadowsocks' 在此映射为 'ss';分享链接按节点协议分发(SS 不依赖 rendered_config)。
 
 import { randomBytes, randomUUID } from 'crypto'
-import { buildShadowsocksShareUrl } from '../parsers/node-share-builder.ts'
+import { buildShadowsocksShareUrl, buildSocksShareUrl } from '../parsers/node-share-builder.ts'
 
 /** 从节点名派生 slug(小写、仅 a-z0-9-)。用于生成终端 email 前缀。 */
 export function nodeSlug(name: string | null | undefined): string {
@@ -49,12 +49,13 @@ export function extractBaseShareLink(rendered: any): string | null {
 }
 
 /** node_clients.protocol 词表(与 DB 约束 node_clients_protocol_check 同一份)。 */
-export type SeatProtocol = 'vless' | 'vmess' | 'trojan' | 'ss'
+export type SeatProtocol = 'vless' | 'vmess' | 'trojan' | 'ss' | 'socks'
 
-/** 节点协议(nodes.protocol / console Protocol 类型)→ 席位协议。shadowsocks/ss → 'ss';vmess/trojan 原样;其余 → 'vless'。 */
+/** 节点协议(nodes.protocol / console Protocol 类型)→ 席位协议。shadowsocks/ss → 'ss';socks/socks5 → 'socks';vmess/trojan 原样;其余 → 'vless'。 */
 export function toSeatProtocol(nodeProtocol: string | null | undefined): SeatProtocol {
   const p = (nodeProtocol ?? '').trim().toLowerCase()
   if (p === 'shadowsocks' || p === 'ss') return 'ss'
+  if (p === 'socks' || p === 'socks5') return 'socks'
   if (p === 'vmess' || p === 'trojan') return p
   return 'vless'
 }
@@ -63,10 +64,36 @@ export function isShadowsocksProtocol(protocol: string | null | undefined): bool
   return toSeatProtocol(protocol) === 'ss'
 }
 
-/** 按席位协议生成凭据:ss → 24 字符随机密码(base64url,144 bit);其它 → uuid。 */
+export function isSocksProtocol(protocol: string | null | undefined): boolean {
+  return toSeatProtocol(protocol) === 'socks'
+}
+
+const SOCKS_USER_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789'
+
+/** socks5 随机用户名:10 位 [a-z0-9](与 agent randAlnum 同形)。 */
+export function generateSocksUsername(len = 10): string {
+  const b = randomBytes(len)
+  let out = ''
+  for (let i = 0; i < len; i++) out += SOCKS_USER_ALPHABET[b[i] % SOCKS_USER_ALPHABET.length]
+  return out
+}
+
+/**
+ * 按席位协议生成凭据:ss → 24 字符随机密码(base64url,144 bit);
+ * socks → "user:pass"(10 位随机用户名 + 24 字符随机密码,一列存两值;R-012);其它 → uuid。
+ */
 export function generateSeatCredential(protocol: SeatProtocol): string {
   if (protocol === 'ss') return randomBytes(18).toString('base64url')
+  if (protocol === 'socks') return `${generateSocksUsername()}:${randomBytes(18).toString('base64url')}`
   return randomUUID()
+}
+
+/** socks 席位凭据 "user:pass" → {user,pass}(密码可含 ':',只按第一个冒号切);非法返回 null。 */
+export function splitSocksCredential(cred: string | null | undefined): { user: string; pass: string } | null {
+  if (!cred) return null
+  const i = cred.indexOf(':')
+  if (i <= 0 || i === cred.length - 1) return null
+  return { user: cred.slice(0, i), pass: cred.slice(i + 1) }
 }
 
 /** 现网 SS 入站(hk1/hk2/hk4 2433)所用加密方法;profile 模板缺 method 时的兜底。 */
@@ -98,8 +125,9 @@ export interface SeatLinkSeat {
 
 /**
  * 按节点协议分发生成某席位的直连分享链接:
- *   ss   → ss://base64url(method:password)@public_ip:port#remark(由节点字段拼出,不需要 rendered_config);
- *   其它 → 以节点 base vless 链接换 uuid(现有行为)。
+ *   ss    → ss://base64url(method:password)@public_ip:port#remark(由节点字段拼出,不需要 rendered_config);
+ *   socks → socks://base64(user:pass)@public_ip:port#remark(cred_ref = "user:pass",R-012);
+ *   其它  → 以节点 base vless 链接换 uuid(现有行为)。
  * 生成不了(缺字段 / 非法 base)返回 null,不抛错;调用方按 null 跳过或降级。
  */
 export function buildSeatShareLink(node: SeatLinkNode | null | undefined, seat: SeatLinkSeat): string | null {
@@ -115,6 +143,11 @@ export function buildSeatShareLink(node: SeatLinkNode | null | undefined, seat: 
         port: node.port,
         remark,
       })
+    }
+    if (toSeatProtocol(node.protocol) === 'socks') {
+      const acc = splitSocksCredential(seat.cred_ref)
+      if (!acc || !node.public_ip || !node.port) return null
+      return buildSocksShareUrl({ user: acc.user, pass: acc.pass, host: node.public_ip, port: node.port, remark })
     }
     if (!node.base_link) return null
     return swapVlessUuid(node.base_link, seat.cred_ref, remark)

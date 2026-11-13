@@ -70,3 +70,12 @@ test('buildShadowsocksShareUrl: remark 缺省用 host;缺必填抛错', () => {
   assert.throws(() => buildShadowsocksShareUrl({ method: '', password: 'p', host: 'h', port: 1 }))
   assert.throws(() => buildShadowsocksShareUrl({ method: 'm', password: 'p', host: 'h', port: 0 }))
 })
+
+// ---- R-012 socks:// ----
+import { buildSocksShareUrl } from './node-share-builder.ts'
+
+test('buildSocksShareUrl: socks://base64(user:pass)@host:port#remark(标准 base64,与 agent buildSocksLink 同形)', () => {
+  const url = buildSocksShareUrl({ user: 'alice', pass: 's3cret:x', host: '8.218.195.183', port: 2080, remark: 'HK5 socks' })
+  assert.equal(url, `socks://${Buffer.from('alice:s3cret:x').toString('base64')}@8.218.195.183:2080#HK5%20socks`)
+  assert.throws(() => buildSocksShareUrl({ user: '', pass: 'p', host: 'h', port: 1 }))
+})

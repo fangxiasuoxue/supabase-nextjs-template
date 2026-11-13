@@ -69,6 +69,20 @@ export function findNodeConflict(
   return null
 }
 
+// R-012(用户裁决 2026-11-13 "默认为 2080 开始 +1"):模板默认端口在同 VPS 已被占用时,自动顺延到下一个空口。
+// 只在"端口是模板默认值"时顺延;用户明确填的端口撞车仍报 409(不替用户改他指定的口)。
+export function nextFreePort(existing: ExistingNodeLite[], start: number, max = 65535): number | null {
+  const used = new Set<number>()
+  for (const n of existing || []) {
+    if (!n || n.status === 'deleted' || !n.port) continue
+    used.add(Number(n.port))
+  }
+  for (let p = start; p <= max; p++) {
+    if (!used.has(p)) return p
+  }
+  return null
+}
+
 // 删除 = 建一条 task_type=delete 的部署任务,交 agent poller 去机器上拆 inbound。
 export function buildDeleteDeployment(nodeId: string): Record<string, unknown> {
   return { node_id: nodeId, task_type: 'delete', deploy_mode: DEPLOY_MODE_DEFAULT, status: 'pending' }

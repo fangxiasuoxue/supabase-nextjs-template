@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomBytes } from 'crypto'
 import { createServerAdminClient } from '@/lib/supabase/serverAdminClient'
 import { requireNodeAccess } from '@/lib/auth/resourceAccess'
-import { nodeSlug, buildSeatEmail, buildSeatShareLink, toSeatProtocol, generateSeatCredential } from '@/lib/clients/node-client-admin'
+import { nodeSlug, buildSeatEmail, buildSeatShareLink, toSeatProtocol, generateSeatCredential, splitSocksCredential } from '@/lib/clients/node-client-admin'
 import { loadSeatLinkNode } from '@/lib/clients/seat-link-context'
 
 // 终端(seat)管理:某 node 下的名额列表 / 批量发名额。
@@ -10,9 +10,10 @@ import { loadSeatLinkNode } from '@/lib/clients/seat-link-context'
 // 权限门:GET=对该 node 有 read;POST(发名额)=对该 node 有 write。admin/ops 旁路。
 
 // GET /api/v1/admin/nodes/[id]/clients — 列出该 node 的终端。
-// 返回每终端的直连链接:share_url(按节点协议:vless 换 uuid / SS 由节点字段拼 SIP002),
-// 并保留 vless_url(仅 vless)与新增 ss_url(仅 SS)两个协议专用字段。
-// cred_ref 仅服务端用于拼链接,不作为独立字段返回(SS 密码只以链接形式出现)。
+// 返回每终端的直连链接:share_url(按节点协议:vless 换 uuid / SS 由节点字段拼 SIP002 / socks 拼 socks://),
+// 并保留 vless_url(仅 vless)、ss_url(仅 SS)、socks_url(仅 socks)协议专用字段。
+// cred_ref 不作为独立字段返回;socks 席位额外给 socks_account {user,pass}(R-012:用户要能直接看到/复制随机账密,
+// 浏览器/AdsPower 类客户端填的是账密而不是链接)。
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params
   const gate = await requireNodeAccess(id, 'read')
@@ -39,7 +40,9 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     const share_url = buildSeatShareLink(linkNode, { cred_ref, label: c.label, email: c.email })
     const vless_url = share_url && share_url.startsWith('vless://') ? share_url : null
     const ss_url = share_url && share_url.startsWith('ss://') ? share_url : null
-    return { ...rest, share_url, vless_url, ss_url }
+    const socks_url = share_url && share_url.startsWith('socks://') ? share_url : null
+    const socks_account = toSeatProtocol(c.protocol) === 'socks' ? splitSocksCredential(cred_ref) : null
+    return { ...rest, share_url, vless_url, ss_url, socks_url, socks_account }
   })
   return NextResponse.json({ clients, node: nodeMeta ?? null })
 }
